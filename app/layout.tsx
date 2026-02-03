@@ -3,8 +3,11 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/authContext";
 
 export const metadata: Metadata = {
-  title: "OSRS Flipping Dashboard",
+  title: "Vault",
   description: "Advanced price tracking and flip opportunity detection for OSRS Grand Exchange",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
