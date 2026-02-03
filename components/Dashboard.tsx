@@ -14,9 +14,11 @@ import {
   findShortTermFlips,
 } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
+import { useAuth } from '@/lib/authContext';
 
 export default function Dashboard() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
   const [activeTab, setActiveTab] = useState<'portfolio' | 'favorites' | 'opportunities'>('portfolio');
@@ -139,6 +141,12 @@ export default function Dashboard() {
               </div>
               <h1 className="text-2xl font-semibold text-slate-100">Vault</h1>
             </div>
+            <button
+              onClick={logout}
+              className="px-4 py-2 text-sm text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
+            >
+              Sign Out
+            </button>
           </div>
 
           <div className="max-w-2xl">

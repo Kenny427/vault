@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { FlipOpportunity } from './analysis';
+import { supabase } from './supabase';
 
 export interface WatchlistItem {
   id: number;
@@ -12,19 +13,21 @@ export interface FavoriteItem {
   id: number;
   name: string;
   addedAt: number;
+  synced?: boolean;
 }
 
 interface DashboardStore {
   // Watchlist
   watchlist: WatchlistItem[];
-  addToWatchlist: (item: WatchlistItem) => void;
-  removeFromWatchlist: (itemId: number) => void;
-  updateWatchlistNote: (itemId: number, note: string) => void;
+  addToWatchlist: (item: WatchlistItem) => Promise<void>;
+  removeFromWatchlist: (itemId: number) => Promise<void>;
+  updateWatchlistNote: (itemId: number, note: string) => Promise<void>;
 
   // Favorites
   favorites: FavoriteItem[];
-  addToFavorites: (item: FavoriteItem) => void;
-  removeFromFavorites: (itemId: number) => void;
+  addToFavorites: (item: FavoriteItem) => Promise<void>;
+  removeFromFavorites: (itemId: number) => Promise<void>;
+  loadFavoritesFromSupabase: () => Promise<void>;
 
   // Filters and settings
   minOpportunityScore: number;
@@ -59,28 +62,64 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     return [];
   })(),
 
-  addToWatchlist: (item) =>
+  addToWatchlist: async (item) => {
     set((state) => {
       const updated = [...state.watchlist, item];
       localStorage.setItem('osrs-watchlist', JSON.stringify(updated));
       return { watchlist: updated };
-    }),
+    });
 
-  removeFromWatchlist: (itemId) =>
+    // Try to sync to Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await supabase
+        .from('watchlist_items')
+        .insert({
+          user_id: session.user.id,
+          item_id: item.id,
+          item_name: item.name,
+          notes: item.notes,
+        });
+    }
+  },
+
+  removeFromWatchlist: async (itemId) => {
     set((state) => {
       const updated = state.watchlist.filter(item => item.id !== itemId);
       localStorage.setItem('osrs-watchlist', JSON.stringify(updated));
       return { watchlist: updated };
-    }),
+    });
 
-  updateWatchlistNote: (itemId, note) =>
+    // Try to sync to Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await supabase
+        .from('watchlist_items')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('item_id', itemId);
+    }
+  },
+
+  updateWatchlistNote: async (itemId, note) => {
     set((state) => {
       const updated = state.watchlist.map(item =>
         item.id === itemId ? { ...item, notes: note } : item
       );
       localStorage.setItem('osrs-watchlist', JSON.stringify(updated));
       return { watchlist: updated };
-    }),
+    });
+
+    // Try to sync to Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await supabase
+        .from('watchlist_items')
+        .update({ notes: note })
+        .eq('user_id', session.user.id)
+        .eq('item_id', itemId);
+    }
+  },
 
   // Favorites
   favorites: (() => {
@@ -91,7 +130,7 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
     return [];
   })(),
 
-  addToFavorites: (item) =>
+  addToFavorites: async (item) => {
     set((state) => {
       if (state.favorites.some(fav => fav.id === item.id)) {
         return state;
@@ -99,14 +138,60 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
       const updated = [...state.favorites, item];
       localStorage.setItem('osrs-favorites', JSON.stringify(updated));
       return { favorites: updated };
-    }),
+    });
 
-  removeFromFavorites: (itemId) =>
+    // Try to sync to Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await supabase
+        .from('favorites')
+        .insert({
+          user_id: session.user.id,
+          item_id: item.id,
+          item_name: item.name,
+        });
+    }
+  },
+
+  removeFromFavorites: async (itemId) => {
     set((state) => {
       const updated = state.favorites.filter(item => item.id !== itemId);
       localStorage.setItem('osrs-favorites', JSON.stringify(updated));
       return { favorites: updated };
-    }),
+    });
+
+    // Try to sync to Supabase
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await supabase
+        .from('favorites')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('item_id', itemId);
+    }
+  },
+
+  loadFavoritesFromSupabase: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const { data } = await supabase
+      .from('favorites')
+      .select('id, item_id, item_name, created_at')
+      .eq('user_id', session.user.id);
+
+    if (data) {
+      const favorites: FavoriteItem[] = data.map((item: any) => ({
+        id: item.item_id,
+        name: item.item_name,
+        addedAt: new Date(item.created_at).getTime(),
+        synced: true,
+      }));
+
+      set({ favorites });
+      localStorage.setItem('osrs-favorites', JSON.stringify(favorites));
+    }
+  },
 
   // Filters and settings
   minOpportunityScore: 40,
