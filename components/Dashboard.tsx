@@ -373,11 +373,8 @@ export default function Dashboard() {
 
       {/* Footer */}
       <footer className="bg-slate-900 border-t border-slate-700 mt-12">
-        <div className="max-w-7xl mx-auto px-4 py-6 text-center text-slate-500 text-sm">
-          <p>Data updated every 30 seconds • Prices from OSRS Wiki API</p>
-          <p className="mt-2">
-            This tool is for educational purposes. Always verify prices in-game before trading.
-          </p>
+        <div className="max-w-7xl mx-auto px-4 py-4 text-center text-slate-500 text-sm">
+          Data updated every 30 seconds • From official Wiki API
         </div>
       </footer>
     </div>
