@@ -1,0 +1,252 @@
+'use client';
+
+import { FlipOpportunity } from '@/lib/analysis';
+import { useDashboardStore } from '@/lib/store';
+
+interface FlipCardProps {
+  opportunity: FlipOpportunity;
+  onViewDetails: () => void;
+}
+
+export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) {
+  const { watchlist, addToWatchlist, removeFromWatchlist } = useDashboardStore();
+  const isInWatchlist = watchlist.some(item => item.id === opportunity.itemId);
+
+  const toggleWatchlist = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isInWatchlist) {
+      removeFromWatchlist(opportunity.itemId);
+    } else {
+      addToWatchlist({
+        id: opportunity.itemId,
+        name: opportunity.itemName,
+        addedAt: Date.now(),
+      });
+    }
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 70) return 'text-green-400 bg-green-900/20 border-green-700';
+    if (score >= 50) return 'text-yellow-400 bg-yellow-900/20 border-yellow-700';
+    if (score >= 30) return 'text-orange-400 bg-orange-900/20 border-orange-700';
+    return 'text-red-400 bg-red-900/20 border-red-700';
+  };
+
+  const getRecommendationColor = (rec: string) => {
+    switch (rec) {
+      case 'buy':
+        return 'bg-green-900/30 text-green-400 border-green-700';
+      case 'sell':
+        return 'bg-red-900/30 text-red-400 border-red-700';
+      default:
+        return 'bg-slate-800 text-slate-300 border-slate-600';
+    }
+  };
+
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case 'low':
+        return 'text-green-400';
+      case 'medium':
+        return 'text-yellow-400';
+      case 'high':
+        return 'text-red-400';
+      default:
+        return 'text-slate-400';
+    }
+  };
+
+  const getTrendEmoji = (trend: string) => {
+    switch (trend) {
+      case 'bullish':
+        return '📈';
+      case 'bearish':
+        return '📉';
+      default:
+        return '→';
+    }
+  };
+
+  return (
+    <div
+      className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-lg overflow-hidden hover:border-osrs-accent transition-all cursor-pointer hover:shadow-lg hover:shadow-osrs-accent/20 hover:-translate-y-1"
+    >
+      {/* Header */}
+      <div className="p-4 border-b border-slate-700 bg-slate-900/50">
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex-1">
+            <h3 className="font-bold text-slate-100 text-lg line-clamp-2">
+              {opportunity.itemName}
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              ID: {opportunity.itemId} • {getTrendEmoji(opportunity.trend)} {opportunity.trend}
+            </p>
+          </div>
+          <button
+            onClick={toggleWatchlist}
+            className={`ml-2 px-3 py-1 rounded text-sm font-bold transition-all ${
+              isInWatchlist
+                ? 'bg-osrs-accent text-slate-900'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            }`}
+          >
+            {isInWatchlist ? '★' : '☆'}
+          </button>
+        </div>
+
+        {/* Key Badges */}
+        <div className="flex gap-2 flex-wrap">
+          <div
+            className={`px-2 py-1 rounded text-xs font-bold border ${getRecommendationColor(
+              opportunity.recommendation
+            )}`}
+          >
+            {opportunity.recommendation.toUpperCase()} SIGNAL
+          </div>
+          <div
+            className={`px-2 py-1 rounded text-xs font-bold border ${getScoreColor(
+              opportunity.opportunityScore
+            )}`}
+          >
+            Score: {opportunity.opportunityScore.toFixed(0)}/100
+          </div>
+          <div className={`px-2 py-1 rounded text-xs font-bold border border-slate-600 ${getRiskColor(opportunity.riskLevel)}`}>
+            {opportunity.riskLevel.toUpperCase()} RISK
+          </div>
+        </div>
+      </div>
+
+      {/* Price Summary */}
+      <div className="p-4 space-y-3 border-b border-slate-700/50">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
+            <p className="text-xs text-slate-400 mb-1">CURRENT PRICE</p>
+            <p className="text-lg font-bold text-slate-100">
+              {opportunity.currentPrice.toLocaleString()}
+              <span className="text-xs text-slate-400 ml-1">gp</span>
+            </p>
+          </div>
+          <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
+            <p className="text-xs text-slate-400 mb-1">30D AVERAGE</p>
+            <p className="text-lg font-bold text-slate-100">
+              {opportunity.averagePrice.toLocaleString()}
+              <span className="text-xs text-slate-400 ml-1">gp</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Profit Metrics - Always Visible */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-green-900/20 p-2 rounded border border-green-700/50">
+            <p className="text-xs text-green-400 mb-1">PROFIT</p>
+            <p className="text-sm font-bold text-green-300">
+              {opportunity.profitPerUnit.toLocaleString()}
+              <span className="text-xs text-green-400 ml-1">gp</span>
+            </p>
+          </div>
+          <div className="bg-blue-900/20 p-2 rounded border border-blue-700/50">
+            <p className="text-xs text-blue-400 mb-1">ROI</p>
+            <p className="text-sm font-bold text-blue-300">
+              {opportunity.roi.toFixed(1)}
+              <span className="text-xs text-blue-400 ml-1">%</span>
+            </p>
+          </div>
+          <div className="bg-purple-900/20 p-2 rounded border border-purple-700/50">
+            <p className="text-xs text-purple-400 mb-1">MARGIN</p>
+            <p className="text-sm font-bold text-purple-300">
+              {opportunity.profitMargin.toFixed(1)}
+              <span className="text-xs text-purple-400 ml-1">%</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Buy/Sell Prices */}
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-green-900/20 border border-green-700/50 p-2 rounded">
+            <p className="text-xs text-green-400 mb-1">💰 BUY AT</p>
+            <p className="text-sm font-bold text-green-300">{opportunity.buyPrice.toLocaleString()} gp</p>
+          </div>
+          <div className="bg-orange-900/20 border border-orange-700/50 p-2 rounded">
+            <p className="text-xs text-orange-400 mb-1">🎯 SELL AT</p>
+            <p className="text-sm font-bold text-orange-300">{opportunity.sellPrice.toLocaleString()} gp</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Detailed Stats */}
+      <div className="p-4 space-y-2">
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="flex justify-between">
+            <span className="text-slate-400">Price Range:</span>
+            <span className="text-slate-200">
+              {opportunity.historicalLow.toLocaleString()} - {opportunity.historicalHigh.toLocaleString()}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Deviation:</span>
+            <span className={opportunity.deviation < 0 ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>
+              {opportunity.deviation.toFixed(1)}%
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Volatility:</span>
+            <span className="text-slate-200">{opportunity.volatility.toFixed(1)}%</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Hold Time:</span>
+            <span className="text-slate-200">{opportunity.estimatedHoldTime}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Confidence:</span>
+            <span className="text-slate-200">{opportunity.confidence.toFixed(0)}%</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-400">Volume Score:</span>
+            <span className="text-slate-200">{opportunity.volumeScore.toFixed(0)}/100</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Education Section */}
+      <div className="p-4 bg-slate-900/50 border-t border-slate-700 space-y-2">
+        <details className="cursor-pointer">
+          <summary className="text-sm font-semibold text-slate-300 hover:text-osrs-accent transition-colors">
+            📚 Strategy & Tips
+          </summary>
+          <div className="mt-3 space-y-2 text-xs text-slate-400 ml-2">
+            <div>
+              <p className="font-semibold text-slate-300">📥 When to Buy:</p>
+              <p>{opportunity.buyWhen}</p>
+            </div>
+            <div>
+              <p className="font-semibold text-slate-300">📤 When to Sell:</p>
+              <p>{opportunity.sellWhen}</p>
+            </div>
+            {opportunity.recommendation === 'buy' && (
+              <div className="bg-green-900/20 border border-green-700/50 p-2 rounded">
+                <p className="text-green-400 font-semibold">✅ Current Status:</p>
+                <p className="text-green-300">This is a good buying opportunity! Price is {Math.abs(opportunity.deviation).toFixed(1)}% below average.</p>
+              </div>
+            )}
+            {opportunity.recommendation === 'sell' && (
+              <div className="bg-orange-900/20 border border-orange-700/50 p-2 rounded">
+                <p className="text-orange-400 font-semibold">📈 Current Status:</p>
+                <p className="text-orange-300">Price is elevated! Consider selling if you have stock. Price is {opportunity.deviation.toFixed(1)}% above average.</p>
+              </div>
+            )}
+          </div>
+        </details>
+      </div>
+
+      {/* View Details Button */}
+      <div className="p-3 border-t border-slate-700 bg-gradient-to-r from-osrs-accent/10 to-transparent">
+        <button
+          onClick={onViewDetails}
+          className="w-full py-2 px-3 bg-osrs-accent hover:bg-osrs-accent/90 text-slate-900 font-bold rounded transition-colors text-sm"
+        >
+          📊 View Full Chart & Analysis
+        </button>
+      </div>
+    </div>
+  );
+}
