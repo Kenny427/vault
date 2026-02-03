@@ -374,7 +374,7 @@ export default function Dashboard() {
       {/* Footer */}
       <footer className="bg-slate-900 border-t border-slate-700 mt-12">
         <div className="max-w-7xl mx-auto px-4 py-4 text-center text-slate-500 text-sm">
-          Data updated every 30 seconds • From official Wiki API
+          Data updated every 30 seconds - Vibecoded by ray
         </div>
       </footer>
     </div>
