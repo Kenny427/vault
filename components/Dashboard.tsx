@@ -6,7 +6,7 @@ import SearchBar from './SearchBar';
 import FlipCard from './FlipCard';
 import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
-import Chat from './Chat';
+import FloatingChat from './FloatingChat';
 import { getPopularItems } from '@/lib/api/osrs';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
@@ -18,12 +18,12 @@ export default function Dashboard() {
   type PoolItem = { id: number; name: string; addedAt?: number };
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'favorites' | 'opportunities' | 'chat'>(() => {
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'favorites' | 'opportunities'>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-active-tab');
-      const validTabs: ('portfolio' | 'favorites' | 'opportunities' | 'chat')[] = ['portfolio', 'favorites', 'opportunities', 'chat'];
+      const validTabs: ('portfolio' | 'favorites' | 'opportunities')[] = ['portfolio', 'favorites', 'opportunities'];
       if (saved && validTabs.includes(saved as any)) {
-        return saved as 'portfolio' | 'favorites' | 'opportunities' | 'chat';
+        return saved as 'portfolio' | 'favorites' | 'opportunities';
       }
     }
     return 'portfolio';
@@ -280,16 +280,6 @@ export default function Dashboard() {
           >
             🎯 Flip Opportunities
           </button>
-          <button
-            onClick={() => setActiveTab('chat')}
-            className={`px-6 py-3 font-semibold transition-all ${
-              activeTab === 'chat'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            🤖 AI Advisor
-          </button>
         </div>
 
         {/* Portfolio Tab Content */}
@@ -442,14 +432,10 @@ export default function Dashboard() {
         </div>
         </>
         )}
-
-        {/* AI Advisor Tab Content */}
-        {activeTab === 'chat' && (
-          <div className="h-[calc(100vh-300px)] bg-slate-900 rounded-lg overflow-hidden">
-            <Chat />
-          </div>
-        )}
       </main>
+
+      {/* Floating AI Chat Widget */}
+      <FloatingChat />
 
       {/* Footer */}
       <footer className="bg-slate-900 border-t border-slate-700 mt-12">

@@ -75,8 +75,9 @@ export const POPULAR_CATEGORIES = [
   'green dragonhide', 'blue dragonhide', 'red dragonhide', 'black dragonhide',
   'green dragon leather', 'blue dragon leather', 'red dragon leather', 'black dragon leather',
 
-  // Bones (volatile)
+  // Bones (volatile - heavily botted)
   'dragon bones', 'babydragon bones', 'wyvern bones', 'superior dragon bones', 'crushed superior dragon bones',
+  'lava dragon bones', 'big bones', 'curved bone', 'long bone',
 
   // Herblore herbs (grimy + clean) - highly volatile
   'grimy ranarr weed', 'grimy snapdragon', 'grimy toadflax', 'grimy avantoe', 'grimy kwuarm',
@@ -104,7 +105,28 @@ export const POPULAR_CATEGORIES = [
 
   // Ammo/components
   'cannonball', 'dragon bolts (unf)', 'amethyst arrowtips', 'amethyst dart tip', 'dragon dart tip',
+
+  // Runes (heavily botted resources)
+  'pure essence', 'rune essence', 'air rune', 'water rune', 'earth rune', 'fire rune',
+  'mind rune', 'body rune', 'chaos rune', 'death rune', 'nature rune', 'law rune', 'blood rune',
+
+  // Fish (bot-farmed)
+  'raw shark', 'raw tuna', 'raw lobster', 'raw swordfish', 'raw monkfish', 'raw anglerfish',
+  'raw karambwan', 'raw manta ray', 'raw dark crab',
+
+  // Gems (bot-mined)
+  'uncut sapphire', 'uncut emerald', 'uncut ruby', 'uncut diamond', 'uncut dragonstone', 'uncut zenyte',
+
+  // Processed gems
+  'sapphire', 'emerald', 'ruby', 'diamond', 'dragonstone', 'zenyte',
+
+  // Jewelry (enchanted/unenchanted)
+  'ring of wealth', 'amulet of glory', 'skills necklace', 'combat bracelet', 'ring of dueling',
+
+  // Bars used in smithing
+  'bronze bar', 'iron bar', 'silver bar',
 ];
+
 
 const priceCache = new Map<number, { data: PriceData; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes

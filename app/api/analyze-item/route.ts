@@ -8,22 +8,59 @@ async function getGPTAnalysis(itemName: string, itemData: string): Promise<strin
     throw new Error('OPENAI_API_KEY not configured');
   }
 
-  const prompt = `You are an expert OSRS Grand Exchange flipper. A user is asking about: "${itemName}"
+  const prompt = `You are an expert OSRS Grand Exchange flipper specializing in MEAN-REVERSION strategy. A user is asking about: "${itemName}"
 
 Here is the current price and historical data:
 ${itemData}
 
-Provide a detailed, actionable analysis answering:
-1. **Is this a good flip right now?** (Yes/No with reasoning)
-2. **Current valuation** - Is it overpriced, underpriced, or fairly valued?
-3. **Price trend** - What's the direction over the last 30/90 days?
-4. **Buy recommendation** - If you were flipping, would you buy now? At what price?
-5. **Hold time estimate** - How long until it recovers to good selling price?
-6. **Risk level** - How volatile/risky is this item?
-7. **Expected profit** - Rough estimate of profit potential if bought at current price
-8. **Alternative timing** - When would be a better time to buy this item?
+**Trading Strategy Context:**
+- User focuses on mean-reversion: buying items significantly below historical averages and waiting for price recovery
+- Comfortable holding items for weeks or even months if fundamentals are strong
+- Looks for items affected by bot activity (price spikes when bots buy, crashes when they sell)
+- Key metric: discount from 30d/90d/365d averages
+- Profit target: 20-50%+ ROI, willing to wait for recovery
 
-Be specific with numbers and percentages. Use the historical data provided to back up your analysis.`;
+Provide a detailed, actionable analysis answering:
+
+1. **Is this a good flip right now?** (Yes/No with strong reasoning based on mean-reversion)
+   - Compare current price to 30d, 90d, 365d averages
+   - Is it at a significant discount (>15-20%)?
+
+2. **Current valuation** - Where does current price sit relative to historical ranges?
+   - Quantify the discount/premium vs averages
+   - Is this a temporary dip or fundamental shift?
+
+3. **Price trend & catalyst** - What caused the current price level?
+   - Bot activity patterns (supply flooding, demand spike)?
+   - Game updates or seasonal factors?
+   - Mean-reversion potential
+
+4. **Buy recommendation** - Exact buy/sell targets
+   - Entry price (current vs wait for better discount?)
+   - Target sell price (realistic recovery level)
+   - Expected ROI percentage
+
+5. **Hold time estimate** - Timeline for mean-reversion recovery
+   - How long historically does this item take to recover?
+   - Is user okay holding for weeks/months?
+
+6. **Risk assessment**
+   - Volatility (good for flipping or too risky?)
+   - Liquidity (can user exit position easily?)
+   - Worst-case scenario
+
+7. **Expected profit calculation**
+   - If bought at current price, sell at [X] target
+   - Profit per unit and ROI%
+   - Volume strategy (how many units to flip?)
+
+8. **Alternative timing**
+   - Should user wait for deeper discount?
+   - Are there better opportunities in similar items?
+   - Historical price floors to watch for
+
+Be specific with numbers, percentages, and GP values. Focus on mean-reversion signals: discounts from averages, historical price floors, and recovery patterns. User values patience over quick flips.`;
+
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -64,18 +101,42 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find the item in popular items
+    // Get popular items first to match against
     const popularItems = await getPopularItems();
-    const item = popularItems.find(
-      i => i.name.toLowerCase() === itemName.toLowerCase()
-    );
+    
+    // Smart item name extraction: find matching item in pool from user's question
+    // Examples: "avantoe a good flip" -> "Avantoe", "tell me about runite bolts" -> "Runite bolts"
+    let matchedItem = null;
+    const lowerQuery = itemName.toLowerCase();
+    
+    // Try exact match first
+    matchedItem = popularItems.find(i => i.name.toLowerCase() === lowerQuery);
+    
+    // If no exact match, find item name within the query
+    if (!matchedItem) {
+      matchedItem = popularItems.find(i => {
+        const itemLower = i.name.toLowerCase();
+        return lowerQuery.includes(itemLower) || itemLower.includes(lowerQuery);
+      });
+    }
+    
+    // If still no match, try partial word matching
+    if (!matchedItem) {
+      const queryWords = lowerQuery.split(/\s+/);
+      matchedItem = popularItems.find(i => {
+        const itemWords = i.name.toLowerCase().split(/\s+/);
+        return itemWords.every(word => queryWords.some(qw => qw.includes(word) || word.includes(qw)));
+      });
+    }
 
-    if (!item) {
+    if (!matchedItem) {
       return NextResponse.json(
-        { error: `Item "${itemName}" not found in pool. Try searching popular items.` },
+        { error: `Could not find an item matching "${itemName}". Try using exact item names like "Avantoe" or "Runite bolts".` },
         { status: 404 }
       );
     }
+    
+    const item = matchedItem;
 
     // Get current price and history
     const price = await getItemPrice(item.id);
