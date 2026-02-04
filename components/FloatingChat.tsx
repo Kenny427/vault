@@ -6,7 +6,20 @@ import { useChat } from '@/lib/chatContext';
 
 export default function FloatingChat() {
   const { isOpen, openChat, closeChat } = useChat();
-  const [isFullSize, setIsFullSize] = useState(false);
+  const [isFullSize, setIsFullSize] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('chat-fullsize') === 'true';
+    }
+    return false;
+  });
+
+  const toggleFullSize = () => {
+    const newSize = !isFullSize;
+    setIsFullSize(newSize);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('chat-fullsize', newSize.toString());
+    }
+  };
 
   return (
     <>
@@ -71,7 +84,7 @@ export default function FloatingChat() {
             <div className="flex items-center gap-2">
               {/* Expand/Shrink button */}
               <button
-                onClick={() => setIsFullSize(!isFullSize)}
+                onClick={toggleFullSize}
                 className="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-800 transition-colors"
                 aria-label={isFullSize ? "Shrink chat" : "Expand chat"}
               >

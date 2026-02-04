@@ -112,7 +112,10 @@ export default function Chat() {
       const response = await fetch('/api/analyze-item', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemName }),
+        body: JSON.stringify({ 
+          itemName,
+          userQuestion: input.trim() // Send original question for context
+        }),
       });
 
       if (!response.ok) {
