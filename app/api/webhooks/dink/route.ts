@@ -3,8 +3,18 @@ import { NextRequest, NextResponse } from 'next/server';
 // Temporary in-memory store for debugging (will be lost on redeploy)
 let allWebhooks: any[] = [];
 let parsedTransactions: any[] = [];
+let seenTransactionIds = new Set<string>();
 
-const createTransactionId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const hashString = (value: string) => {
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return `tx_${Math.abs(hash)}`;
+};
+
+const createTransactionId = (signature: string) => hashString(signature);
 
 const normalizeType = (status?: string) => {
   const normalized = (status || '').toUpperCase();
@@ -20,8 +30,19 @@ const parseFromPayloadJson = (payload: any) => {
   if (!item?.name) return null;
 
   const status = payload.extra?.status || payload.content || 'UNKNOWN';
+  const signature = [
+    payload.playerName || 'unknown',
+    payload.world || 'unknown',
+    payload.regionId || 'unknown',
+    status,
+    item.id,
+    item.name,
+    item.quantity,
+    item.priceEach,
+    payload.extra?.slot ?? 'unknown',
+  ].join('|');
   return {
-    id: createTransactionId(),
+    id: createTransactionId(signature),
     username: payload.playerName || 'Unknown',
     type: normalizeType(status),
     itemName: item.name,
@@ -69,7 +90,10 @@ export async function POST(request: NextRequest) {
     // Parse using DINK payload_json when available
     const payloadTransaction = parseFromPayloadJson(body);
     if (payloadTransaction) {
-      parsedTransactions.push(payloadTransaction);
+      if (!seenTransactionIds.has(payloadTransaction.id)) {
+        parsedTransactions.push(payloadTransaction);
+        seenTransactionIds.add(payloadTransaction.id);
+      }
       allWebhooks.push({ received: new Date().toISOString(), parsed: payloadTransaction });
 
       return NextResponse.json(
@@ -115,8 +139,9 @@ export async function POST(request: NextRequest) {
       console.warn('⚠️ Invalid type, storing anyway:', type);
     }
 
+    const signature = [username, type, itemName, status].join('|');
     const transaction = {
-      id: createTransactionId(),
+      id: createTransactionId(signature),
       username,
       type,
       itemName,
@@ -124,7 +149,10 @@ export async function POST(request: NextRequest) {
       timestamp: Date.now(),
     };
 
-    parsedTransactions.push(transaction);
+    if (!seenTransactionIds.has(transaction.id)) {
+      parsedTransactions.push(transaction);
+      seenTransactionIds.add(transaction.id);
+    }
 
     // Store parsed transaction
     allWebhooks.push({
