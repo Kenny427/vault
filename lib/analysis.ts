@@ -547,6 +547,12 @@ export function scoreOpportunitiesByMeanReversion(
     // SCORING ALGORITHM
     let score = 0;
     
+    // ONLY score if item is actually below recent average (otherwise it's not a buy opportunity)
+    if (discount30 < 5 && discount90 < 5 && discount365 < 5) {
+      // Not undervalued at all, skip
+      return null as any; // Will be filtered out
+    }
+    
     // Discount scoring: items below average are cheaper
     if (discount30 >= 5) score += Math.min(15, discount30 * 2); // Max 15 points for 30d discount
     if (discount90 >= 10) score += Math.min(25, discount90 * 1.5); // Max 25 points for 90d discount
@@ -600,7 +606,7 @@ export function scoreOpportunitiesByMeanReversion(
       deviation: volatilityPercent,
       deviationScore: discount365 * -1, // Negative = undervalued
       trend,
-      recommendation: score >= 40 ? 'buy' : 'hold',
+      recommendation: score >= 60 ? 'buy' : 'hold',
       opportunityScore: Math.round(Math.min(100, score)),
       historicalLow: lowAll,
       historicalHigh: highAll,
@@ -625,7 +631,15 @@ export function scoreOpportunitiesByMeanReversion(
     
     return opportunity;
   }).filter(opp => {
-    // Only show opportunities with score >= 40 and reasonable upside
-    return opp.opportunityScore >= 40;
+    // Only show opportunities that:
+    // 1. Have high score (60+)
+    // 2. Show positive profit/ROI
+    // 3. Are actually below average (genuine buy opportunity)
+    return (
+      opp.opportunityScore >= 60 &&
+      opp.profitPerUnit > 0 &&
+      opp.profitMargin > 0 &&
+      opp.currentPrice < opp.averagePrice90 // Must be below 90d average
+    );
   });
 }
