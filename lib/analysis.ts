@@ -546,25 +546,27 @@ export function scoreOpportunitiesByMeanReversion(
     
     // SCORING ALGORITHM
     let score = 0;
+    let isUndervalued = false;
     
-    // ONLY score if item is actually below recent average (otherwise it's not a buy opportunity)
-    if (discount30 < 5 && discount90 < 5 && discount365 < 5) {
-      // Not undervalued at all, skip
-      return null as any; // Will be filtered out
+    // Check if item is actually below recent average (otherwise it's not a buy opportunity)
+    if (discount30 >= 5 || discount90 >= 5 || discount365 >= 5) {
+      isUndervalued = true;
     }
     
-    // Discount scoring: items below average are cheaper
-    if (discount30 >= 5) score += Math.min(15, discount30 * 2); // Max 15 points for 30d discount
-    if (discount90 >= 10) score += Math.min(25, discount90 * 1.5); // Max 25 points for 90d discount
-    if (discount365 >= 15) score += Math.min(30, discount365); // Max 30 points for 365d discount
-    
-    // Upside potential: items with high recovery potential
-    if (upsideToRecent >= 10) score += Math.min(20, upsideToRecent * 1.5); // Can reach recent high
-    if (upsideToAllTime >= 25) score += Math.min(15, upsideToAllTime * 0.5); // Can reach all-time high
-    
-    // Volatility bonus: volatile items have more opportunity
-    if (spreadPercent >= 20) score += Math.min(15, spreadPercent * 0.5);
-    if (volatilityPercent >= 10) score += Math.min(10, volatilityPercent);
+    if (isUndervalued) {
+      // Discount scoring: items below average are cheaper
+      if (discount30 >= 5) score += Math.min(15, discount30 * 2); // Max 15 points for 30d discount
+      if (discount90 >= 10) score += Math.min(25, discount90 * 1.5); // Max 25 points for 90d discount
+      if (discount365 >= 15) score += Math.min(30, discount365); // Max 30 points for 365d discount
+      
+      // Upside potential: items with high recovery potential
+      if (upsideToRecent >= 10) score += Math.min(20, upsideToRecent * 1.5); // Can reach recent high
+      if (upsideToAllTime >= 25) score += Math.min(15, upsideToAllTime * 0.5); // Can reach all-time high
+      
+      // Volatility bonus: volatile items have more opportunity
+      if (spreadPercent >= 20) score += Math.min(15, spreadPercent * 0.5);
+      if (volatilityPercent >= 10) score += Math.min(10, volatilityPercent);
+    }
     
     // Confidence calculation
     // Higher confidence if item is consistently cheap and volatile
