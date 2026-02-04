@@ -1,9 +1,20 @@
 import OpenAI from 'openai';
 import { FlipOpportunity, PricePoint } from './analysis';
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy-loaded OpenAI client - only initialized when needed
+let client: OpenAI | null = null;
+
+function getClient(): OpenAI {
+  if (!client) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY not configured');
+    }
+    client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+  return client;
+}
 
 // Cache AI analysis results - longer duration to prevent API spam
 const analysisCache = new Map<string, { data: FlipOpportunity[]; timestamp: number }>();
@@ -30,9 +41,8 @@ export async function analyzeFlipsWithAI(
     history365: PricePoint[];
   }>
 ): Promise<FlipOpportunity[]> {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY not configured');
-  }
+  // Get lazy-loaded client
+  const aiClient = getClient();
 
   // Check cache
   const cacheKey = items.map(i => i.id).sort().join(',');
@@ -160,7 +170,7 @@ RESPOND ONLY WITH A VALID JSON ARRAY. Example:
 If no opportunities, return empty array: []`;
 
   try {
-    const message = await client.chat.completions.create({
+    const message = await aiClient.chat.completions.create({
       model: 'gpt-4o',
       max_tokens: 2000,
       messages: [
