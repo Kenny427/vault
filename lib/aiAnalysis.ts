@@ -358,10 +358,88 @@ If items are scarce even at 25% confidence, return them anyway. Prefer showing u
       })
       .filter((op: any): op is FlipOpportunity => op !== null);
 
-    // Cache results
-    analysisCache.set(cacheKey, { data: opportunities, timestamp: Date.now() });
+    // FALLBACK: Add items that meet basic discount criteria but weren't included by AI
+    // This ensures we don't miss obvious opportunities if AI is being too conservative
+    const aiItemIds = new Set(opportunities.map(o => o.itemId));
+    const fallbackOpps: FlipOpportunity[] = items
+      .filter(item => !aiItemIds.has(item.id))
+      .map(item => {
+        const prices30 = item.history30.map(p => p.price);
+        const prices90 = item.history90.map(p => p.price);
+        const prices365 = item.history365.map(p => p.price);
+        
+        const avg30 = prices30.reduce((a, b) => a + b, 0) / prices30.length;
+        const avg90 = prices90.reduce((a, b) => a + b, 0) / prices90.length;
+        const avg365 = prices365.reduce((a, b) => a + b, 0) / prices365.length;
+        const min365 = Math.min(...prices365);
+        const max365 = Math.max(...prices365);
+        
+        const deviation90 = ((item.currentPrice - avg90) / avg90) * 100;
+        const deviation365 = ((item.currentPrice - avg365) / avg365) * 100;
+        
+        // Include if:
+        // - 12%+ below 90d average, OR
+        // - 18%+ below 365d average
+        const qualifies = deviation90 < -12 || deviation365 < -18;
+        
+        if (!qualifies) return null;
+        
+        const volatility = ((max365 - min365) / avg365) * 100;
+        const GE_TAX = 0.02;
+        const buyPrice = Math.round(item.currentPrice * 0.99);
+        const targetAvg = deviation365 < -25 ? avg365 : avg90;
+        const sellPrice = Math.round(targetAvg * 1.02);
+        const profitPerUnit = Math.max(0, Math.round(sellPrice - buyPrice - sellPrice * GE_TAX));
+        const roi = buyPrice > 0 ? ((profitPerUnit / buyPrice) * 100) : 0;
+        
+        // Confidence based on discount depth
+        const confidence = Math.min(85, Math.max(30, Math.abs(deviation365) * 1.5));
+        
+        return {
+          itemId: item.id,
+          itemName: item.name,
+          currentPrice: item.currentPrice,
+          averagePrice: avg365,
+          averagePrice30: avg30,
+          averagePrice90: avg90,
+          averagePrice180: avg365,
+          averagePrice365: avg365,
+          deviation: deviation365,
+          deviationScore: (((item.currentPrice - avg365) / Math.sqrt(volatility)) * 10) || 0,
+          trend: item.currentPrice < avg365 ? 'bearish' : 'bullish',
+          recommendation: 'buy',
+          opportunityScore: Math.min(85, Math.max(40, Math.abs(deviation365) * 1.2)),
+          historicalLow: min365,
+          historicalHigh: max365,
+          buyPrice,
+          sellPrice,
+          profitPerUnit,
+          profitMargin: buyPrice > 0 ? ((profitPerUnit / buyPrice) * 100) : 0,
+          roi,
+          riskLevel: confidence > 70 ? 'medium' : 'high',
+          confidence: Math.round(confidence),
+          estimatedHoldTime: Math.abs(deviation365) > 25 ? '2-8 weeks' : '1-4 weeks',
+          volatility,
+          volumeScore: 100,
+          buyWhen: `Fallback: ${Math.abs(deviation365).toFixed(0)}% below 365d avg (${Math.round(avg365)}gp). Has bounced before, likely recovery.`,
+          sellWhen: `Target reached or trend reversal`,
+          momentum: 0,
+          acceleration: 0,
+          tradingRange: volatility,
+          consistency: Math.min(100, volatility / 2),
+          spreadQuality: 60,
+        };
+      })
+      .filter((op): op is FlipOpportunity => op !== null);
+    
+    console.log(`Fallback added ${fallbackOpps.length} items not found by AI`);
+    const allOpps = [...opportunities, ...fallbackOpps]
+      .sort((a, b) => b.opportunityScore - a.opportunityScore);
 
-    return opportunities;
+    // Cache results
+    analysisCache.set(cacheKey, { data: allOpps, timestamp: Date.now() });
+
+    return allOpps;
   } catch (error) {
     console.error('AI analysis failed:', error);
     throw error;
