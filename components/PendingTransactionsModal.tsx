@@ -7,7 +7,7 @@ import { useTradeHistoryStore } from '@/lib/tradeHistoryStore';
 
 export default function PendingTransactionsModal({ onClose }: { onClose: () => void }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [filterType, setFilterType] = useState<'ALL' | 'BUY' | 'SELL'>('BUY');
+  const [filterType, setFilterType] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -138,11 +138,32 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
             notes: `DINK auto-sale (${tx.status})`,
           });
 
+          const existingLots = match.lots && match.lots.length > 0
+            ? match.lots
+            : [{
+                id: `${match.id}-lot`,
+                quantity: match.quantity,
+                buyPrice: match.buyPrice,
+                datePurchased: match.datePurchased,
+                notes: match.notes,
+              }];
+
+          let remainingToSell = sellQty;
+          const updatedLots = existingLots.map((lot) => {
+            if (remainingToSell <= 0) return lot;
+            const soldFromLot = Math.min(lot.quantity, remainingToSell);
+            remainingToSell -= soldFromLot;
+            return {
+              ...lot,
+              quantity: lot.quantity - soldFromLot,
+            };
+          }).filter((lot) => lot.quantity > 0);
+
           const remaining = match.quantity - sellQty;
           if (remaining <= 0) {
             await removeItem(match.id);
           } else {
-            await updateItem(match.id, { quantity: remaining });
+            await updateItem(match.id, { quantity: remaining, lots: updatedLots });
           }
 
           markHandled(tx.id);

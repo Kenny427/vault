@@ -30,9 +30,6 @@ export default function Portfolio() {
   const [prices, setPrices] = useState<Record<number, { high: number; low: number }>>({});
   const { openChat } = useChat();
 
-  const formatNumber = (value: number) =>
-    value.toLocaleString(undefined, { maximumFractionDigits: 0 });
-
   const itemIds = useMemo(() => [...new Set(items.map(item => item.itemId))], [items]);
 
   useEffect(() => {
@@ -142,6 +139,7 @@ export default function Portfolio() {
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Remaining</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Buy</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Current</th>
+                  <th className="text-right px-6 py-4 text-slate-300 font-semibold">Value</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">P/L</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold"></th>
                 </tr>
@@ -156,12 +154,7 @@ export default function Portfolio() {
                   const netSell = current ? current * 0.98 : null;
                   const unrealized = (netSell && current) ? (netSell - item.buyPrice) * remainingQty : null;
                   const date = new Date(item.datePurchased);
-                  const lots = (item.lots && item.lots.length > 0)
-                    ? item.lots
-                    : [{ id: item.id, quantity: item.quantity, buyPrice: item.buyPrice, datePurchased: item.datePurchased }];
-                  const lotsPreview = lots.slice(0, 2).map((lot) =>
-                    `${formatNumber(lot.quantity)} @ ${formatNumber(lot.buyPrice)}gp`
-                  );
+                  const value = current ? Math.round(current * remainingQty) : null;
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
@@ -172,9 +165,6 @@ export default function Portfolio() {
                           </Link>
                         </div>
                         <div className="text-xs text-slate-500 mt-1">Bought {date.toLocaleDateString()}</div>
-                        <div className="text-xs text-slate-500 mt-1">
-                          Lots: {lots.length} • {lotsPreview.join(' • ')}{lots.length > 2 ? ' • …' : ''}
-                        </div>
                       </td>
                       <td className="text-right px-6 py-4 text-slate-200">{item.quantity.toLocaleString()}</td>
                       <td className="text-right px-6 py-4 text-slate-200">{remainingQty.toLocaleString()}</td>
@@ -186,6 +176,13 @@ export default function Portfolio() {
                           <span className="text-slate-200">{Math.round(current!).toLocaleString()}gp</span>
                         ) : (
                           <span className="text-slate-500 text-sm">No data</span>
+                        )}
+                      </td>
+                      <td className="text-right px-6 py-4 font-semibold">
+                        {value !== null ? (
+                          <span className="text-slate-200">{value.toLocaleString()}gp</span>
+                        ) : (
+                          <span className="text-slate-500 text-sm">—</span>
                         )}
                       </td>
                       <td className={`text-right px-6 py-4 font-semibold`}>
