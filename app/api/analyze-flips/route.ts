@@ -77,7 +77,6 @@ export async function POST(request: Request) {
     }
 
     itemsWithData.forEach(item => {
-      const h30 = item.history30.length;
       const prices = item.history30.map(p => p.price);
       const min = Math.min(...prices);
       const max = Math.max(...prices);
