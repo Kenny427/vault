@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import PriceChart from './PriceChart';
-import { getItemDetails, getItemHistory, getItemPrice, resolveIconUrl } from '@/lib/api/osrs';
+import { getItemDailyVolume, getItemDetails, getItemHistory, getItemPrice, resolveIconUrl } from '@/lib/api/osrs';
+import { useDashboardStore } from '@/lib/store';
 
 const TIMEFRAMES = [
   { value: '7d', label: '7D', seconds: 7 * 24 * 60 * 60 },
@@ -21,6 +22,8 @@ export default function ItemPage() {
   const params = useParams();
   const itemId = Number(params?.id);
   const [timeframe, setTimeframe] = useState<Timeframe>('30d');
+  const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
+  const isFavorite = favorites.some(item => item.id === itemId);
 
   const formatNumber = (value: number) => {
     const abs = Math.abs(value);
@@ -44,6 +47,13 @@ export default function ItemPage() {
     queryFn: () => getItemPrice(itemId),
     enabled: Number.isFinite(itemId),
     refetchInterval: 30000,
+  });
+
+  const { data: dailyVolume } = useQuery({
+    queryKey: ['daily-volume', itemId],
+    queryFn: () => getItemDailyVolume(itemId),
+    enabled: Number.isFinite(itemId),
+    refetchInterval: 60 * 60 * 1000,
   });
 
   const currentPrice = priceData ? (priceData.high + priceData.low) / 2 : 0;
@@ -180,6 +190,26 @@ export default function ItemPage() {
               {itemDetails.members ? 'Members' : 'Free'}
             </span>
           ) : null}
+          <button
+            onClick={() => {
+              if (isFavorite) {
+                removeFromFavorites(itemId);
+              } else {
+                addToFavorites({
+                  id: itemId,
+                  name: itemDetails?.name || `Item ${itemId}`,
+                  addedAt: Date.now(),
+                });
+              }
+            }}
+            className={`ml-2 px-3 py-1.5 text-xs rounded border transition-colors ${
+              isFavorite
+                ? 'bg-osrs-accent text-slate-900 border-osrs-accent'
+                : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-600'
+            }`}
+          >
+            {isFavorite ? '★ Favorited' : '☆ Add to Favorites'}
+          </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -206,6 +236,7 @@ export default function ItemPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-400">
           <div className="flex flex-wrap gap-3">
             <span>Limit: {itemDetails?.limit ? itemDetails.limit.toLocaleString() : '—'}</span>
+            <span>Daily Volume: {dailyVolume ? dailyVolume.toLocaleString() : '—'}</span>
             <span>High Alch: {itemDetails?.highalch ? `${itemDetails.highalch.toLocaleString()}gp` : '—'}</span>
             <span>Low Alch: {itemDetails?.lowalch ? `${itemDetails.lowalch.toLocaleString()}gp` : '—'}</span>
           </div>

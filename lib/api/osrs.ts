@@ -256,6 +256,36 @@ export async function getItemHistory(
 }
 
 /**
+ * Fetch latest daily volume for an item
+ */
+export async function getItemDailyVolume(itemId: number): Promise<number | null> {
+  try {
+    const response = await axios.get(
+      `${OSRS_WIKI_API}/timeseries`,
+      {
+        params: {
+          id: itemId,
+          timestep: '24h',
+        },
+      }
+    );
+
+    const data = response.data?.data;
+    if (!Array.isArray(data) || data.length === 0) return null;
+
+    const latest = data[data.length - 1];
+    const highVol = latest?.highPriceVolume ?? 0;
+    const lowVol = latest?.lowPriceVolume ?? 0;
+    const total = highVol + lowVol;
+
+    return total > 0 ? total : null;
+  } catch (error) {
+    console.error(`Failed to fetch daily volume for item ${itemId}:`, error);
+    return null;
+  }
+}
+
+/**
  * Generate realistic price history based on current price
  * Uses OSRS-like price movement patterns
  */
