@@ -67,11 +67,22 @@ export async function POST(request: Request) {
     }
 
     // Log pool composition for debugging
-    console.log(`📊 Pool Analysis: ${cappedItems.length} items requested, ${itemsWithData.length} with valid history`);
+    console.log(`📊 POOL ANALYSIS STARTED`);
+    console.log(`   Requested: ${cappedItems.length} items`);
+    console.log(`   Passed spread filter (>15%): ${itemsWithData.length} items`);
+    
+    if (itemsWithData.length === 0) {
+      console.log(`   ⚠️  NO ITEMS WITH ADEQUATE PRICE SPREAD - All items may have simulated data`);
+      return NextResponse.json([]);
+    }
+
     itemsWithData.forEach(item => {
       const h30 = item.history30.length;
-      const isSimulated = h30 > 0 && item.history30[0].price === item.currentPrice * 0.97 ? ' (SIMULATED)' : ' (REAL)';
-      console.log(`  - ${item.name}: ${h30} data points${isSimulated}`);
+      const prices = item.history30.map(p => p.price);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      const spread = ((max - min) / item.currentPrice) * 100;
+      console.log(`   ✓ ${item.name}: spread=${spread.toFixed(1)}%, range ${min}-${max}`);
     });
 
     if (itemsWithData.length === 0) {
@@ -80,11 +91,14 @@ export async function POST(request: Request) {
 
     const opportunities = await analyzeFlipsWithAI(itemsWithData);
     
-    console.log(`✅ AI returned ${opportunities.length} opportunities`);
+    console.log(`\n📈 AI ANALYSIS COMPLETE`);
+    console.log(`   Returned: ${opportunities.length} opportunities`);
     if (opportunities.length > 0) {
-      opportunities.forEach(opp => {
-        console.log(`  - ${opp.itemName}: ${opp.confidence}% confidence, score ${opp.opportunityScore}`);
+      opportunities.slice(0, 10).forEach(opp => {
+        console.log(`   • ${opp.itemName}: score=${opp.opportunityScore}, confidence=${opp.confidence}%, discount=${opp.deviation.toFixed(1)}%`);
       });
+    } else {
+      console.log(`   ⚠️  WARNING: AI returned NO opportunities from ${itemsWithData.length} items`);
     }
     
     return NextResponse.json(opportunities);
