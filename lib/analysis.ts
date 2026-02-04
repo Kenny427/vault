@@ -722,16 +722,22 @@ export function scoreOpportunitiesByMeanReversion(
     
     return opportunity;
   }).filter(opp => {
-    // LOWERED THRESHOLD: Show more opportunities with better filtering
-    // 1. Score >= 45 (down from 60) - more lenient
-    // 2. Show positive profit/ROI
-    // 3. Must be below 90d average OR have good volatility
-    // 4. Min profit per unit: 100gp (filters out tiny gains)
+    const isVolatile = opp.flipType === 'volatile-play';
+    const trendOkay = opp.trend !== 'bearish' || opp.flipType === 'bot-dump' || opp.flipType === 'quick-flip' || isVolatile;
+    const volatilityOkay = isVolatile || opp.volatility <= 50;
+
+    // QUALITY GATES: reduce false positives while keeping real opportunities
     return (
       opp.opportunityScore >= 45 &&
-      opp.profitPerUnit >= 100 &&
+      opp.confidence >= 45 &&
+      opp.profitPerUnit >= 200 &&
+      opp.totalProfit >= 25_000 &&
       opp.profitMargin > 0 &&
-      (opp.currentPrice < opp.averagePrice90 || opp.volatility > 20)
+      (opp.currentPrice < opp.averagePrice90 || opp.volatility > 20) &&
+      opp.spreadQuality >= 20 &&
+      opp.consistency >= 25 &&
+      trendOkay &&
+      volatilityOkay
     );
   });
 }

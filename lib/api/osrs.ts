@@ -9,6 +9,13 @@ export interface PriceData {
   lowTime: number;
 }
 
+export interface VolumeData {
+  avgHighPrice?: number;
+  avgLowPrice?: number;
+  highPriceVolume?: number;
+  lowPriceVolume?: number;
+}
+
 export interface ItemData {
   id: number;
   name: string;
@@ -130,6 +137,7 @@ export const POPULAR_CATEGORIES = [
 
 const priceCache = new Map<number, { data: PriceData; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const volumeCache = new Map<number, { data: VolumeData; timestamp: number }>();
 
 /**
  * Fetch all tradeable items from OSRS Wiki API
@@ -215,6 +223,31 @@ export async function getItemPrice(itemId: number): Promise<PriceData | null> {
     return null;
   } catch (error) {
     console.error(`Failed to fetch price for item ${itemId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Fetch 1-hour volume data for an item (used for liquidity scoring)
+ */
+export async function getItemVolume1h(itemId: number): Promise<VolumeData | null> {
+  const cached = volumeCache.get(itemId);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data;
+  }
+
+  try {
+    const response = await axios.get(`${OSRS_WIKI_API}/1h?id=${itemId}`);
+    const data = response.data?.data?.[itemId];
+
+    if (data) {
+      volumeCache.set(itemId, { data, timestamp: Date.now() });
+      return data;
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Failed to fetch 1h volume for item ${itemId}:`, error);
     return null;
   }
 }
@@ -313,6 +346,10 @@ export async function getItemDailyVolume(itemId: number): Promise<number | null>
         params: {
           id: itemId,
           timestep: '24h',
+        },
+        headers: {
+          'User-Agent': 'osrs-flipping-dashboard',
+          Accept: 'application/json',
         },
       }
     );

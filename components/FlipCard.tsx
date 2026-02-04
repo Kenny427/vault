@@ -5,7 +5,6 @@ import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useChat } from '@/lib/chatContext';
 import SetAlertModal from './SetAlertModal';
-import ItemNotesModal from './ItemNotesModal';
 
 interface FlipCardProps {
   opportunity: FlipOpportunity;
@@ -18,7 +17,6 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
   const isInFavorites = favorites.some(item => item.id === opportunity.itemId);
   
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
-  const [showNotesModal, setShowNotesModal] = useState(false);
 
   const formatNumber = (value: number) => {
     const abs = Math.abs(value);
@@ -376,15 +374,6 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
           >
             🔔 Set Alert
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowNotesModal(true);
-            }}
-            className="py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded transition-colors text-xs"
-          >
-            📝 Notes
-          </button>
         </div>
       </div>
 
@@ -395,13 +384,6 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
           itemName={opportunity.itemName}
           currentPrice={opportunity.currentPrice}
           onClose={() => setShowSetAlertModal(false)}
-        />
-      )}
-      {showNotesModal && (
-        <ItemNotesModal
-          itemId={opportunity.itemId}
-          itemName={opportunity.itemName}
-          onClose={() => setShowNotesModal(false)}
         />
       )}
     </div>

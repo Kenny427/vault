@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { scoreOpportunitiesByMeanReversion } from '@/lib/analysis';
-import { getItemPrice, getItemHistory } from '@/lib/api/osrs';
+import { getItemPrice, getItemHistory, getItemVolume1h } from '@/lib/api/osrs';
 
 export async function POST(request: Request) {
   try {
@@ -11,6 +11,7 @@ export async function POST(request: Request) {
       id: number;
       name: string;
       currentPrice: number;
+      volume1h?: number;
       history30: any[];
       history90: any[];
       history180: any[];
@@ -25,6 +26,11 @@ export async function POST(request: Request) {
         const currentPrice = price ? (price.high + price.low) / 2 : undefined;
 
         if (!currentPrice) continue;
+
+        const volumeData = await getItemVolume1h(item.id);
+        const volume1h = volumeData
+          ? (volumeData.highPriceVolume ?? 0) + (volumeData.lowPriceVolume ?? 0)
+          : undefined;
 
         const history30 = await getItemHistory(item.id, 30 * 24 * 60 * 60, currentPrice);
         const history90 = await getItemHistory(item.id, 90 * 24 * 60 * 60, currentPrice);
@@ -52,6 +58,7 @@ export async function POST(request: Request) {
             id: item.id,
             name: item.name,
             currentPrice,
+            volume1h,
             history30,
             history90: history90 && history90.length > 0 ? history90 : history30,
             history180: history180 && history180.length > 0 ? history180 : history30,

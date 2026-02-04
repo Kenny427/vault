@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import SearchBar from './SearchBar';
 import FlipCard from './FlipCard';
@@ -60,6 +60,8 @@ export default function Dashboard() {
     minOpportunityScore,
     setMinOpportunityScore
   } = useDashboardStore();
+  const analyzeRef = useRef<null | (() => void)>(null);
+  const loadingRef = useRef(loading);
 
   // Analyze items with AI
   const analyzeWithAI = async () => {
@@ -163,6 +165,14 @@ export default function Dashboard() {
     }
   };
 
+  useEffect(() => {
+    analyzeRef.current = analyzeWithAI;
+  }, [analyzeWithAI]);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
   // Check price alerts periodically
   const checkAlerts = usePriceAlertsStore(state => state.checkAlerts);
   
@@ -211,6 +221,21 @@ export default function Dashboard() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('osrs-active-tab', activeTab);
     }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'opportunities') return;
+
+    const runRefresh = () => {
+      if (!loadingRef.current && analyzeRef.current) {
+        analyzeRef.current();
+      }
+    };
+
+    runRefresh();
+
+    const intervalId = setInterval(runRefresh, 5 * 60 * 1000);
+    return () => clearInterval(intervalId);
   }, [activeTab]);
 
   // Filter opportunities based on settings
