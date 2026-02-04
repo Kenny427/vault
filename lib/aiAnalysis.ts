@@ -378,9 +378,9 @@ If items are scarce even at 25% confidence, return them anyway. Prefer showing u
         const deviation365 = ((item.currentPrice - avg365) / avg365) * 100;
         
         // Include if:
-        // - 12%+ below 90d average, OR
-        // - 18%+ below 365d average
-        const qualifies = deviation90 < -12 || deviation365 < -18;
+        // - 8%+ below 90d average, OR
+        // - 12%+ below 365d average
+        const qualifies = deviation90 < -8 || deviation365 < -12;
         
         if (!qualifies) return null;
         
