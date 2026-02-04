@@ -42,8 +42,6 @@ export default function Dashboard() {
     }
     return null;
   });
-  const ANALYSIS_COOLDOWN = 30 * 60 * 1000; // 30 minutes
-  
   const {
     watchlist,
     minOpportunityScore,
@@ -57,11 +55,7 @@ export default function Dashboard() {
   // Analyze items with AI
   const analyzeWithAI = async () => {
     if (loading) return;
-    
-    
-      console.log('Skipping analysis - cooldown active');
-      return;
-    }
+
     const customPool: PoolItem[] = typeof window !== 'undefined'
       ? (JSON.parse(localStorage.getItem('osrs-custom-pool') || '[]') as PoolItem[])
       : [];
@@ -304,7 +298,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <button
-                  onClick={() => analyzeWithAI(true)}
+                  onClick={() => analyzeWithAI()}
                   disabled={loading}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white rounded font-medium text-sm transition-colors"
                 >
@@ -372,24 +366,6 @@ export default function Dashboard() {
                 <option value="roi">ROI %</option>
                 <option value="profit">Profit/Unit</option>
                 <option value="confidence">Confidence</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-slate-300 block mb-2">
-                Timeframe
-              </label>
-              <select
-                value={selectedTimeframe}
-                onChange={(e) =>
-                  setSelectedTimeframe(e.target.value as '7d' | '30d' | '90d' | '1y')
-                }
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:border-osrs-accent"
-              >
-                <option value="7d">7 Days</option>
-                <option value="30d">30 Days</option>
-                <option value="90d">90 Days</option>
-                <option value="1y">1 Year</option>
               </select>
             </div>
 
