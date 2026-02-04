@@ -72,6 +72,13 @@ const POPULAR_CATEGORIES = [
   // High-volume potions & food
   'super combat', 'super restore', 'prayer potion', 'saradomin brew', 'stamina potion',
   'shark', 'manta ray', 'dark crab', 'anglerfish',
+  
+  // Heavily botted items (price crash opportunities)
+  'zulrah', 'toxic blowpipe', 'serpentine helm', 'magic fang', 'tanzanite fang',
+  'vorkath', 'superior dragon bones', 'blue dragon', 'dragon bones', 'dragon hide',
+  'green dragonhide', 'red dragonhide', 'black dragonhide',
+  'limpwurt root', 'mort myre fungus', 'snape grass', 'white berries',
+  'ranarr weed', 'snapdragon', 'torstol', 'dwarf weed',
 ];
 
 const priceCache = new Map<number, { data: PriceData; timestamp: number }>();

@@ -27,7 +27,13 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('osrs-last-refresh');
+      return saved ? new Date(saved) : null;
+    }
+    return null;
+  });
   const ANALYSIS_COOLDOWN = 30 * 60 * 1000; // 30 minutes
   
   const {
@@ -45,7 +51,13 @@ export default function Dashboard() {
   // Analyze items with AI
   const analyzeWithAI = async (force = false) => {
     if (loading) return;
-    if (!force && lastRefresh && Date.now() - lastRefresh.getTime() < ANALYSIS_COOLDOWN) {
+    
+    // Check cooldown from localStorage to prevent costly re-runs
+    const savedRefresh = typeof window !== 'undefined' ? localStorage.getItem('osrs-last-refresh') : null;
+    const lastRefreshTime = savedRefresh ? new Date(savedRefresh).getTime() : 0;
+    
+    if (!force && lastRefreshTime && Date.now() - lastRefreshTime < ANALYSIS_COOLDOWN) {
+      console.log('Skipping analysis - cooldown active');
       return;
     }
     const itemsToAnalyze = watchlist.length > 0 ? watchlist : (await getPopularItems()).map(item => ({
@@ -105,7 +117,11 @@ export default function Dashboard() {
         setOpportunities(
           allOpportunities.sort((a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore)
         );
-        setLastRefresh(new Date());
+        const now = new Date();
+        setLastRefresh(now);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('osrs-last-refresh', now.toISOString());
+        }
       } else {
         setOpportunities([]);
       }
@@ -120,9 +136,10 @@ export default function Dashboard() {
   // Load and analyze watchlist items and popular items
   useEffect(() => {
     if (activeTab === 'opportunities') {
-      analyzeWithAI();
+      // Only auto-analyze if cooldown expired (prevents costly tab close re-runs)
+      analyzeWithAI(false);
     }
-  }, [watchlist, activeTab]);
+  }, [activeTab]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
