@@ -34,6 +34,21 @@ export async function POST(request: Request) {
         const history180 = await getItemHistory(item.id, 180 * 24 * 60 * 60, currentPrice);
         const history365 = await getItemHistory(item.id, 365 * 24 * 60 * 60, currentPrice);
 
+        // Skip items with only simulated history (too narrow price range = unreliable data)
+        // Real data should have wider spreads; simulated data clusters within ±15% of current
+        if (history365 && history365.length > 0) {
+          const prices365 = history365.map(p => p.price);
+          const minPrice = Math.min(...prices365);
+          const maxPrice = Math.max(...prices365);
+          const spread = ((maxPrice - minPrice) / currentPrice) * 100;
+          
+          // If spread is less than 8%, data is likely simulated
+          if (spread < 8) {
+            console.log(`  ⊘ Skipping ${item.name}: spread only ${spread.toFixed(1)}% (likely simulated data)`);
+            continue;
+          }
+        }
+
         if (history30 && history30.length > 0) {
           itemsWithData.push({
             id: item.id,
