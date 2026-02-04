@@ -262,6 +262,88 @@ export function calculateDeviationScore(
 }
 
 /**
+ * Identify price levels where bounces frequently occur (support levels)
+ * These are price points where buying interest repeatedly emerges
+ */
+function findSupportLevels(prices: number[]): number[] {
+  if (prices.length < 14) return [];
+  
+  const supports: number[] = [];
+  const range = Math.max(...prices) - Math.min(...prices);
+  const granularity = range / 10; // Divide into 10 segments
+  
+  // Count how often prices bounce off each level
+  const levelFrequency = new Map<number, number>();
+  
+  for (let i = 1; i < prices.length; i++) {
+    // Check if price bounced (went down then came back up)
+    if (prices[i-1] > prices[i] && prices[i] > 0) {
+      // Low point - this could be support
+      const level = Math.round(prices[i] / granularity) * granularity;
+      levelFrequency.set(level, (levelFrequency.get(level) || 0) + 1);
+    }
+  }
+  
+  // Return levels where bounces happened 2+ times
+  levelFrequency.forEach((count, level) => {
+    if (count >= 2) supports.push(level);
+  });
+  
+  return supports.sort((a, b) => a - b);
+}
+
+/**
+ * Identify price levels where reversals frequently occur (resistance levels)
+ * These are price points where selling pressure repeatedly emerges
+ */
+function findResistanceLevels(prices: number[]): number[] {
+  if (prices.length < 14) return [];
+  
+  const resistances: number[] = [];
+  const range = Math.max(...prices) - Math.min(...prices);
+  const granularity = range / 10;
+  
+  // Count how often prices hit ceilings
+  const levelFrequency = new Map<number, number>();
+  
+  for (let i = 1; i < prices.length; i++) {
+    // Check if price hit ceiling (went up then came back down)
+    if (prices[i-1] < prices[i]) {
+      // High point - this could be resistance
+      const level = Math.round(prices[i] / granularity) * granularity;
+      levelFrequency.set(level, (levelFrequency.get(level) || 0) + 1);
+    }
+  }
+  
+  // Return levels where resistance happened 2+ times
+  levelFrequency.forEach((count, level) => {
+    if (count >= 2) resistances.push(level);
+  });
+  
+  return resistances.sort((a, b) => b - a); // Highest first
+}
+
+/**
+ * Find the price level where most trading volume accumulates
+ * "low" = where buyers accumulate, "high" = where sellers accumulate
+ */
+function findVolumeWeightedLevel(prices: number[], direction: 'low' | 'high'): number {
+  if (prices.length < 7) return calculateMean(prices);
+  
+  if (direction === 'low') {
+    // Find the cluster of prices in the bottom quartile
+    const sorted = [...prices].sort((a, b) => a - b);
+    const bottomQuartile = sorted.slice(0, Math.ceil(sorted.length * 0.25));
+    return calculateMean(bottomQuartile);
+  } else {
+    // Find the cluster of prices in the top quartile
+    const sorted = [...prices].sort((a, b) => a - b);
+    const topQuartile = sorted.slice(Math.floor(sorted.length * 0.75));
+    return calculateMean(topQuartile);
+  }
+}
+
+/**
  * Analyze a single item for flip opportunities - IMPROVED VERSION
  */
 export function analyzeFlipOpportunity(
@@ -596,33 +678,101 @@ export function scoreOpportunitiesByMeanReversion(
     const changePct30 = prices30.slice(1).map((p, i) => Math.abs((p - prices30[i]) / prices30[i]) * 100);
     const spreadStability = Math.max(0, 100 - (calculateStdDev(changePct30) * 4));
     
-    // SCORING ALGORITHM
-    let score = 0;
-    let isUndervalued = false;
+    // ===== ENHANCED SCORING ALGORITHM (Multi-Factor Analysis) =====
+    // Instead of just "is price below average?", we look at realistic trading patterns
     
-    // Check if item is actually below recent average (otherwise it's not a buy opportunity)
-    if (discount30 >= 5 || discount90 >= 5 || discount365 >= 5) {
-      isUndervalued = true;
+    let score = 0;
+    
+    // FACTOR 1: Support/Resistance Detection
+    // Items that repeatedly bounce at certain prices are more predictable
+    const supports = findSupportLevels(prices365);
+    const resistances = findResistanceLevels(prices365);
+    const nearSupport = supports.some(s => Math.abs(current - s) < s * 0.03); // Within 3% of support
+    const nearResistance = resistances.some(r => Math.abs(current - r) < r * 0.03); // Within 3% of resistance
+    
+    if (nearSupport && discount30 >= 3) {
+      // Item is at a support level AND below 30d average = strong buy signal
+      score += 35; // Significant bonus for support-level buying
+    } else if (nearResistance && discount30 <= -3) {
+      // Item is at resistance AND above average = strong sell signal
+      score += 20;
     }
     
-    if (isUndervalued) {
-      // Discount scoring: items below average are cheaper
-      if (discount30 >= 5) score += Math.min(15, discount30 * 2); // Max 15 points for 30d discount
-      if (discount90 >= 10) score += Math.min(25, discount90 * 1.5); // Max 25 points for 90d discount
-      if (discount365 >= 15) score += Math.min(30, discount365); // Max 30 points for 365d discount
-      
-      // Upside potential: items with high recovery potential
-      if (upsideToRecent >= 10) score += Math.min(20, upsideToRecent * 1.5); // Can reach recent high
-      if (upsideToAllTime >= 25) score += Math.min(15, upsideToAllTime * 0.5); // Can reach all-time high
-      
-      // Volatility bonus: volatile items have more opportunity
-      if (spreadPercent >= 20) score += Math.min(15, spreadPercent * 0.5);
-      if (volatilityPercent >= 10) score += Math.min(10, volatilityPercent);
-      // Liquidity + stability bonuses
-      if (liquidityScore >= 40) score += 8;
-      if (spreadStability >= 50) score += 7;
-      if (spreadStabilityScore >= 50) score += 8;
-      if (volumeScoreApi >= 40) score += 8;
+    // FACTOR 2: Momentum + Trend Reversal (acceleration detection)
+    // Look for items where price is moving away from average then reversing
+    const momentumScore = calculateMomentum(prices30);
+    const accelerationScore = calculateAcceleration(prices30);
+    
+    if (discount30 >= 5 && momentumScore < -20 && accelerationScore > 10) {
+      // Price is low, was falling hard, but now accelerating UP = reversal buy signal
+      score += 30;
+    } else if (discount30 <= -5 && momentumScore > 20 && accelerationScore < -10) {
+      // Price is high, was rising hard, but now decelerating = reversal sell signal
+      score += 25;
+    }
+    
+    // FACTOR 3: Volume-Weighted Price Levels
+    // Items with consistent high volume at low prices are more likely to bounce
+    const volumeWeightedLow = findVolumeWeightedLevel(prices30, 'low');
+    const volumeWeightedHigh = findVolumeWeightedLevel(prices30, 'high');
+    const distanceToVWLow = Math.abs(current - volumeWeightedLow) / volumeWeightedLow;
+    const distanceToVWHigh = Math.abs(current - volumeWeightedHigh) / volumeWeightedHigh;
+    
+    if (distanceToVWLow < 0.02 && discount30 >= 3) {
+      // Current price is very close to volume-weighted low = accumulation zone
+      score += 25;
+    }
+    if (distanceToVWHigh < 0.02 && discount30 <= -3) {
+      // Current price is very close to volume-weighted high = distribution zone
+      score += 20;
+    }
+    
+    // FACTOR 4: Mean Reversion Strength (how far from mean vs historical volatility)
+    // Items with extreme but consistent volatility are better candidates
+    const deviationFromMean = Math.abs(discount30);
+    const expectedDeviation = volatilityPercent * 0.7; // Items typically deviate by ~0.7x their volatility
+    
+    if (deviationFromMean > expectedDeviation * 0.8 && deviationFromMean < expectedDeviation * 1.5) {
+      // Item is at an extreme but realistic deviation = high mean reversion probability
+      score += Math.min(25, deviationFromMean * 2);
+    } else if (deviationFromMean > expectedDeviation * 2) {
+      // Item is EXTREMELY far from average (unusual) = lower confidence but higher potential
+      score += Math.min(15, deviationFromMean);
+    }
+    
+    // FACTOR 5: Price Action Patterns (identify pumps/dumps)
+    // Rapid spikes followed by consolidation are good flip opportunities
+    const recentPricesReversed = prices30.slice(-7).reverse(); // Most recent first
+    const recentChange = ((recentPricesReversed[0] - recentPricesReversed[6]) / recentPricesReversed[6]) * 100;
+    const priceSwing7d = Math.abs(recentChange);
+    
+    if (priceSwing7d > 8 && discount30 >= 3) {
+      // Item had big swing recently AND is now below average = dump recovery setup
+      score += 20;
+    }
+    
+    // FACTOR 6: Liquidity Quality (higher volume = more reliable flips)
+    // Only bonus if we have real volume data
+    if (liquidityScore >= 60) {
+      score += 12; // Highly liquid items
+    } else if (liquidityScore >= 40) {
+      score += 6; // Decent liquidity
+    } else if (liquidityScore < 20) {
+      score -= 10; // Penalize illiquid items (hard to sell)
+    }
+    
+    // FACTOR 7: Risk/Reward Filter
+    // Ensure the potential profit justifies the risk
+    const profitPotential = (recentHigh - current) / current * 100;
+    const riskDistance = (current - lowAll) / lowAll * 100;
+    const riskRewardRatio = profitPotential / Math.max(1, riskDistance);
+    
+    if (riskRewardRatio >= 1.5) {
+      // Good risk/reward (can make 1.5x the risk as profit)
+      score += 15;
+    } else if (riskRewardRatio < 0.5) {
+      // Poor risk/reward (risk is much higher than potential profit)
+      score -= 15;
     }
     
     // Confidence calculation

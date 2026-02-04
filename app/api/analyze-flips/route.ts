@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server';
 import { scoreOpportunitiesByMeanReversion } from '@/lib/analysis';
-import { getItemPrice, getItemHistory, getItemVolume1h } from '@/lib/api/osrs';
+import { analyzeFlipsWithAI } from '@/lib/aiAnalysis';
+import { fetchItemMapping, getItemPrice, getItemHistory, getItemVolume1h } from '@/lib/api/osrs';
 
 export async function POST(request: Request) {
   try {
-    const items = await request.json();
-    const cappedItems = Array.isArray(items) ? items : [];
+    const body = await request.json();
+    const payloadItems = Array.isArray(body) ? body : Array.isArray(body?.items) ? body.items : [];
+    const cappedItems = payloadItems;
+    const enableAi = typeof body?.enableAi === 'boolean' ? body.enableAi : true;
+    const aiTopN = Number.isFinite(body?.aiTopN) ? Math.min(Math.max(5, body.aiTopN), 30) : 12;
+    const aiMinScore = Number.isFinite(body?.aiMinScore) ? Math.min(Math.max(0, body.aiMinScore), 100) : 45;
+
+    // Build mapping lookup to ensure id/name consistency (prevents dose mismatches)
+    const mapping = await fetchItemMapping();
+    const mapById = new Map(mapping.map(item => [item.id, item]));
+    const mapByName = new Map(mapping.map(item => [item.name.toLowerCase(), item]));
     
     const itemsWithData: Array<{
       id: number;
@@ -20,22 +30,41 @@ export async function POST(request: Request) {
 
     for (const item of cappedItems) {
       try {
-        if (!item?.id || !item?.name) continue;
+        if (!item?.name) continue;
 
-        const price = await getItemPrice(item.id);
+        let resolvedId: number | null = null;
+        let resolvedName: string = item.name;
+
+        const mappedByName = mapByName.get(item.name.toLowerCase());
+        if (mappedByName) {
+          resolvedId = mappedByName.id;
+          resolvedName = mappedByName.name;
+        }
+
+        if (!resolvedId && typeof item?.id === 'number') {
+          const mappedById = mapById.get(item.id);
+          if (mappedById) {
+            resolvedId = mappedById.id;
+            resolvedName = mappedById.name;
+          }
+        }
+
+        if (!resolvedId) continue;
+
+        const price = await getItemPrice(resolvedId);
         const currentPrice = price ? (price.high + price.low) / 2 : undefined;
 
         if (!currentPrice) continue;
 
-        const volumeData = await getItemVolume1h(item.id);
+        const volumeData = await getItemVolume1h(resolvedId);
         const volume1h = volumeData
           ? (volumeData.highPriceVolume ?? 0) + (volumeData.lowPriceVolume ?? 0)
           : undefined;
 
-        const history30 = await getItemHistory(item.id, 30 * 24 * 60 * 60, currentPrice);
-        const history90 = await getItemHistory(item.id, 90 * 24 * 60 * 60, currentPrice);
-        const history180 = await getItemHistory(item.id, 180 * 24 * 60 * 60, currentPrice);
-        const history365 = await getItemHistory(item.id, 365 * 24 * 60 * 60, currentPrice);
+        const history30 = await getItemHistory(resolvedId, 30 * 24 * 60 * 60, currentPrice);
+        const history90 = await getItemHistory(resolvedId, 90 * 24 * 60 * 60, currentPrice);
+        const history180 = await getItemHistory(resolvedId, 180 * 24 * 60 * 60, currentPrice);
+        const history365 = await getItemHistory(resolvedId, 365 * 24 * 60 * 60, currentPrice);
 
         // Skip items with only simulated history (too narrow price range = unreliable data)
         // Real data should have wider spreads; simulated data clusters within ±15% of current
@@ -55,8 +84,8 @@ export async function POST(request: Request) {
 
         if (history30 && history30.length > 0) {
           itemsWithData.push({
-            id: item.id,
-            name: item.name,
+            id: resolvedId,
+            name: resolvedName,
             currentPrice,
             volume1h,
             history30,
@@ -97,7 +126,44 @@ export async function POST(request: Request) {
     });
 
     // Rule-based analysis: no AI needed, pure math-based mean-reversion scoring
-    const opportunities = scoreOpportunitiesByMeanReversion(itemsWithData);
+    let opportunities = scoreOpportunitiesByMeanReversion(itemsWithData);
+
+    // Optional AI enhancement for top candidates (cost-controlled)
+    if (enableAi && process.env.OPENAI_API_KEY) {
+      const topCandidates = opportunities
+        .filter(op => op.opportunityScore >= aiMinScore)
+        .sort((a, b) => b.opportunityScore - a.opportunityScore)
+        .slice(0, aiTopN);
+
+      const topIds = new Set(topCandidates.map(op => op.itemId));
+      const aiItems = itemsWithData.filter(item => topIds.has(item.id));
+
+      if (aiItems.length > 0) {
+        try {
+          const aiOpps = await analyzeFlipsWithAI(aiItems);
+          const aiMap = new Map(aiOpps.map(op => [op.itemId, op]));
+
+          opportunities = opportunities.map(op => {
+            const ai = aiMap.get(op.itemId);
+            if (!ai) return op;
+            return {
+              ...op,
+              recommendation: ai.recommendation ?? op.recommendation,
+              confidence: ai.confidence ?? op.confidence,
+              opportunityScore: Math.max(op.opportunityScore, ai.opportunityScore ?? 0),
+              buyWhen: ai.buyWhen || op.buyWhen,
+              sellWhen: ai.sellWhen || op.sellWhen,
+              estimatedHoldTime: ai.estimatedHoldTime || op.estimatedHoldTime,
+              profitPerUnit: ai.profitPerUnit ?? op.profitPerUnit,
+              roi: ai.roi ?? op.roi,
+              riskLevel: ai.riskLevel || op.riskLevel,
+            };
+          });
+        } catch (error) {
+          console.error('AI enhancement failed, using rule-based results:', error);
+        }
+      }
+    }
     
     console.log(`\n📈 ANALYSIS COMPLETE (Rule-Based Mean-Reversion)`);
     console.log(`   Returned: ${opportunities.length} opportunities`);
@@ -128,7 +194,7 @@ export async function POST(request: Request) {
             current: item.currentPrice
           };
         }),
-        analysisType: 'rule-based-mean-reversion',
+        analysisType: enableAi ? 'rule-based + ai-shortlist' : 'rule-based-mean-reversion',
         timestamp: new Date().toISOString()
       }
     };

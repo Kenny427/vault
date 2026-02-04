@@ -21,6 +21,11 @@ import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
 type MenuTab = 'admin';
 
+const EXPANDED_POOL_LIMIT = 2000;
+const EXPANDED_POOL_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const AI_TOP_N = 12;
+const AI_MIN_SCORE = 45;
+
 export default function Dashboard() {
   const router = useRouter();
   const { logout } = useAuth();
@@ -42,6 +47,8 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [batchProgress, setBatchProgress] = useState(0);
+  const [totalBatches, setTotalBatches] = useState(0);
   const [minConfidenceThreshold, setMinConfidenceThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-min-confidence');
@@ -63,6 +70,43 @@ export default function Dashboard() {
   const analyzeRef = useRef<null | (() => void)>(null);
   const loadingRef = useRef(loading);
 
+  const getExpandedPool = async (): Promise<PoolItem[]> => {
+    if (typeof window === 'undefined') return [];
+
+    const cached = localStorage.getItem('osrs-expanded-pool');
+    const cachedAt = localStorage.getItem('osrs-expanded-pool-ts');
+    if (cached && cachedAt) {
+      const age = Date.now() - Number(cachedAt);
+      if (Number.isFinite(age) && age < EXPANDED_POOL_TTL_MS) {
+        try {
+          const parsed = JSON.parse(cached) as PoolItem[];
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        } catch {
+          // ignore and refetch
+        }
+      }
+    }
+
+    const response = await fetch(`/api/item-pool?mode=expanded&limit=${EXPANDED_POOL_LIMIT}`);
+    if (!response.ok) return [];
+    const data = await response.json();
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const poolItems = items.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      addedAt: Date.now(),
+    }));
+
+    if (poolItems.length > 0) {
+      localStorage.setItem('osrs-expanded-pool', JSON.stringify(poolItems));
+      localStorage.setItem('osrs-expanded-pool-ts', Date.now().toString());
+    }
+
+    return poolItems;
+  };
+
   // Analyze items with AI
   const analyzeWithAI = async () => {
     if (loading) return;
@@ -72,9 +116,16 @@ export default function Dashboard() {
       : [];
 
     // Use expanded pool (350+ items) if no custom pool, otherwise use custom
+    let expandedPool: PoolItem[] = [];
+    if (customPool.length === 0) {
+      expandedPool = await getExpandedPool();
+    }
+
     const itemsToAnalyze: PoolItem[] = customPool.length > 0
       ? customPool
-      : getAllAnalysisItems().map(item => ({
+      : expandedPool.length > 0
+        ? expandedPool
+        : getAllAnalysisItems().map(item => ({
             id: item.id,
             name: item.name,
             addedAt: Date.now(),
@@ -95,13 +146,24 @@ export default function Dashboard() {
           .map(item => ({ id: item.id, name: item.name }));
         const batchSize = 15;
         const allOpportunities: FlipOpportunity[] = [];
+        let batchCount = 0;
+        const numBatches = Math.ceil(payloadItems.length / batchSize);
+        setTotalBatches(numBatches);
+        setBatchProgress(0);
 
         for (let i = 0; i < payloadItems.length; i += batchSize) {
+          batchCount++;
+          setBatchProgress(batchCount);
           const batch = payloadItems.slice(i, i + batchSize);
           const response = await fetch('/api/analyze-flips', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(batch),
+            body: JSON.stringify({
+              items: batch,
+              enableAi: false,
+              aiTopN: AI_TOP_N,
+              aiMinScore: AI_MIN_SCORE,
+            }),
           });
 
           const contentType = response.headers.get('content-type') || '';
@@ -126,15 +188,21 @@ export default function Dashboard() {
           const data = await response.json();
           
           // Handle both old format (array) and new format (object with opportunities + diagnostic)
-          const aiOpportunities = Array.isArray(data) ? data : data.opportunities || [];
-          allOpportunities.push(...aiOpportunities);
+          const batchOpps = Array.isArray(data) ? data : data.opportunities || [];
+          allOpportunities.push(...batchOpps);
+          
+          // Show results incrementally as batches complete
+          const sortedOpps = allOpportunities.sort(
+            (a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore
+          );
+          setOpportunities(sortedOpps);
           
           // Log diagnostic info if available
           if (data.diagnostic) {
-            const batchNum = Math.floor(i / batchSize) + 1;
-            console.log(`📊 POOL ANALYSIS - Batch ${batchNum}:`);
+            console.log(`📊 POOL ANALYSIS - Batch ${batchCount}/${totalBatches}:`);
             console.log(`   Requested: ${data.diagnostic.requested} items`);
             console.log(`   Passed spread filter (>15%): ${data.diagnostic.passedFilter} items`);
+            console.log(`   Found ${batchOpps.length} opportunities in this batch`);
             if (data.diagnostic.itemsPassedFilter.length > 0) {
               data.diagnostic.itemsPassedFilter.forEach((item: any) => {
                 console.log(`   ✓ ${item.name}: spread=${item.spread}%, range ${item.min}-${item.max}`);
@@ -143,11 +211,60 @@ export default function Dashboard() {
           }
         }
 
-        setOpportunities(
-          allOpportunities.sort((a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore)
+        const sortedOpps = allOpportunities.sort(
+          (a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore
         );
-        console.log(`📊 AI returned ${allOpportunities.length} opportunities`);
+
+        // AI shortlist pass (single call) to keep costs low
+        const shortlist = sortedOpps
+          .slice(0, AI_TOP_N)
+          .map(op => ({ id: op.itemId, name: op.itemName }));
+
+        if (shortlist.length > 0) {
+          try {
+            const aiResponse = await fetch('/api/ai-shortlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ items: shortlist, maxItems: AI_TOP_N }),
+            });
+
+            if (aiResponse.ok) {
+              const aiData = await aiResponse.json();
+              const aiOpps = Array.isArray(aiData?.opportunities) ? aiData.opportunities : [];
+              const aiMap = new Map(aiOpps.map((op: FlipOpportunity) => [op.itemId, op]));
+
+              const merged = sortedOpps.map(op => {
+                const ai = aiMap.get(op.itemId);
+                if (!ai) return op;
+                return {
+                  ...op,
+                  recommendation: ai.recommendation ?? op.recommendation,
+                  confidence: ai.confidence ?? op.confidence,
+                  opportunityScore: Math.max(op.opportunityScore, ai.opportunityScore ?? 0),
+                  buyWhen: ai.buyWhen || op.buyWhen,
+                  sellWhen: ai.sellWhen || op.sellWhen,
+                  estimatedHoldTime: ai.estimatedHoldTime || op.estimatedHoldTime,
+                  profitPerUnit: ai.profitPerUnit ?? op.profitPerUnit,
+                  roi: ai.roi ?? op.roi,
+                  riskLevel: ai.riskLevel || op.riskLevel,
+                };
+              });
+
+              setOpportunities(merged);
+            } else {
+              setOpportunities(sortedOpps);
+            }
+          } catch (error) {
+            console.error('AI shortlist failed:', error);
+            setOpportunities(sortedOpps);
+          }
+        } else {
+          setOpportunities(sortedOpps);
+        }
+        console.log(`📊 Analysis complete: ${allOpportunities.length} total opportunities found`);
         console.log(`Min Score filter: ${minOpportunityScore}, Confidence filter: ${minConfidenceThreshold}%`);
+        setBatchProgress(0);
+        setTotalBatches(0);
         const now = new Date();
         setLastRefresh(now);
         if (typeof window !== 'undefined') {
@@ -160,6 +277,8 @@ export default function Dashboard() {
     } catch (err: any) {
       setError(err.message || 'Failed to analyze opportunities');
       console.error('AI analysis error:', err);
+      setBatchProgress(0);
+      setTotalBatches(0);
     } finally {
       setLoading(false);
     }
@@ -224,24 +343,23 @@ export default function Dashboard() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (activeTab !== 'opportunities') return;
-
     const runRefresh = () => {
       if (!loadingRef.current && analyzeRef.current) {
         analyzeRef.current();
       }
     };
 
-    // Only auto-refresh every 5 minutes, not on tab switch
-    const intervalId = setInterval(runRefresh, 5 * 60 * 1000);
+    // Auto-refresh every 15 minutes in background, regardless of active tab
+    const intervalId = setInterval(runRefresh, 15 * 60 * 1000);
     return () => clearInterval(intervalId);
-  }, [activeTab]);
+  }, []);
 
   // Filter opportunities based on settings
   let filteredOpportunities = opportunities.filter(opp => {
     if (opp.opportunityScore < minOpportunityScore) return false;
     if (opp.confidence < minConfidenceThreshold) return false;
-    if (opp.recommendation !== 'buy') return false;
+    // Only filter by recommendation if it's been set (AI pass sets this)
+    if (opp.recommendation && opp.recommendation !== 'buy') return false;
     
     // Flip type filter
     if (flipTypeFilter !== 'all' && opp.flipType !== flipTypeFilter) return false;
@@ -416,14 +534,27 @@ export default function Dashboard() {
             {/* AI Analysis Status & Refresh Button */}
             <div className="bg-gradient-to-r from-blue-900 to-blue-800 border border-blue-700 rounded-lg p-4 mb-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="text-sm text-blue-200">
-                    {loading && <span>🔄 Analyzing with AI...</span>}
+                <div className="flex-1">
+                  <div className="text-sm text-blue-200 mb-2">
+                    {loading && totalBatches > 0 && (
+                      <span>🔄 Analyzing... Batch {batchProgress}/{totalBatches}</span>
+                    )}
+                    {loading && totalBatches === 0 && <span>🔄 Loading pool data...</span>}
                     {!loading && lastRefresh && (
                       <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
                     )}
                     {!loading && !lastRefresh && <span>Ready to analyze</span>}
                   </div>
+                  {loading && totalBatches > 0 && (
+                    <div className="w-full bg-blue-900 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-green-400 to-blue-400 h-full transition-all duration-300 ease-out"
+                        style={{
+                          width: `${totalBatches > 0 ? (batchProgress / totalBatches) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <button
