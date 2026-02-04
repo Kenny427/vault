@@ -51,17 +51,27 @@ const MAPPING_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
 // Popular item categories to prioritize
 const POPULAR_CATEGORIES = [
-  // PVM gear & weapons (specific, high volume)
-  'whip', 'trident', 'blowpipe', 'godsword', 'dragon', 'barrows', 'ahrim', 'karil', 'guthan', 'dharok',
-  'torag', 'verac', 'bandos', 'armadyl', 'saradomin', 'zamorak', 'rapier', 'scythe',
-  'rune crossbow', 'dragon crossbow', 'armadyl crossbow', 'twisted bow', 'bow of faerdhinen',
-  'amethyst', 'onyx', 'zenyte',
-  // Ammo & runes
-  'bolt', 'arrow', 'rune', 'blood', 'death', 'chaos', 'nature', 'cosmic',
-  // Potions & supplies
-  'potion', 'super', 'prayer', 'restore', 'stamina', 'sanfew', 'antivenom',
-  // Food & skilling supplies with volume
-  'shark', 'karambwan', 'angler', 'food', 'log', 'plank', 'ore', 'bar',
+  // High-end PVM gear & weapons
+  'whip', 'trident', 'blowpipe', 'godsword', 'barrows', 'ahrim', 'karil', 'guthan', 'dharok',
+  'torag', 'verac', 'bandos', 'armadyl', 'rapier', 'scythe', 'zenyte', 'ancestral',
+  'dragon crossbow', 'armadyl crossbow', 'twisted bow', 'bow of faerdhinen',
+  
+  // Mid-tier PVM gear (dragon only)
+  'dragon platebody', 'dragon platelegs', 'dragon plateskirt', 'dragon boots', 'dragon defender',
+  'dragon scimitar', 'dragon longsword', 'dragon dagger', 'dragon claws', 'dragon hunter',
+  
+  // High-volume skilling supplies
+  'yew log', 'magic log', 'yew longbow', 'magic longbow', 'yew shortbow',
+  'runite ore', 'runite bar', 'rune bar', 'adamantite bar', 'coal',
+  'mahogany plank', 'oak plank', 'teak plank',
+  
+  // High-volume runes & ammo
+  'blood rune', 'death rune', 'nature rune', 'law rune', 'astral rune',
+  'dragon arrow', 'rune arrow', 'amethyst arrow', 'dragon bolt', 'onyx bolt',
+  
+  // High-volume potions & food
+  'super combat', 'super restore', 'prayer potion', 'saradomin brew', 'stamina potion',
+  'shark', 'manta ray', 'dark crab', 'anglerfish',
 ];
 
 const priceCache = new Map<number, { data: PriceData; timestamp: number }>();
@@ -348,9 +358,14 @@ export async function getPopularItems(): Promise<ItemData[]> {
     // Filter for popular trading items
     const popular = allItems.filter(item => {
       const lowerName = item.name.toLowerCase();
-      if (lowerName.includes('adamant') || lowerName.includes('mithril') || lowerName.includes('steel') || lowerName.includes('iron') || lowerName.includes('bronze')) {
+      
+      // Exclude low-tier items
+      const excludeTerms = ['adamant', 'mithril', 'steel', 'iron', 'bronze', '(broken)', '(deg)', 'rusty'];
+      if (excludeTerms.some(term => lowerName.includes(term))) {
         return false;
       }
+      
+      // Must match at least one category
       return POPULAR_CATEGORIES.some(cat => lowerName.includes(cat));
     });
 
