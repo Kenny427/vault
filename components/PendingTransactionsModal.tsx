@@ -1,0 +1,269 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { usePendingTransactionsStore } from '@/lib/pendingTransactionsStore';
+import { usePortfolioStore } from '@/lib/portfolioStore';
+
+export default function PendingTransactionsModal({ onClose }: { onClose: () => void }) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filterType, setFilterType] = useState<'ALL' | 'BUY' | 'SELL'>('BUY');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const transactions = usePendingTransactionsStore((state) => state.transactions);
+  const removeTransaction = usePendingTransactionsStore((state) => state.removeTransaction);
+  const addItem = usePortfolioStore((state) => state.addItem);
+
+  const filteredTransactions = useMemo(() => {
+    return filterType === 'ALL'
+      ? transactions
+      : transactions.filter((tx) => tx.type === filterType);
+  }, [transactions, filterType]);
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredTransactions.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredTransactions.map((tx) => tx.id)));
+    }
+  };
+
+  const handleAddToPortfolio = async () => {
+    if (selectedIds.size === 0) {
+      setError('Please select at least one transaction');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const selectedTransactions = filteredTransactions.filter((tx) => selectedIds.has(tx.id));
+
+      for (const tx of selectedTransactions) {
+        if (tx.type === 'BUY') {
+          // Try to fetch item ID
+          let itemId: number | undefined;
+          try {
+            const response = await fetch(`https://prices.runescape.wiki/api/v1/osrs/mapping`);
+            const mapping = await response.json();
+            const item = mapping.find((m: any) => m.name.toLowerCase() === tx.itemName.toLowerCase());
+            itemId = item?.id;
+          } catch {
+            console.log(`Could not find item ID for ${tx.itemName}`);
+          }
+
+          await addItem({
+            itemId: itemId || 0,
+            itemName: tx.itemName,
+            quantity: tx.quantity || 1,
+            buyPrice: tx.price || 0,
+            datePurchased: tx.timestamp,
+            sales: [],
+            lots: [],
+          });
+
+          removeTransaction(tx.id);
+        }
+      }
+
+      setSelectedIds(new Set());
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add to portfolio');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDismiss = (id: string) => {
+    removeTransaction(id);
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const selectedCount = selectedIds.size;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-slate-900 rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-auto border border-slate-700">
+        {/* Header */}
+        <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-100">📥 Pending Transactions</h2>
+              <p className="text-slate-400 text-sm mt-1">Review DINK webhook purchases and add to portfolio</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-200 text-2xl">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {transactions.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-4xl mb-4">🔕</div>
+              <p className="text-slate-400 text-lg">No pending transactions</p>
+              <p className="text-slate-500 text-sm mt-2">
+                Configure DINK webhook to send purchases to: <br />
+                <code className="bg-slate-800 px-2 py-1 rounded text-xs mt-1 inline-block">
+                  https://yourdomain.com/api/webhooks/dink
+                </code>
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Filter Tabs */}
+              <div className="flex gap-2">
+                {(['ALL', 'BUY', 'SELL'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setFilterType(type)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      filterType === type
+                        ? 'bg-osrs-accent text-slate-900'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    {type === 'ALL' && `All (${transactions.length})`}
+                    {type === 'BUY' && `Buys (${transactions.filter((tx) => tx.type === 'BUY').length})`}
+                    {type === 'SELL' && `Sells (${transactions.filter((tx) => tx.type === 'SELL').length})`}
+                  </button>
+                ))}
+              </div>
+
+              {/* Selection Info */}
+              <div className="bg-slate-800 rounded-lg p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-slate-300 font-medium">
+                    {selectedCount} of {filteredTransactions.length} selected
+                  </p>
+                </div>
+                <button
+                  onClick={toggleSelectAll}
+                  className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-sm transition-colors"
+                >
+                  {selectedIds.size === filteredTransactions.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+
+              {/* Transactions Table */}
+              <div className="overflow-x-auto border border-slate-700 rounded-lg">
+                <table className="w-full text-sm">
+                  <thead className="bg-slate-800 border-b border-slate-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.size === filteredTransactions.length && filteredTransactions.length > 0}
+                          onChange={toggleSelectAll}
+                          className="w-4 h-4 rounded cursor-pointer"
+                        />
+                      </th>
+                      <th className="px-4 py-3 text-left text-slate-300 font-semibold">Item</th>
+                      <th className="px-4 py-3 text-center text-slate-300 font-semibold">Type</th>
+                      <th className="px-4 py-3 text-center text-slate-300 font-semibold">Status</th>
+                      <th className="px-4 py-3 text-right text-slate-300 font-semibold">Time</th>
+                      <th className="px-4 py-3 text-center text-slate-300 font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700">
+                    {filteredTransactions.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                          No {filterType !== 'ALL' ? filterType.toLowerCase() : ''} transactions
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredTransactions.map((tx) => (
+                        <tr
+                          key={tx.id}
+                          className={`hover:bg-slate-800/50 transition-colors ${
+                            selectedIds.has(tx.id) ? 'bg-slate-800/30' : ''
+                          }`}
+                        >
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(tx.id)}
+                              onChange={() => toggleSelection(tx.id)}
+                              className="w-4 h-4 rounded cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-slate-100 font-medium">{tx.itemName}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-semibold ${
+                                tx.type === 'BUY'
+                                  ? 'bg-green-900/30 text-green-400'
+                                  : 'bg-red-900/30 text-red-400'
+                              }`}
+                            >
+                              {tx.type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-slate-300 text-xs">{tx.status}</td>
+                          <td className="px-4 py-3 text-right text-slate-400 text-xs">
+                            {new Date(tx.timestamp).toLocaleTimeString()}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              onClick={() => handleDismiss(tx.id)}
+                              className="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded text-xs transition-colors"
+                            >
+                              Dismiss
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {error && (
+                <div className="bg-red-900/20 border border-red-700 rounded-lg p-4 text-red-200 text-sm">
+                  ⚠️ {error}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 justify-end pt-4 border-t border-slate-700">
+                <button
+                  onClick={onClose}
+                  className="px-6 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg font-medium transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleAddToPortfolio}
+                  disabled={loading || selectedCount === 0}
+                  className="px-6 py-2 bg-osrs-accent hover:bg-osrs-accent/90 disabled:bg-slate-700 disabled:text-slate-500 text-slate-900 rounded-lg font-semibold transition-colors"
+                >
+                  {loading ? 'Adding...' : `Add ${selectedCount} to Portfolio`}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

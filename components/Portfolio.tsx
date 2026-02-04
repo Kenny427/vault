@@ -11,13 +11,16 @@ import SetAlertModal from './SetAlertModal';
 import ItemNotesModal from './ItemNotesModal';
 import TradeHistory from './TradeHistory';
 import CSVImportModal from './CSVImportModal';
+import PendingTransactionsModal from './PendingTransactionsModal';
 import { getBatchPrices } from '@/lib/api/osrs';
 import { useChat } from '@/lib/chatContext';
+import { usePendingTransactionsStore } from '@/lib/pendingTransactionsStore';
 
 export default function Portfolio() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showImportCSV, setShowImportCSV] = useState(false);
+  const [showPendingTransactions, setShowPendingTransactions] = useState(false);
   const [showRecordTradeModal, setShowRecordTradeModal] = useState<{ item: any; currentPrice: number } | null>(null);
   const [showSetAlertModal, setShowSetAlertModal] = useState<{ itemId: number; itemName: string; currentPrice: number } | null>(null);
   const [showNotesModal, setShowNotesModal] = useState<{ itemId: number; itemName: string } | null>(null);
@@ -25,6 +28,7 @@ export default function Portfolio() {
   const [refreshKey, setRefreshKey] = useState(0);
   const items = usePortfolioStore((state) => state.items);
   const removeItem = usePortfolioStore((state) => state.removeItem);
+  const pendingTransactions = usePendingTransactionsStore((state) => state.transactions);
   const [prices, setPrices] = useState<Record<number, { high: number; low: number }>>({});
   const { openChat } = useChat();
 
@@ -89,8 +93,18 @@ export default function Portfolio() {
           >
             🔄 Refresh
           </button>
-          <button
-            onClick={() => setShowImportCSV(true)}
+          <button            onClick={() => setShowPendingTransactions(true)}
+            className="relative px-4 py-2 bg-slate-800 text-slate-200 rounded-lg border border-slate-700 hover:bg-slate-700 transition-colors"
+            title="Review pending webhook transactions"
+          >
+            📥 Pending
+            {pendingTransactions.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                {pendingTransactions.length}
+              </span>
+            )}
+          </button>
+          <button            onClick={() => setShowImportCSV(true)}
             className="px-4 py-2 bg-slate-800 text-slate-200 rounded-lg border border-slate-700 hover:bg-slate-700 transition-colors"
             disabled={showTradeHistory}
             title="Import from CSV file"
@@ -302,6 +316,16 @@ export default function Portfolio() {
         <CSVImportModal
           onClose={() => {
             setShowImportCSV(false);
+            setRefreshKey(prev => prev + 1);
+          }}
+        />
+      )}
+
+      {/* Pending Transactions Modal */}
+      {showPendingTransactions && (
+        <PendingTransactionsModal
+          onClose={() => {
+            setShowPendingTransactions(false);
             setRefreshKey(prev => prev + 1);
           }}
         />

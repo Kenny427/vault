@@ -16,6 +16,7 @@ import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
 import { usePriceAlertsStore } from '@/lib/priceAlertsStore';
+import { initDinkWebhookListener } from '@/lib/dinkWebhook';
 
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
 type MenuTab = 'admin';
@@ -165,6 +166,12 @@ export default function Dashboard() {
   // Check price alerts periodically
   const checkAlerts = usePriceAlertsStore(state => state.checkAlerts);
   
+  // Initialize DINK webhook listener on mount
+  useEffect(() => {
+    const cleanup = initDinkWebhookListener();
+    return cleanup;
+  }, []);
+
   useEffect(() => {
     if (activeTab === 'opportunities' && opportunities.length > 0) {
       opportunities.forEach(opp => {
