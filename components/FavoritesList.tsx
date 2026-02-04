@@ -169,8 +169,8 @@ export default function FavoritesList() {
             const historyLow = history.length > 0 ? Math.min(...history.map(h => h.price)) : price?.low;
 
             // Oversold/overbought indicator
-            const priceRange = historyHigh - historyLow;
-            const pricePosition = priceRange > 0 ? ((currentPrice - historyLow) / priceRange) * 100 : 50;
+            const priceRange = (historyHigh ?? 0) - (historyLow ?? 0);
+            const pricePosition = priceRange > 0 && currentPrice ? (((currentPrice ?? 0) - (historyLow ?? 0)) / priceRange) * 100 : 50;
             const isOversold = pricePosition < 30;
             const isOverbought = pricePosition > 70;
 
