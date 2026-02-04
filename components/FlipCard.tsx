@@ -86,6 +86,23 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
     }
   };
 
+  const getFlipTypeDisplay = (flipType: string) => {
+    switch (flipType) {
+      case 'quick-flip':
+        return { emoji: '⚡', label: 'Quick Flip', color: 'text-green-400 bg-green-900/20 border-green-700' };
+      case 'bot-dump':
+        return { emoji: '🤖', label: 'Bot Dump', color: 'text-blue-400 bg-blue-900/20 border-blue-700' };
+      case 'long-term':
+        return { emoji: '📈', label: 'Long-Term', color: 'text-purple-400 bg-purple-900/20 border-purple-700' };
+      case 'safe-hold':
+        return { emoji: '🛡️', label: 'Safe Hold', color: 'text-emerald-400 bg-emerald-900/20 border-emerald-700' };
+      case 'volatile-play':
+        return { emoji: '💥', label: 'Volatile', color: 'text-red-400 bg-red-900/20 border-red-700' };
+      default:
+        return { emoji: '📊', label: 'Short-Term', color: 'text-slate-400 bg-slate-900/20 border-slate-700' };
+    }
+  };
+
   // Calculate price change percentage from 30d average
   const priceChange30d = opportunity.averagePrice30 
     ? ((opportunity.currentPrice - opportunity.averagePrice30) / opportunity.averagePrice30) * 100 
@@ -94,6 +111,22 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
   const priceChange90d = opportunity.averagePrice90 
     ? ((opportunity.currentPrice - opportunity.averagePrice90) / opportunity.averagePrice90) * 100 
     : 0;
+
+  const flipTypeInfo = getFlipTypeDisplay(opportunity.flipType);
+
+  // Format large numbers (for investment display)
+  const formatLarge = (value: number) => {
+    if (value >= 1_000_000_000) {
+      return `${(value / 1_000_000_000).toFixed(2)}B`;
+    }
+    if (value >= 1_000_000) {
+      return `${(value / 1_000_000).toFixed(2)}M`;
+    }
+    if (value >= 1_000) {
+      return `${(value / 1_000).toFixed(1)}K`;
+    }
+    return value.toFixed(0);
+  };
 
   return (
     <div
@@ -124,6 +157,9 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
 
         {/* Key Badges */}
         <div className="flex gap-2 flex-wrap">
+          <div className={`px-2 py-1 rounded text-xs font-bold border ${flipTypeInfo.color}`}>
+            {flipTypeInfo.emoji} {flipTypeInfo.label}
+          </div>
           <div
             className={`px-2 py-1 rounded text-xs font-bold border ${getRecommendationColor(
               opportunity.recommendation
@@ -143,6 +179,34 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
           </div>
         </div>
       </div>
+
+      {/* Investment Summary (NEW - For big budgets) */}
+      {opportunity.totalInvestment && opportunity.totalInvestment > 0 && (
+        <div className="p-4 bg-gradient-to-r from-osrs-accent/10 to-osrs-accent/5 border-b border-slate-700/50">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-xs text-slate-400 mb-1">INVEST</p>
+              <p className="text-lg font-bold text-slate-100">
+                {formatLarge(opportunity.totalInvestment)}
+                <span className="text-xs text-slate-400 ml-1">gp</span>
+              </p>
+              <p className="text-xs text-slate-500">{opportunity.recommendedQuantity.toLocaleString()}x</p>
+            </div>
+            <div>
+              <p className="text-xs text-green-400 mb-1">PROFIT</p>
+              <p className="text-lg font-bold text-green-300">
+                +{formatLarge(opportunity.totalProfit)}
+                <span className="text-xs text-green-400 ml-1">gp</span>
+              </p>
+              <p className="text-xs text-green-500">{opportunity.roi.toFixed(1)}% ROI</p>
+            </div>
+            <div>
+              <p className="text-xs text-blue-400 mb-1">HOLD TIME</p>
+              <p className="text-sm font-bold text-blue-300 mt-2">{opportunity.estimatedHoldTime}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Price Summary */}
       <div className="p-4 space-y-3 border-b border-slate-700/50">

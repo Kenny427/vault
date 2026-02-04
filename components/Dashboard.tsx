@@ -12,11 +12,12 @@ import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
 import KeyboardShortcuts from './KeyboardShortcuts';
 import { getPopularItems } from '@/lib/api/osrs';
-import { FlipOpportunity } from '@/lib/analysis';
+import { FlipOpportunity, FlipType } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
 import { usePriceAlertsStore } from '@/lib/priceAlertsStore';
 import { initDinkWebhookListener } from '@/lib/dinkWebhook';
+import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
 type MenuTab = 'admin';
@@ -27,6 +28,7 @@ export default function Dashboard() {
   type PoolItem = { id: number; name: string; addedAt?: number };
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
+  const [flipTypeFilter, setFlipTypeFilter] = useState<FlipType | 'all'>('all');
   const [showMenu, setShowMenu] = useState(false);
   const [activeMenuTab, setActiveMenuTab] = useState<MenuTab | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>(() => {
@@ -68,11 +70,10 @@ export default function Dashboard() {
       ? (JSON.parse(localStorage.getItem('osrs-custom-pool') || '[]') as PoolItem[])
       : [];
 
-    // Always analyze full popular pool if no custom pool is set
-    // This ensures we check all 110+ items for opportunities, not just watchlist
+    // Use expanded pool (350+ items) if no custom pool, otherwise use custom
     const itemsToAnalyze: PoolItem[] = customPool.length > 0
       ? customPool
-      : (await getPopularItems()).map(item => ({
+      : getAllAnalysisItems().map(item => ({
             id: item.id,
             name: item.name,
             addedAt: Date.now(),
@@ -218,6 +219,10 @@ export default function Dashboard() {
     if (opp.opportunityScore < minOpportunityScore) return false;
     if (opp.confidence < minConfidenceThreshold) return false;
     if (opp.recommendation !== 'buy') return false;
+    
+    // Flip type filter
+    if (flipTypeFilter !== 'all' && opp.flipType !== flipTypeFilter) return false;
+    
     return true;
   });
 
@@ -227,7 +232,7 @@ export default function Dashboard() {
       case 'roi':
         return b.roi - a.roi;
       case 'profit':
-        return b.profitPerUnit - a.profitPerUnit;
+        return b.totalProfit - a.totalProfit; // Sort by total profit for big budgets
       case 'confidence':
         return b.confidence - a.confidence;
       case 'score':
@@ -409,7 +414,75 @@ export default function Dashboard() {
 
         {/* Settings & Filters */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-slate-100 mb-4">🎛️ Analysis Settings</h2>
+          <h2 className="text-xl font-bold text-slate-100 mb-4">🎛️ Analysis Settings & Filters</h2>
+          
+          {/* Flip Type Filter */}
+          <div className="mb-6">
+            <label className="text-sm font-medium text-slate-300 block mb-3">Flip Type:</label>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => setFlipTypeFilter('all')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  flipTypeFilter === 'all'
+                    ? 'bg-osrs-accent text-slate-900'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
+                }`}
+              >
+                All ({filteredOpportunities.length})
+              </button>
+              <button
+                onClick={() => setFlipTypeFilter('quick-flip')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  flipTypeFilter === 'quick-flip'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
+                }`}
+              >
+                ⚡ Quick Flips ({opportunities.filter(o => o.flipType === 'quick-flip').length})
+              </button>
+              <button
+                onClick={() => setFlipTypeFilter('bot-dump')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  flipTypeFilter === 'bot-dump'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
+                }`}
+              >
+                🤖 Bot Dumps ({opportunities.filter(o => o.flipType === 'bot-dump').length})
+              </button>
+              <button
+                onClick={() => setFlipTypeFilter('long-term')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  flipTypeFilter === 'long-term'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
+                }`}
+              >
+                📈 Long-Term ({opportunities.filter(o => o.flipType === 'long-term').length})
+              </button>
+              <button
+                onClick={() => setFlipTypeFilter('safe-hold')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  flipTypeFilter === 'safe-hold'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
+                }`}
+              >
+                🛡️ Safe Holds ({opportunities.filter(o => o.flipType === 'safe-hold').length})
+              </button>
+              <button
+                onClick={() => setFlipTypeFilter('volatile-play')}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  flipTypeFilter === 'volatile-play'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
+                }`}
+              >
+                💥 Volatile ({opportunities.filter(o => o.flipType === 'volatile-play').length})
+              </button>
+            </div>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="space-y-3">
               <label className="text-sm font-medium text-slate-300 block mb-2">
@@ -427,7 +500,7 @@ export default function Dashboard() {
 
             <div className="space-y-3">
               <label className="text-sm font-medium text-slate-300 block mb-2">
-                Risk Level: {minConfidenceThreshold}%
+                Confidence: {minConfidenceThreshold}%
               </label>
               <input
                 type="range"

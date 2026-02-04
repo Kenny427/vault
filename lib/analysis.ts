@@ -7,6 +7,14 @@ export interface PricePoint {
   price: number;
 }
 
+export type FlipType = 
+  | 'quick-flip'      // 1-3 days, quick turnaround
+  | 'bot-dump'        // Bot-driven price drops, rebounds expected
+  | 'short-term'      // 1-2 weeks, normal mean reversion  
+  | 'long-term'       // 2-8 weeks, deep value plays
+  | 'volatile-play'   // High risk/reward, major swings
+  | 'safe-hold';      // Low risk, stable recovery
+
 export interface FlipOpportunity {
   itemId: number;
   itemName: string;
@@ -24,7 +32,11 @@ export interface FlipOpportunity {
   historicalLow: number;
   historicalHigh: number;
   
-  // New enhanced metrics
+  // Flip classification
+  flipType: FlipType; // Type of flip opportunity
+  flipTypeConfidence: number; // How confident we are in the flip type (0-100)
+  
+  // Enhanced metrics
   buyPrice: number; // Recommended buy price (at margin)
   sellPrice: number; // Estimated sell price
   profitPerUnit: number; // Profit per item after GE tax
@@ -38,12 +50,17 @@ export interface FlipOpportunity {
   buyWhen: string; // Educational: when to buy
   sellWhen: string; // Educational: when to sell
   
-  // New analysis metrics
+  // Analysis metrics
   momentum: number; // Price momentum score (-100 to 100)
   acceleration: number; // Price acceleration (-100 to 100)
   tradingRange: number; // % difference between high and low
   consistency: number; // How consistent the price movement is (0-100)
   spreadQuality: number; // Quality of buy/sell spread (0-100)
+  
+  // Investment planning (for large budgets)
+  recommendedQuantity: number; // Suggested buy quantity
+  totalInvestment: number; // Total gp needed
+  totalProfit: number; // Total expected profit
 }
 
 /**
@@ -596,6 +613,68 @@ export function scoreOpportunitiesByMeanReversion(
     if (discount365 >= 25) estimatedHoldTime = '2-4 weeks';
     if (upsideToAllTime >= 40) estimatedHoldTime = '2-8 weeks';
     
+    // FLIP TYPE CLASSIFICATION
+    // Analyze characteristics to determine flip type
+    let flipType: FlipType = 'short-term';
+    let flipTypeConfidence = 50;
+    
+    // Bot Dump Recovery: Sharp recent drop, high volatility, strong recovery potential
+    if (discount30 >= 15 && discount30 > discount90 * 1.5 && volatilityPercent > 20 && upsideToRecent >= 20) {
+      flipType = 'bot-dump';
+      flipTypeConfidence = 75;
+      estimatedHoldTime = '3-7 days';
+    }
+    // Quick Flip: Below 30d average, moderate volatility, fast turnaround
+    else if (discount30 >= 8 && discount30 < 15 && volatilityPercent >= 15 && volatilityPercent < 35) {
+      flipType = 'quick-flip';
+      flipTypeConfidence = 70;
+      estimatedHoldTime = '1-3 days';
+    }
+    // Long-Term: Deep discount from 180d/365d, lower volatility preferred
+    else if (discount90 >= 20 || discount365 >= 25) {
+      flipType = 'long-term';
+      flipTypeConfidence = 80;
+      estimatedHoldTime = '2-8 weeks';
+    }
+    // Volatile Play: Very high volatility, major swings, high risk/reward
+    else if (volatilityPercent > 40 && spreadPercent > 50) {
+      flipType = 'volatile-play';
+      flipTypeConfidence = 70;
+      estimatedHoldTime = '1-4 weeks';
+    }
+    // Safe Hold: Low volatility, consistent recovery, low risk
+    else if (volatilityPercent < 20 && confidence >= 70 && discount90 >= 10) {
+      flipType = 'safe-hold';
+      flipTypeConfidence = 85;
+      estimatedHoldTime = '1-3 weeks';
+    }
+    
+    // Calculate recommended investment for large budgets
+    // Assumes user wants to invest 1-10M per flip
+    let recommendedQuantity = 0;
+    let targetInvestment = 5_000_000; // 5M default
+    
+    if (current > 0) {
+      // For expensive items (>100k), invest less quantity but more total value
+      if (current > 100_000) {
+        targetInvestment = 10_000_000; // 10M for high-value items
+      } else if (current > 10_000) {
+        targetInvestment = 5_000_000; // 5M for mid-value
+      } else if (current > 1_000) {
+        targetInvestment = 2_000_000; // 2M for lower-value
+      } else {
+        targetInvestment = 500_000; // 500k for cheap items
+      }
+      
+      recommendedQuantity = Math.floor(targetInvestment / current);
+      // Cap quantity at reasonable limits
+      if (recommendedQuantity > 10_000) recommendedQuantity = 10_000;
+      if (recommendedQuantity < 10) recommendedQuantity = Math.max(10, Math.floor(100_000 / current));
+    }
+    
+    const totalInvestment = recommendedQuantity * current;
+    const totalProfit = recommendedQuantity * profitPerUnit;
+    
     const opportunity: FlipOpportunity = {
       itemId: item.id,
       itemName: item.name,
@@ -608,10 +687,12 @@ export function scoreOpportunitiesByMeanReversion(
       deviation: volatilityPercent,
       deviationScore: discount365 * -1, // Negative = undervalued
       trend,
-      recommendation: score >= 60 ? 'buy' : 'hold',
+      recommendation: score >= 45 ? 'buy' : 'hold',
       opportunityScore: Math.round(Math.min(100, score)),
       historicalLow: lowAll,
       historicalHigh: highAll,
+      flipType,
+      flipTypeConfidence,
       buyPrice: current,
       sellPrice: Math.round(estimatedSellPrice),
       profitPerUnit: Math.round(profitPerUnit),
@@ -629,19 +710,23 @@ export function scoreOpportunitiesByMeanReversion(
       tradingRange: spreadPercent,
       consistency: 100 - Math.min(100, volatilityPercent), // Lower volatility = more consistent
       spreadQuality: Math.min(100, (spreadPercent / 50) * 100), // 50% spread = perfect quality
+      recommendedQuantity,
+      totalInvestment,
+      totalProfit,
     };
     
     return opportunity;
   }).filter(opp => {
-    // Only show opportunities that:
-    // 1. Have high score (60+)
+    // LOWERED THRESHOLD: Show more opportunities with better filtering
+    // 1. Score >= 45 (down from 60) - more lenient
     // 2. Show positive profit/ROI
-    // 3. Are actually below average (genuine buy opportunity)
+    // 3. Must be below 90d average OR have good volatility
+    // 4. Min profit per unit: 100gp (filters out tiny gains)
     return (
-      opp.opportunityScore >= 60 &&
-      opp.profitPerUnit > 0 &&
+      opp.opportunityScore >= 45 &&
+      opp.profitPerUnit >= 100 &&
       opp.profitMargin > 0 &&
-      opp.currentPrice < opp.averagePrice90 // Must be below 90d average
+      (opp.currentPrice < opp.averagePrice90 || opp.volatility > 20)
     );
   });
 }
