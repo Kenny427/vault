@@ -255,12 +255,6 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => router.push('/admin')}
-                className="px-4 py-2 text-sm text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
-              >
-                Admin Pool
-              </button>
-              <button
                 onClick={logout}
                 className="px-4 py-2 text-sm text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
               >
@@ -550,10 +544,7 @@ export default function Dashboard() {
       {/* Footer */}
       <footer className="bg-slate-900 border-t border-slate-700 mt-12">
         <div className="max-w-7xl mx-auto px-4 py-4 text-center text-slate-500 text-sm">
-          <div className="mb-2">Data updated every 30 seconds - vibecoded by ray</div>
-          <div className="text-xs text-slate-600">
-            Keyboard shortcuts: <kbd className="px-2 py-0.5 bg-slate-800 rounded">Ctrl+K</kbd> Open Chat · <kbd className="px-2 py-0.5 bg-slate-800 rounded">Ctrl+/</kbd> Quick Search
-          </div>
+          <div>Data updated every 30 seconds - vibecoded by ray</div>
         </div>
       </footer>
     </div>

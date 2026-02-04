@@ -201,7 +201,6 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-slate-100">📥 Pending Transactions</h2>
-              <p className="text-slate-400 text-sm mt-1">Review DINK webhook purchases and add to portfolio</p>
             </div>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-200 text-2xl">
               ✕
@@ -215,12 +214,6 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
             <div className="text-center py-12">
               <div className="text-4xl mb-4">🔕</div>
               <p className="text-slate-400 text-lg">No pending transactions</p>
-              <p className="text-slate-500 text-sm mt-2">
-                Configure DINK webhook to send purchases to: <br />
-                <code className="bg-slate-800 px-2 py-1 rounded text-xs mt-1 inline-block">
-                  https://yourdomain.com/api/webhooks/dink
-                </code>
-              </p>
             </div>
           ) : (
             <>
