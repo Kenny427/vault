@@ -240,8 +240,7 @@ export default function Dashboard() {
       }
     };
 
-    runRefresh();
-
+    // Only auto-refresh every 5 minutes, not on tab switch
     const intervalId = setInterval(runRefresh, 5 * 60 * 1000);
     return () => clearInterval(intervalId);
   }, [activeTab]);
