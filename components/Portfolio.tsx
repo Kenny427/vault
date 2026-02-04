@@ -9,6 +9,7 @@ import AddPortfolioSaleModal from './AddPortfolioSaleModal';
 import RecordTradeModal from './RecordTradeModal';
 import SetAlertModal from './SetAlertModal';
 import ItemNotesModal from './ItemNotesModal';
+import TradeHistory from './TradeHistory';
 import { getBatchPrices } from '@/lib/api/osrs';
 import { useChat } from '@/lib/chatContext';
 
@@ -18,6 +19,7 @@ export default function Portfolio() {
   const [showRecordTradeModal, setShowRecordTradeModal] = useState<{ item: any; currentPrice: number } | null>(null);
   const [showSetAlertModal, setShowSetAlertModal] = useState<{ itemId: number; itemName: string; currentPrice: number } | null>(null);
   const [showNotesModal, setShowNotesModal] = useState<{ itemId: number; itemName: string } | null>(null);
+  const [showTradeHistory, setShowTradeHistory] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const items = usePortfolioStore((state) => state.items);
   const removeItem = usePortfolioStore((state) => state.removeItem);
@@ -72,19 +74,18 @@ export default function Portfolio() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={() => setShowTradeHistory(!showTradeHistory)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+          >
+            {showTradeHistory ? '📋 Portfolio' : '📊 Trade History'}
+          </button>
+          <button
             onClick={handleRefreshPrices}
             className="px-4 py-2 bg-slate-800 text-slate-200 rounded-lg border border-slate-700 hover:bg-slate-700 transition-colors"
             disabled={items.length === 0}
             title="Refresh current prices"
           >
             🔄 Refresh
-          </button>
-          <button
-            onClick={() => setShowSaleModal(true)}
-            className="px-4 py-2 bg-slate-800 text-slate-200 rounded-lg border border-slate-700 hover:bg-slate-700 transition-colors"
-            disabled={items.length === 0}
-          >
-            Record Sale
           </button>
           <button
             onClick={() => setShowAddModal(true)}
@@ -95,6 +96,10 @@ export default function Portfolio() {
         </div>
       </div>
 
+      {showTradeHistory ? (
+        <TradeHistory />
+      ) : (
+        <>
       {/* Summary */}
       <PortfolioSummary key={refreshKey} />
 
@@ -233,6 +238,8 @@ export default function Portfolio() {
             </table>
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Add Modal */}

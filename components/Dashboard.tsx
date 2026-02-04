@@ -8,19 +8,16 @@ import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
 import FloatingChat from './FloatingChat';
 import PoolManager from './PoolManager';
-import TradeHistory from './TradeHistory';
 import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
-import ExportData from './ExportData';
 import KeyboardShortcuts from './KeyboardShortcuts';
-import BulkAnalysis from './BulkAnalysis';
 import { getPopularItems } from '@/lib/api/osrs';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
 import { usePriceAlertsStore } from '@/lib/priceAlertsStore';
 
-type TabType = 'portfolio' | 'favorites' | 'opportunities' | 'admin' | 'trades' | 'performance' | 'alerts' | 'export' | 'bulk';
+type TabType = 'portfolio' | 'favorites' | 'opportunities' | 'admin' | 'performance' | 'alerts';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -31,7 +28,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-active-tab');
-      const validTabs: TabType[] = ['portfolio', 'favorites', 'opportunities', 'admin', 'trades', 'performance', 'alerts', 'export', 'bulk'];
+      const validTabs: TabType[] = ['portfolio', 'favorites', 'opportunities', 'admin', 'performance', 'alerts'];
       if (saved && validTabs.includes(saved as TabType)) {
         return saved as TabType;
       }
@@ -282,16 +279,6 @@ export default function Dashboard() {
             💼 Portfolio
           </button>
           <button
-            onClick={() => setActiveTab('trades')}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'trades'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            📊 Trade History
-          </button>
-          <button
             onClick={() => setActiveTab('performance')}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
               activeTab === 'performance'
@@ -332,26 +319,6 @@ export default function Dashboard() {
             🔔 Price Alerts
           </button>
           <button
-            onClick={() => setActiveTab('bulk')}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'bulk'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            🔍 Bulk Analysis
-          </button>
-          <button
-            onClick={() => setActiveTab('export')}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'export'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            📄 Export
-          </button>
-          <button
             onClick={() => setActiveTab('admin')}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
               activeTab === 'admin'
@@ -366,29 +333,11 @@ export default function Dashboard() {
         {/* Portfolio Tab Content */}
         {activeTab === 'portfolio' && <Portfolio />}
 
-        {/* Trade History Tab */}
-        {activeTab === 'trades' && <TradeHistory />}
-
         {/* Performance Dashboard Tab */}
         {activeTab === 'performance' && <PerformanceDashboard />}
 
         {/* Price Alerts Tab */}
         {activeTab === 'alerts' && <PriceAlerts />}
-
-        {/* Bulk Analysis Tab */}
-        {activeTab === 'bulk' && (
-          <BulkAnalysis items={opportunities.map(opp => ({
-            itemId: opp.itemId,
-            itemName: opp.itemName,
-            currentPrice: opp.currentPrice,
-            avg30d: opp.averagePrice30,
-            avg90d: opp.averagePrice90,
-            volatility: opp.volatility,
-          }))} />
-        )}
-
-        {/* Export Tab */}
-        {activeTab === 'export' && <ExportData />}
 
         {/* Admin Pool Manager Tab */}
         {activeTab === 'admin' && <PoolManager />}
