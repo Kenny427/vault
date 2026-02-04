@@ -51,9 +51,10 @@ const MAPPING_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
 // Popular item categories to prioritize
 const POPULAR_CATEGORIES = [
-  // PVM gear & weapons
+  // PVM gear & weapons (specific, high volume)
   'whip', 'trident', 'blowpipe', 'godsword', 'dragon', 'barrows', 'ahrim', 'karil', 'guthan', 'dharok',
-  'torag', 'verac', 'bandos', 'armadyl', 'saradomin', 'zamorak', 'rapier', 'scythe', 'bow', 'crossbow',
+  'torag', 'verac', 'bandos', 'armadyl', 'saradomin', 'zamorak', 'rapier', 'scythe',
+  'rune crossbow', 'dragon crossbow', 'armadyl crossbow', 'twisted bow', 'bow of faerdhinen',
   'amethyst', 'onyx', 'zenyte',
   // Ammo & runes
   'bolt', 'arrow', 'rune', 'blood', 'death', 'chaos', 'nature', 'cosmic',
@@ -347,6 +348,9 @@ export async function getPopularItems(): Promise<ItemData[]> {
     // Filter for popular trading items
     const popular = allItems.filter(item => {
       const lowerName = item.name.toLowerCase();
+      if (lowerName.includes('adamant') || lowerName.includes('mithril') || lowerName.includes('steel') || lowerName.includes('iron') || lowerName.includes('bronze')) {
+        return false;
+      }
       return POPULAR_CATEGORIES.some(cat => lowerName.includes(cat));
     });
 

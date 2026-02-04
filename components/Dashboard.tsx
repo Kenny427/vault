@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const ANALYSIS_COOLDOWN = 30 * 60 * 1000; // 30 minutes
   
   const {
     watchlist,
@@ -42,7 +43,11 @@ export default function Dashboard() {
   } = useDashboardStore();
 
   // Analyze items with AI
-  const analyzeWithAI = async () => {
+  const analyzeWithAI = async (force = false) => {
+    if (loading) return;
+    if (!force && lastRefresh && Date.now() - lastRefresh.getTime() < ANALYSIS_COOLDOWN) {
+      return;
+    }
     const itemsToAnalyze = watchlist.length > 0 ? watchlist : (await getPopularItems()).map(item => ({
       id: item.id,
       name: item.name,
@@ -114,8 +119,10 @@ export default function Dashboard() {
 
   // Load and analyze watchlist items and popular items
   useEffect(() => {
-    analyzeWithAI();
-  }, [watchlist]);
+    if (activeTab === 'opportunities') {
+      analyzeWithAI();
+    }
+  }, [watchlist, activeTab]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -241,7 +248,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <button
-                  onClick={analyzeWithAI}
+                  onClick={() => analyzeWithAI(true)}
                   disabled={loading}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white rounded font-medium text-sm transition-colors"
                 >
