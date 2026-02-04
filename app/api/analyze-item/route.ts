@@ -20,15 +20,19 @@ ${itemData}
 - Key metric: discount from 30d/90d/365d averages
 - Profit target: 20-50%+ ROI, willing to wait for recovery
 
-**IMPORTANT:** If the user mentions they are already "holding" or "bought at" a specific price, FOCUS YOUR ENTIRE RESPONSE ON EXIT STRATEGY:
-- Skip "buy recommendation" - they already own it
-- Focus on: When to sell? What's the optimal exit price? How long to hold?
-- Calculate their current profit/loss based on their entry price
-- Provide specific sell targets with timeline estimates
+**CRITICAL: Determine if this is a BUYING or SELLING question:**
 
-Provide a detailed, actionable analysis:
+**EXIT STRATEGY Questions (user already owns the item):**
+- Contains phrases: "I'm holding", "I bought at", "I own", "my position", "exit strategy"
+- These mean they ALREADY own the item and want to know WHEN TO SELL
 
-**If user already owns the item (mentioned "holding" or "bought at"):**
+**BUYING Questions (user wants to know if they should buy):**
+- Contains phrases: "Should I flip", "Should I buy", "Is this a good flip", "good opportunity"
+- These mean they DON'T own it yet and want to know IF/WHEN TO BUY
+
+---
+
+**If this is an EXIT STRATEGY question (user already owns it):**
 1. **Current Position Analysis**
    - Their entry price vs current price (profit/loss)
    - Their entry price vs historical averages (did they buy well?)
@@ -48,17 +52,46 @@ Provide a detailed, actionable analysis:
    - Projected profit at each exit target
    - After GE tax (2%)
 
-**If user is asking about buying:**
+**If this is a BUYING question (user wants to know if they should buy):**
 1. **Is this a good flip right now?** (Yes/No with strong reasoning)
-2. **Current valuation** - Discount/premium vs averages
-3. **Price trend & catalyst** - Bot activity, updates, mean-reversion potential
-4. **Buy recommendation** - Entry price, target sell price, expected ROI
-5. **Hold time estimate** - Timeline for recovery
-6. **Risk assessment** - Volatility, liquidity, worst-case
-7. **Expected profit** - Per unit profit, ROI%, volume strategy
-8. **Alternative timing** - Wait for deeper discount?
+   - Compare current price to 30d, 90d, 365d averages
+   - Is it at a significant discount (>15-20%)?
 
-Be specific with numbers, percentages, and GP values. Focus on actionable advice based on whether they're buying or selling.`;
+2. **Current valuation** - Where does current price sit relative to historical ranges?
+   - Quantify the discount/premium vs averages
+   - Is this a temporary dip or fundamental shift?
+
+3. **Price trend & catalyst** - What caused the current price level?
+   - Bot activity patterns (supply flooding, demand spike)?
+   - Game updates or seasonal factors?
+   - Mean-reversion potential
+
+4. **Buy recommendation** - Exact buy/sell targets
+   - Should they buy at current price or wait?
+   - Entry price target
+   - Target sell price (realistic recovery level)
+   - Expected ROI percentage
+
+5. **Hold time estimate** - Timeline for mean-reversion recovery
+   - How long historically does this item take to recover?
+   - Is user okay holding for weeks/months?
+
+6. **Risk assessment**
+   - Volatility (good for flipping or too risky?)
+   - Liquidity (can user exit position easily?)
+   - Worst-case scenario
+
+7. **Expected profit calculation**
+   - If bought at current price, sell at [X] target
+   - Profit per unit and ROI%
+   - Volume strategy (how many units to flip?)
+
+8. **Alternative timing**
+   - Should user wait for deeper discount?
+   - Are there better opportunities in similar items?
+   - Historical price floors to watch for
+
+Be specific with numbers, percentages, and GP values. DO NOT confuse buying and selling questions - read the user's original question carefully.`;
 
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -176,10 +209,16 @@ export async function POST(request: Request) {
     const volatility = (calculateStdDev(prices365) / avg365) * 100;
     const spread = ((high365 - low365) / currentPrice) * 100;
 
-    // Add user context if they're asking about a position they hold
+    // Determine if this is a buying or exit strategy question
+    const isExitStrategyQuestion = userQuestion && /\b(holding|bought at|I bought|I own|my position|exit strategy)\b/i.test(userQuestion);
+    const isBuyingQuestion = userQuestion && /\b(should I flip|should I buy|is .+ a good flip|good opportunity|worth buying|flip .+\?)\b/i.test(userQuestion);
+    
+    // Add user context based on question type
     let userContext = '';
-    if (userQuestion && /holding|bought at|I bought|I own/i.test(userQuestion)) {
-      userContext = `\n**USER CONTEXT - EXIT STRATEGY QUESTION:**\nThe user's original question was: "${userQuestion}"\nThis indicates they already own this item and want to know WHEN TO SELL for optimal profit. Focus your entire response on exit strategy, not buying advice.\n`;
+    if (isExitStrategyQuestion && !isBuyingQuestion) {
+      userContext = `\n**⚠️ USER CONTEXT - EXIT STRATEGY QUESTION:**\nThe user's question: "${userQuestion}"\n**This is an EXIT STRATEGY question.** The user already owns this item and wants to know WHEN TO SELL for optimal profit. DO NOT give buying advice - focus entirely on exit targets and timing.\n`;
+    } else if (isBuyingQuestion || userQuestion) {
+      userContext = `\n**📊 USER CONTEXT - BUYING QUESTION:**\nThe user's question: "${userQuestion}"\n**This is a BUYING question.** The user does NOT own this item yet and wants to know if they should BUY it. Focus on entry points, valuation, and whether this is a good flip opportunity right now.\n`;
     }
 
     // Build detailed data for AI analysis
