@@ -24,7 +24,15 @@ export default function PortfolioItemPage() {
   const items = usePortfolioStore((state) => state.items);
   const [timeframe, setTimeframe] = useState<Timeframe>('30d');
 
-  const lots = useMemo(() => items.filter((item) => item.itemId === itemId), [items, itemId]);
+  const matchingItems = useMemo(() => items.filter((item) => item.itemId === itemId), [items, itemId]);
+  const lots = useMemo(() => {
+    return matchingItems.flatMap((item) =>
+      item.lots && item.lots.length > 0
+        ? item.lots
+        : [{ id: item.id, quantity: item.quantity, buyPrice: item.buyPrice, datePurchased: item.datePurchased, notes: item.notes }]
+    );
+  }, [matchingItems]);
+  const sales = useMemo(() => matchingItems.flatMap((item) => item.sales ?? []), [matchingItems]);
 
   const { data: itemDetails } = useQuery({
     queryKey: ['item-details', itemId],
@@ -61,28 +69,36 @@ export default function PortfolioItemPage() {
     const totalQty = lots.reduce((sum, lot) => sum + lot.quantity, 0);
     const totalCost = lots.reduce((sum, lot) => sum + lot.quantity * lot.buyPrice, 0);
 
-    let soldQty = 0;
-    let realizedProfit = 0;
+    const soldQty = sales.reduce((sum, sale) => sum + sale.quantity, 0);
+    const avgBuy = totalQty > 0 ? totalCost / totalQty : 0;
+
     let realizedRevenue = 0;
-    let remainingCost = 0;
+    sales.forEach((sale) => {
+      const gross = sale.sellPrice * sale.quantity;
+      const net = gross * 0.98;
+      realizedRevenue += net;
+    });
 
-    lots.forEach((lot) => {
-      const lotSold = (lot.sales ?? []).reduce((sum, sale) => sum + sale.quantity, 0);
-      const lotRemaining = Math.max(0, lot.quantity - lotSold);
-      soldQty += lotSold;
-      remainingCost += lotRemaining * lot.buyPrice;
+    const avgSell = soldQty > 0 ? realizedRevenue / soldQty : 0;
+    const realizedProfit = realizedRevenue - (avgBuy * soldQty);
 
-      (lot.sales ?? []).forEach((sale) => {
-        const gross = sale.sellPrice * sale.quantity;
-        const net = gross * 0.98;
-        realizedRevenue += net;
-        realizedProfit += net - sale.quantity * lot.buyPrice;
-      });
+    // Allocate sold quantity across lots (FIFO) to compute remaining cost
+    let remainingToAllocate = soldQty;
+    const remainingByLot = new Map<string, number>();
+    const sortedLots = [...lots].sort((a, b) => a.datePurchased - b.datePurchased);
+
+    sortedLots.forEach((lot) => {
+      const soldFromLot = Math.min(lot.quantity, remainingToAllocate);
+      remainingToAllocate -= soldFromLot;
+      const remainingQtyForLot = Math.max(0, lot.quantity - soldFromLot);
+      remainingByLot.set(lot.id, remainingQtyForLot);
     });
 
     const remainingQty = Math.max(0, totalQty - soldQty);
-    const avgBuy = totalQty > 0 ? totalCost / totalQty : 0;
-    const avgSell = soldQty > 0 ? realizedRevenue / soldQty : 0;
+    const remainingCost = sortedLots.reduce((sum, lot) => {
+      const remainingQtyForLot = remainingByLot.get(lot.id) ?? lot.quantity;
+      return sum + (remainingQtyForLot * lot.buyPrice);
+    }, 0);
 
     const livePrice = priceData ? (priceData.high + priceData.low) / 2 : avgBuy;
     const unrealizedValue = livePrice * remainingQty * 0.98;
@@ -102,8 +118,9 @@ export default function PortfolioItemPage() {
       unrealizedProfit,
       totalProfit,
       roi,
+      remainingByLot,
     };
-  }, [lots, priceData]);
+  }, [lots, sales, priceData]);
 
   if (!Number.isFinite(itemId)) {
     return (
@@ -262,8 +279,7 @@ export default function PortfolioItemPage() {
               </thead>
               <tbody className="divide-y divide-slate-800">
                 {lots.map((lot) => {
-                  const soldQty = (lot.sales ?? []).reduce((sum, sale) => sum + sale.quantity, 0);
-                  const remainingQty = Math.max(0, lot.quantity - soldQty);
+                  const remainingQty = stats.remainingByLot?.get(lot.id) ?? lot.quantity;
                   return (
                     <tr key={lot.id}>
                       <td className="px-6 py-3 text-slate-300">{format(new Date(lot.datePurchased), 'MMM dd, yyyy')}</td>
@@ -291,12 +307,12 @@ export default function PortfolioItemPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {lots.flatMap((lot) => (lot.sales ?? []).map((sale) => ({ lot, sale }))).length === 0 ? (
+                {sales.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-6 text-center text-slate-500">No sales recorded yet.</td>
                   </tr>
                 ) : (
-                  lots.flatMap((lot) => (lot.sales ?? []).map((sale) => ({ lot, sale }))).map(({ sale }) => (
+                  sales.map((sale) => (
                     <tr key={sale.id}>
                       <td className="px-6 py-3 text-slate-300">{format(new Date(sale.dateSold), 'MMM dd, yyyy')}</td>
                       <td className="px-6 py-3 text-right text-slate-200">{sale.sellPrice.toLocaleString()}gp</td>
