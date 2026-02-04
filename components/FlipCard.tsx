@@ -6,8 +6,14 @@ import { useDashboardStore } from '@/lib/store';
 import { useChat } from '@/lib/chatContext';
 import SetAlertModal from './SetAlertModal';
 
+interface AIRankedOpportunity extends FlipOpportunity {
+  aiScore: number;
+  aiReasoning: string;
+  aiConfidence: number;
+}
+
 interface FlipCardProps {
-  opportunity: FlipOpportunity;
+  opportunity: FlipOpportunity | AIRankedOpportunity;
   onViewDetails: () => void;
 }
 
@@ -15,6 +21,7 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
   const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
   const { openChat } = useChat();
   const isInFavorites = favorites.some(item => item.id === opportunity.itemId);
+  const isAIRanked = 'aiScore' in opportunity;
   
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
 
@@ -155,6 +162,11 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
 
         {/* Key Badges */}
         <div className="flex gap-2 flex-wrap">
+          {isAIRanked && (
+            <div className="px-2 py-1 rounded text-xs font-bold border border-purple-600 text-purple-300 bg-purple-900/30">
+              🤖 AI: {(opportunity as AIRankedOpportunity).aiScore}/100
+            </div>
+          )}
           <div className={`px-2 py-1 rounded text-xs font-bold border ${flipTypeInfo.color}`}>
             {flipTypeInfo.emoji} {flipTypeInfo.label}
           </div>
@@ -177,6 +189,21 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
           </div>
         </div>
       </div>
+
+      {/* AI Reasoning (if available) */}
+      {isAIRanked && (opportunity as AIRankedOpportunity).aiReasoning && (
+        <div className="p-3 bg-gradient-to-r from-purple-900/30 to-purple-800/20 border-b border-purple-700/50">
+          <div className="flex items-start gap-2">
+            <span className="text-purple-400 text-sm">🤖</span>
+            <p className="text-sm text-purple-200 flex-1">
+              {(opportunity as AIRankedOpportunity).aiReasoning}
+            </p>
+            <span className="text-xs text-purple-400 font-semibold">
+              {(opportunity as AIRankedOpportunity).aiConfidence}%
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Investment Summary (NEW - For big budgets) */}
       {opportunity.totalInvestment && opportunity.totalInvestment > 0 && (

@@ -449,3 +449,207 @@ If items are scarce even at 25% confidence, return them anyway. Prefer showing u
 export function clearAnalysisCache() {
   analysisCache.clear();
 }
+
+// Portfolio AI Review - analyzes all holdings in one batch
+export interface PortfolioAIReview {
+  itemId: number;
+  itemName: string;
+  quantity: number;
+  buyPrice: number;
+  currentPrice: number;
+  unrealizedPL: number;
+  recommendation: 'HOLD' | 'SELL_NOW' | 'SELL_SOON' | 'WATCH_CLOSELY' | 'GOOD_POSITION';
+  reasoning: string;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  suggestedAction: string;
+  exitPrice?: number;
+}
+
+export interface PortfolioSummaryAI {
+  overallRisk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  diversificationScore: number; // 0-100
+  recommendations: string[];
+  warnings: string[];
+  items: PortfolioAIReview[];
+}
+
+export async function analyzePortfolioWithAI(
+  portfolioItems: Array<{
+    itemId: number;
+    itemName: string;
+    quantity: number;
+    buyPrice: number;
+    currentPrice: number;
+    datePurchased: string;
+  }>
+): Promise<PortfolioSummaryAI> {
+  const aiClient = getClient();
+
+  if (portfolioItems.length === 0) {
+    return {
+      overallRisk: 'LOW',
+      diversificationScore: 100,
+      recommendations: ['Your portfolio is empty. Start adding investments to track.'],
+      warnings: [],
+      items: [],
+    };
+  }
+
+  // Calculate unrealized P/L for each item
+  const itemsWithPL = portfolioItems.map(item => ({
+    ...item,
+    unrealizedPL: (item.currentPrice * 0.98 - item.buyPrice) * item.quantity,
+    percentChange: ((item.currentPrice - item.buyPrice) / item.buyPrice) * 100,
+  }));
+
+  const prompt = `You are an expert OSRS Grand Exchange trader analyzing a player's portfolio. Review ALL holdings and provide actionable insights.
+
+PORTFOLIO (${portfolioItems.length} items):
+${itemsWithPL.map((item, i) => `
+${i + 1}. ${item.itemName}
+   - Quantity: ${item.quantity.toLocaleString()}
+   - Buy Price: ${item.buyPrice.toLocaleString()}gp
+   - Current Price: ${item.currentPrice.toLocaleString()}gp
+   - Unrealized P/L: ${item.unrealizedPL >= 0 ? '+' : ''}${Math.round(item.unrealizedPL).toLocaleString()}gp (${item.percentChange.toFixed(1)}%)
+   - Held Since: ${new Date(item.datePurchased).toLocaleDateString()}
+`).join('')}
+
+Analyze each item and the portfolio as a whole. For EACH item, provide:
+1. Recommendation: HOLD, SELL_NOW, SELL_SOON, WATCH_CLOSELY, or GOOD_POSITION
+2. Risk Level: LOW, MEDIUM, HIGH, or CRITICAL
+3. Reasoning (1-2 sentences)
+4. Suggested Action (specific exit price or condition)
+
+For the overall portfolio:
+- Overall Risk Level
+- Diversification Score (0-100)
+- Top 3 Recommendations
+- Critical Warnings (if any)
+
+Return valid JSON only:
+{
+  "overallRisk": "LOW|MEDIUM|HIGH|CRITICAL",
+  "diversificationScore": 85,
+  "recommendations": ["recommendation 1", "recommendation 2", "recommendation 3"],
+  "warnings": ["warning 1", "warning 2"],
+  "items": [
+    {
+      "itemId": ${portfolioItems[0].itemId},
+      "itemName": "${portfolioItems[0].itemName}",
+      "quantity": ${portfolioItems[0].quantity},
+      "buyPrice": ${portfolioItems[0].buyPrice},
+      "currentPrice": ${portfolioItems[0].currentPrice},
+      "unrealizedPL": ${itemsWithPL[0].unrealizedPL},
+      "recommendation": "HOLD|SELL_NOW|SELL_SOON|WATCH_CLOSELY|GOOD_POSITION",
+      "reasoning": "Brief explanation",
+      "riskLevel": "LOW|MEDIUM|HIGH|CRITICAL",
+      "suggestedAction": "Specific action",
+      "exitPrice": 12345
+    }
+  ]
+}`;
+
+  try {
+    const completion = await aiClient.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content || '{}');
+    return result as PortfolioSummaryAI;
+  } catch (error) {
+    console.error('Portfolio AI analysis failed:', error);
+    throw error;
+  }
+}
+
+// Rank top opportunities with AI - analyzes batch of opportunities
+export interface AIRankedOpportunity extends FlipOpportunity {
+  aiScore: number;
+  aiReasoning: string;
+  aiConfidence: number;
+}
+
+export async function rankOpportunitiesWithAI(
+  opportunities: FlipOpportunity[]
+): Promise<AIRankedOpportunity[]> {
+  const aiClient = getClient();
+
+  if (opportunities.length === 0) {
+    return [];
+  }
+
+  // Only analyze top opportunities (limit to save costs)
+  const topOpps = opportunities.slice(0, 15);
+
+  const prompt = `You are an expert OSRS Grand Exchange trader. Rank these ${topOpps.length} flip opportunities by quality and confidence.
+
+OPPORTUNITIES:
+${topOpps.map((opp, i) => `
+${i + 1}. ${opp.itemName}
+   - Current Price: ${opp.currentPrice.toLocaleString()}gp
+   - Score: ${opp.opportunityScore.toFixed(0)}
+   - Confidence: ${opp.confidence}%
+   - ROI: ${opp.roi.toFixed(1)}%
+   - Profit/Unit: ${Math.round(opp.profitPerUnit).toLocaleString()}gp
+   - Flip Type: ${opp.flipType}
+   - Buy: ${Math.round(opp.buyPrice).toLocaleString()}gp → Sell: ${Math.round(opp.sellPrice).toLocaleString()}gp
+   - Volatility: ${opp.volatility.toFixed(0)}%
+   - Trend: ${opp.trend}
+`).join('')}
+
+For EACH opportunity, provide:
+1. AI Score (0-100) - your quality rating
+2. AI Confidence (0-100) - how confident you are
+3. Reasoning (1 sentence)
+
+Consider:
+- Price stability and mean reversion likelihood
+- Flip type appropriateness
+- Risk/reward balance
+- Market conditions and volatility
+
+Return valid JSON only:
+{
+  "rankings": [
+    {
+      "itemId": ${topOpps[0].itemId},
+      "itemName": "${topOpps[0].itemName}",
+      "aiScore": 85,
+      "aiConfidence": 90,
+      "aiReasoning": "Brief explanation"
+    }
+  ]
+}`;
+
+  try {
+    const completion = await aiClient.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content || '{}');
+    const rankings = result.rankings || [];
+
+    // Merge AI scores back into opportunities
+    const rankedOpps: AIRankedOpportunity[] = topOpps.map(opp => {
+      const aiData = rankings.find((r: any) => r.itemId === opp.itemId);
+      return {
+        ...opp,
+        aiScore: aiData?.aiScore || 0,
+        aiReasoning: aiData?.aiReasoning || '',
+        aiConfidence: aiData?.aiConfidence || 0,
+      };
+    });
+
+    // Sort by AI score
+    return rankedOpps.sort((a, b) => b.aiScore - a.aiScore);
+  } catch (error) {
+    console.error('AI ranking failed:', error);
+    throw error;
+  }
+}

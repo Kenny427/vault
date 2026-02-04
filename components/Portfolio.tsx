@@ -14,6 +14,28 @@ import { getBatchPrices } from '@/lib/api/osrs';
 import { useChat } from '@/lib/chatContext';
 import { usePendingTransactionsStore } from '@/lib/pendingTransactionsStore';
 
+interface PortfolioAIReview {
+  itemId: number;
+  itemName: string;
+  quantity: number;
+  buyPrice: number;
+  currentPrice: number;
+  unrealizedPL: number;
+  recommendation: 'HOLD' | 'SELL_NOW' | 'SELL_SOON' | 'WATCH_CLOSELY' | 'GOOD_POSITION';
+  reasoning: string;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  suggestedAction: string;
+  exitPrice?: number;
+}
+
+interface PortfolioSummaryAI {
+  overallRisk: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  diversificationScore: number;
+  recommendations: string[];
+  warnings: string[];
+  items: PortfolioAIReview[];
+}
+
 export default function Portfolio() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
@@ -22,6 +44,8 @@ export default function Portfolio() {
   const [showSetAlertModal, setShowSetAlertModal] = useState<{ itemId: number; itemName: string; currentPrice: number } | null>(null);
   const [showTradeHistory, setShowTradeHistory] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [aiReview, setAIReview] = useState<PortfolioSummaryAI | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const items = usePortfolioStore((state) => state.items);
   const removeItem = usePortfolioStore((state) => state.removeItem);
   const pendingTransactions = usePendingTransactionsStore((state) => state.transactions);
@@ -63,6 +87,46 @@ export default function Portfolio() {
     setRefreshKey(prev => prev + 1);
   };
 
+  const handleAIReview = async () => {
+    if (items.length === 0) return;
+    
+    setIsAnalyzing(true);
+    try {
+      // Prepare portfolio data with current prices
+      const portfolioData = items.map(item => {
+        const priceData = prices[item.itemId];
+        const currentPrice = priceData ? (priceData.high + priceData.low) / 2 : item.buyPrice;
+        
+        return {
+          itemId: item.itemId,
+          itemName: item.itemName,
+          quantity: item.quantity,
+          buyPrice: item.buyPrice,
+          currentPrice: Math.round(currentPrice),
+          datePurchased: item.datePurchased,
+        };
+      });
+
+      const response = await fetch('/api/analyze-portfolio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(portfolioData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze portfolio');
+      }
+
+      const review = await response.json();
+      setAIReview(review);
+    } catch (error) {
+      console.error('AI portfolio review failed:', error);
+      alert('Failed to analyze portfolio. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -78,6 +142,16 @@ export default function Portfolio() {
           >
             {showTradeHistory ? '📋 Portfolio' : '📊 Trade History'}
           </button>
+          {!showTradeHistory && items.length > 0 && (
+            <button
+              onClick={handleAIReview}
+              disabled={isAnalyzing}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
+              title="AI analyzes all your holdings in one batch"
+            >
+              {isAnalyzing ? '⏳ Analyzing...' : '🤖 AI Review Portfolio'}
+            </button>
+          )}
           <button
             onClick={handleRefreshPrices}
             className="px-4 py-2 bg-slate-800 text-slate-200 rounded-lg border border-slate-700 hover:bg-slate-700 transition-colors"
@@ -110,6 +184,122 @@ export default function Portfolio() {
         <TradeHistory />
       ) : (
         <>
+      {/* AI Review Results */}
+      {aiReview && (
+        <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 rounded-lg p-6 border border-purple-700/50">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-xl font-semibold text-purple-300 mb-1">🤖 AI Portfolio Analysis</h3>
+              <p className="text-sm text-slate-400">Batch analyzed {aiReview.items.length} holdings</p>
+            </div>
+            <button
+              onClick={() => setAIReview(null)}
+              className="text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Overall Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+              <div className="text-sm text-slate-400 mb-1">Overall Risk</div>
+              <div className={`text-2xl font-bold ${
+                aiReview.overallRisk === 'LOW' ? 'text-green-400' :
+                aiReview.overallRisk === 'MEDIUM' ? 'text-yellow-400' :
+                aiReview.overallRisk === 'HIGH' ? 'text-orange-400' :
+                'text-red-400'
+              }`}>
+                {aiReview.overallRisk}
+              </div>
+            </div>
+            <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+              <div className="text-sm text-slate-400 mb-1">Diversification</div>
+              <div className="text-2xl font-bold text-blue-400">{aiReview.diversificationScore}/100</div>
+            </div>
+          </div>
+
+          {/* Recommendations */}
+          {aiReview.recommendations.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-slate-300 mb-2">📋 Top Recommendations</h4>
+              <ul className="space-y-2">
+                {aiReview.recommendations.map((rec, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
+                    <span className="text-purple-400 mt-0.5">•</span>
+                    <span>{rec}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Warnings */}
+          {aiReview.warnings.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-red-400 mb-2">⚠️ Warnings</h4>
+              <ul className="space-y-2">
+                {aiReview.warnings.map((warning, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-red-300 bg-red-900/20 p-3 rounded-lg">
+                    <span className="mt-0.5">⚠️</span>
+                    <span>{warning}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Item-by-Item Analysis */}
+          <div>
+            <h4 className="text-sm font-semibold text-slate-300 mb-3">Item Analysis</h4>
+            <div className="space-y-3">
+              {aiReview.items.map((item) => {
+                const recommendationColors = {
+                  'HOLD': 'text-blue-400 bg-blue-900/20',
+                  'SELL_NOW': 'text-red-400 bg-red-900/20',
+                  'SELL_SOON': 'text-orange-400 bg-orange-900/20',
+                  'WATCH_CLOSELY': 'text-yellow-400 bg-yellow-900/20',
+                  'GOOD_POSITION': 'text-green-400 bg-green-900/20',
+                };
+                
+                const riskColors = {
+                  'LOW': 'text-green-400',
+                  'MEDIUM': 'text-yellow-400',
+                  'HIGH': 'text-orange-400',
+                  'CRITICAL': 'text-red-400',
+                };
+
+                return (
+                  <div key={item.itemId} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <div className="font-semibold text-slate-200">{item.itemName}</div>
+                        <div className="text-xs text-slate-500">
+                          {item.quantity.toLocaleString()} @ {item.buyPrice.toLocaleString()}gp → {item.currentPrice.toLocaleString()}gp
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-xs font-bold px-2 py-1 rounded ${recommendationColors[item.recommendation]}`}>
+                          {item.recommendation.replace(/_/g, ' ')}
+                        </div>
+                        <div className={`text-xs mt-1 ${riskColors[item.riskLevel]}`}>
+                          {item.riskLevel} RISK
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-300 mb-2">{item.reasoning}</p>
+                    <div className="text-sm text-purple-300 bg-purple-900/20 p-2 rounded">
+                      💡 {item.suggestedAction}
+                      {item.exitPrice && ` (Target: ${item.exitPrice.toLocaleString()}gp)`}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Summary */}
       <PortfolioSummary key={refreshKey} />
 
