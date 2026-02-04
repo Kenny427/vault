@@ -17,7 +17,8 @@ import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
 import { usePriceAlertsStore } from '@/lib/priceAlertsStore';
 
-type TabType = 'portfolio' | 'favorites' | 'opportunities' | 'admin' | 'performance' | 'alerts';
+type TabType = 'portfolio' | 'opportunities' | 'favorites';
+type MenuTab = 'performance' | 'alerts' | 'admin';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -25,10 +26,12 @@ export default function Dashboard() {
   type PoolItem = { id: number; name: string; addedAt?: number };
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
+  const [showMenu, setShowMenu] = useState(false);
+  const [activeMenuTab, setActiveMenuTab] = useState<MenuTab | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-active-tab');
-      const validTabs: TabType[] = ['portfolio', 'favorites', 'opportunities', 'admin', 'performance', 'alerts'];
+      const validTabs: TabType[] = ['portfolio', 'opportunities', 'favorites'];
       if (saved && validTabs.includes(saved as TabType)) {
         return saved as TabType;
       }
@@ -266,12 +269,16 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6 border-b border-slate-700 overflow-x-auto">
+        {/* Tab Navigation - Minimal 3 tabs + Menu */}
+        <div className="flex items-center gap-2 mb-6 border-b border-slate-700">
           <button
-            onClick={() => setActiveTab('portfolio')}
+            onClick={() => {
+              setActiveTab('portfolio');
+              setActiveMenuTab(null);
+              setShowMenu(false);
+            }}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'portfolio'
+              activeTab === 'portfolio' && !activeMenuTab
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
             }`}
@@ -279,29 +286,13 @@ export default function Dashboard() {
             💼 Portfolio
           </button>
           <button
-            onClick={() => setActiveTab('performance')}
+            onClick={() => {
+              setActiveTab('opportunities');
+              setActiveMenuTab(null);
+              setShowMenu(false);
+            }}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'performance'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            📈 Performance
-          </button>
-          <button
-            onClick={() => setActiveTab('favorites')}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'favorites'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            ⭐ Favorites
-          </button>
-          <button
-            onClick={() => setActiveTab('opportunities')}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'opportunities'
+              activeTab === 'opportunities' && !activeMenuTab
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
             }`}
@@ -309,51 +300,78 @@ export default function Dashboard() {
             🎯 Opportunities
           </button>
           <button
-            onClick={() => setActiveTab('alerts')}
+            onClick={() => {
+              setActiveTab('favorites');
+              setActiveMenuTab(null);
+              setShowMenu(false);
+            }}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'alerts'
+              activeTab === 'favorites' && !activeMenuTab
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
             }`}
           >
-            🔔 Price Alerts
+            ⭐ Favorites
           </button>
-          <button
-            onClick={() => setActiveTab('admin')}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'admin'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            ⚙️ Pool Manager
-          </button>
+
+          {/* Settings Menu */}
+          <div className="relative ml-auto">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className={`px-4 py-3 font-semibold transition-all rounded-lg ${
+                showMenu
+                  ? 'text-osrs-accent bg-slate-700/50'
+                  : 'text-slate-400 hover:text-slate-300'
+              }`}
+              title="More options"
+            >
+              ⚙️
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50">
+                <button
+                  onClick={() => {
+                    setActiveMenuTab('performance');
+                    setShowMenu(false);
+                  }}
+                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${
+                    activeMenuTab === 'performance' ? 'text-osrs-accent' : 'text-slate-300'
+                  }`}
+                >
+                  📈 Performance
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveMenuTab('alerts');
+                    setShowMenu(false);
+                  }}
+                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${
+                    activeMenuTab === 'alerts' ? 'text-osrs-accent' : 'text-slate-300'
+                  }`}
+                >
+                  🔔 Price Alerts
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveMenuTab('admin');
+                    setShowMenu(false);
+                  }}
+                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors border-t border-slate-700 ${
+                    activeMenuTab === 'admin' ? 'text-osrs-accent' : 'text-slate-300'
+                  }`}
+                >
+                  ⚙️ Pool Manager
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Portfolio Tab Content */}
-        {activeTab === 'portfolio' && <Portfolio />}
-
-        {/* Performance Dashboard Tab */}
-        {activeTab === 'performance' && <PerformanceDashboard />}
-
-        {/* Price Alerts Tab */}
-        {activeTab === 'alerts' && <PriceAlerts />}
-
-        {/* Admin Pool Manager Tab */}
-        {activeTab === 'admin' && <PoolManager />}
-
-        {/* Favorites Tab Content */}
-        {activeTab === 'favorites' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-slate-100">Favorite Items</h2>
-            </div>
-            <FavoritesList />
-          </div>
-        )}
+        {activeTab === 'portfolio' && !activeMenuTab && <Portfolio />}
 
         {/* Opportunities Tab Content */}
-        {activeTab === 'opportunities' && (
+        {activeTab === 'opportunities' && !activeMenuTab && (
           <>
             {/* AI Analysis Status & Refresh Button */}
             <div className="bg-gradient-to-r from-blue-900 to-blue-800 border border-blue-700 rounded-lg p-4 mb-6">
@@ -489,6 +507,25 @@ export default function Dashboard() {
         </div>
         </>
         )}
+
+        {/* Favorites Tab Content */}
+        {activeTab === 'favorites' && !activeMenuTab && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-slate-100">Favorite Items</h2>
+            </div>
+            <FavoritesList />
+          </div>
+        )}
+
+        {/* Menu Tab: Performance */}
+        {activeMenuTab === 'performance' && <PerformanceDashboard />}
+
+        {/* Menu Tab: Price Alerts */}
+        {activeMenuTab === 'alerts' && <PriceAlerts />}
+
+        {/* Menu Tab: Pool Manager */}
+        {activeMenuTab === 'admin' && <PoolManager />}
       </main>
 
       {/* Floating AI Chat Widget */}
