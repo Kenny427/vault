@@ -52,34 +52,43 @@ export default function Dashboard() {
     try {
       // Analyze with AI via API route (server handles data fetching)
       if (itemsToAnalyze.length > 0) {
-        const response = await fetch('/api/analyze-flips', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(itemsToAnalyze.map(item => ({ id: item.id, name: item.name }))),
-        });
+        const payloadItems = itemsToAnalyze.map(item => ({ id: item.id, name: item.name }));
+        const batchSize = 20;
+        const allOpportunities: FlipOpportunity[] = [];
 
-        const contentType = response.headers.get('content-type') || '';
+        for (let i = 0; i < payloadItems.length; i += batchSize) {
+          const batch = payloadItems.slice(i, i + batchSize);
+          const response = await fetch('/api/analyze-flips', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(batch),
+          });
 
-        if (!response.ok) {
-          let errorMessage = 'Failed to analyze opportunities';
-          if (contentType.includes('application/json')) {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
-          } else {
-            const errorText = await response.text();
-            if (errorText) errorMessage = errorText;
+          const contentType = response.headers.get('content-type') || '';
+
+          if (!response.ok) {
+            let errorMessage = 'Failed to analyze opportunities';
+            if (contentType.includes('application/json')) {
+              const errorData = await response.json();
+              errorMessage = errorData.error || errorMessage;
+            } else {
+              const errorText = await response.text();
+              if (errorText) errorMessage = errorText;
+            }
+            throw new Error(errorMessage);
           }
-          throw new Error(errorMessage);
+
+          if (!contentType.includes('application/json')) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Unexpected response from analysis API');
+          }
+
+          const aiOpportunities = await response.json();
+          allOpportunities.push(...aiOpportunities);
         }
 
-        if (!contentType.includes('application/json')) {
-          const errorText = await response.text();
-          throw new Error(errorText || 'Unexpected response from analysis API');
-        }
-
-        const aiOpportunities = await response.json();
         setOpportunities(
-          aiOpportunities.sort((a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore)
+          allOpportunities.sort((a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore)
         );
         setLastRefresh(new Date());
       } else {
