@@ -43,7 +43,7 @@ interface PortfolioStore {
 
 export const usePortfolioStore = create<PortfolioStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       items: [],
       
       addItem: async (item) => {
@@ -283,6 +283,14 @@ export const usePortfolioStore = create<PortfolioStore>()(
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
+        const existing = get().items;
+        const existingLotsByItemId = new Map<number, PortfolioItem['lots']>();
+        existing.forEach((item) => {
+          if (item.lots && item.lots.length > 0) {
+            existingLotsByItemId.set(item.itemId, item.lots);
+          }
+        });
+
         const { data: portfolioData } = await supabase
           .from('portfolio_items')
           .select(`
@@ -313,6 +321,7 @@ export const usePortfolioStore = create<PortfolioStore>()(
             buyPrice: item.buy_price,
             datePurchased: new Date(item.date_purchased).getTime(),
             notes: item.notes,
+            lots: existingLotsByItemId.get(item.item_id),
             sales: (item.sales || []).map((sale: any) => ({
               id: sale.id,
               quantity: sale.quantity,
