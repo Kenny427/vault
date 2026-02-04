@@ -9,8 +9,8 @@ interface FlipCardProps {
 }
 
 export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) {
-  const { watchlist, addToWatchlist, removeFromWatchlist } = useDashboardStore();
-  const isInWatchlist = watchlist.some(item => item.id === opportunity.itemId);
+  const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
+  const isInFavorites = favorites.some(item => item.id === opportunity.itemId);
 
   const formatNumber = (value: number) => {
     const abs = Math.abs(value);
@@ -23,12 +23,12 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
     return `${(value / 1_000_000).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '')}M`;
   };
 
-  const toggleWatchlist = (e: React.MouseEvent) => {
+  const toggleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isInWatchlist) {
-      removeFromWatchlist(opportunity.itemId);
+    if (isInFavorites) {
+      removeFromFavorites(opportunity.itemId);
     } else {
-      addToWatchlist({
+      addToFavorites({
         id: opportunity.itemId,
         name: opportunity.itemName,
         addedAt: Date.now(),
@@ -94,14 +94,14 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
             </p>
           </div>
           <button
-            onClick={toggleWatchlist}
+            onClick={toggleFavorite}
             className={`ml-2 px-3 py-1 rounded text-sm font-bold transition-all ${
-              isInWatchlist
+              isInFavorites
                 ? 'bg-osrs-accent text-slate-900'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
             }`}
           >
-            {isInWatchlist ? '★' : '☆'}
+            {isInFavorites ? '★' : '☆'}
           </button>
         </div>
 

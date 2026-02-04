@@ -43,7 +43,6 @@ export default function Dashboard() {
     return null;
   });
   const {
-    watchlist,
     minOpportunityScore,
     setMinOpportunityScore
   } = useDashboardStore();
@@ -415,16 +414,16 @@ export default function Dashboard() {
             </div>
           )}
 
-          {filteredOpportunities.length === 0 && watchlist.length === 0 && (
+          {filteredOpportunities.length === 0 && (
             <div className="text-center py-12">
               <p className="text-slate-400 text-lg mb-2">
                 🎯 Auto-loaded popular items
               </p>
               <p className="text-slate-500 text-sm mb-4">
-                Popular OSRS trading items are being analyzed. Use the search bar to add more items to your watchlist.
+                Popular OSRS trading items are being analyzed. Use the search bar to add more items to analyze.
               </p>
               <p className="text-slate-600 text-xs">
-                Tip: Click the search bar to see popular items, or search for specific items you want to track.
+                Tip: Click the star ★ on any card to add it to your favorites for quick access.
               </p>
             </div>
           )}

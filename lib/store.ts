@@ -2,13 +2,6 @@ import { create } from 'zustand';
 import { FlipOpportunity } from './analysis';
 import { supabase } from './supabase';
 
-export interface WatchlistItem {
-  id: number;
-  name: string;
-  addedAt: number;
-  notes?: string;
-}
-
 export interface FavoriteItem {
   id: number;
   name: string;
@@ -17,12 +10,6 @@ export interface FavoriteItem {
 }
 
 interface DashboardStore {
-  // Watchlist
-  watchlist: WatchlistItem[];
-  addToWatchlist: (item: WatchlistItem) => Promise<void>;
-  removeFromWatchlist: (itemId: number) => Promise<void>;
-  updateWatchlistNote: (itemId: number, note: string) => Promise<void>;
-
   // Favorites
   favorites: FavoriteItem[];
   addToFavorites: (item: FavoriteItem) => Promise<void>;
@@ -53,74 +40,6 @@ interface DashboardStore {
 }
 
 export const useDashboardStore = create<DashboardStore>((set) => ({
-  // Watchlist
-  watchlist: (() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('osrs-watchlist');
-      return saved ? JSON.parse(saved) : [];
-    }
-    return [];
-  })(),
-
-  addToWatchlist: async (item) => {
-    set((state) => {
-      const updated = [...state.watchlist, item];
-      localStorage.setItem('osrs-watchlist', JSON.stringify(updated));
-      return { watchlist: updated };
-    });
-
-    // Try to sync to Supabase
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      await supabase
-        .from('watchlist_items')
-        .insert({
-          user_id: session.user.id,
-          item_id: item.id,
-          item_name: item.name,
-          notes: item.notes,
-        });
-    }
-  },
-
-  removeFromWatchlist: async (itemId) => {
-    set((state) => {
-      const updated = state.watchlist.filter(item => item.id !== itemId);
-      localStorage.setItem('osrs-watchlist', JSON.stringify(updated));
-      return { watchlist: updated };
-    });
-
-    // Try to sync to Supabase
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      await supabase
-        .from('watchlist_items')
-        .delete()
-        .eq('user_id', session.user.id)
-        .eq('item_id', itemId);
-    }
-  },
-
-  updateWatchlistNote: async (itemId, note) => {
-    set((state) => {
-      const updated = state.watchlist.map(item =>
-        item.id === itemId ? { ...item, notes: note } : item
-      );
-      localStorage.setItem('osrs-watchlist', JSON.stringify(updated));
-      return { watchlist: updated };
-    });
-
-    // Try to sync to Supabase
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      await supabase
-        .from('watchlist_items')
-        .update({ notes: note })
-        .eq('user_id', session.user.id)
-        .eq('item_id', itemId);
-    }
-  },
-
   // Favorites
   favorites: (() => {
     if (typeof window !== 'undefined') {
