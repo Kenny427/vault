@@ -135,25 +135,6 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
-          <div className="bg-slate-800/40 p-2 rounded border border-slate-700">
-            <p className="text-[10px] text-slate-400 mb-1">30D AVG</p>
-            <p className="text-xs font-bold text-slate-100">{opportunity.averagePrice30.toLocaleString()}</p>
-          </div>
-          <div className="bg-slate-800/40 p-2 rounded border border-slate-700">
-            <p className="text-[10px] text-slate-400 mb-1">90D AVG</p>
-            <p className="text-xs font-bold text-slate-100">{opportunity.averagePrice90.toLocaleString()}</p>
-          </div>
-          <div className="bg-slate-800/40 p-2 rounded border border-slate-700">
-            <p className="text-[10px] text-slate-400 mb-1">180D AVG</p>
-            <p className="text-xs font-bold text-slate-100">{opportunity.averagePrice180.toLocaleString()}</p>
-          </div>
-          <div className="bg-slate-800/40 p-2 rounded border border-slate-700">
-            <p className="text-[10px] text-slate-400 mb-1">365D AVG</p>
-            <p className="text-xs font-bold text-slate-100">{opportunity.averagePrice365.toLocaleString()}</p>
-          </div>
-        </div>
-
         {/* Profit Metrics - Always Visible */}
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-green-900/20 p-2 rounded border border-green-700/50">

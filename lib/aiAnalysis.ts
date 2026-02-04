@@ -295,6 +295,8 @@ BE SELECTIVE. Quality > Quantity. Only recommend trades YOU would take with YOUR
 
         // Get stats from appropriate timeframe
         const prices30 = item.history30.map(p => p.price);
+        const prices90 = item.history90.map(p => p.price);
+        const prices180 = item.history180.map(p => p.price);
         const prices365 = item.history365.map(p => p.price);
         
         const avg30 = prices30.reduce((a, b) => a + b, 0) / prices30.length;
