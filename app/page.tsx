@@ -6,7 +6,7 @@ import Auth from '@/components/Auth';
 import { useAuth } from '@/lib/authContext';
 import { usePortfolioStore } from '@/lib/portfolioStore';
 import { useDashboardStore } from '@/lib/store';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { initializeVisibilityHandler } from '@/lib/visibilityHandler';
 
 export default function Home() {
@@ -23,6 +23,7 @@ export default function Home() {
   const { loadFromSupabase: loadPortfolio } = usePortfolioStore();
   const { loadFavoritesFromSupabase: loadFavorites } = useDashboardStore();
   const [syncing, setSyncing] = useState(false);
+  const lastSyncedUserId = useRef<string | null>(null);
 
   // Initialize visibility handler once
   useEffect(() => {
@@ -31,15 +32,19 @@ export default function Home() {
 
   // Load data from Supabase when user logs in (only once)
   useEffect(() => {
-    if (session && !loading) {
-      setSyncing(true);
-      Promise.all([
-        loadPortfolio(),
-        loadFavorites(),
-      ]).finally(() => setSyncing(false));
-    }
+    if (!session || loading) return;
+
+    const userId = session.user?.id ?? null;
+    if (!userId || lastSyncedUserId.current === userId) return;
+
+    lastSyncedUserId.current = userId;
+    setSyncing(true);
+    Promise.all([
+      loadPortfolio(),
+      loadFavorites(),
+    ]).finally(() => setSyncing(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, loading]); // Only re-run when session/loading changes
+  }, [session, loading]);
 
   if (loading || syncing) {
     return (
