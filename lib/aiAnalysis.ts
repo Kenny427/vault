@@ -275,10 +275,12 @@ If items are scarce even at 25% confidence, return them anyway. Prefer showing u
     const jsonMatch = responseText.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       console.warn('No JSON found in AI response');
+      console.warn('AI response text:', responseText.substring(0, 500));
       return [];
     }
 
     const aiAnalysis = JSON.parse(jsonMatch[0]);
+    console.log(`AI Analysis: Parsed ${aiAnalysis.length} opportunities from response`);
 
     // Convert AI analysis to FlipOpportunity format
     const opportunities: FlipOpportunity[] = aiAnalysis
