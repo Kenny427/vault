@@ -202,20 +202,16 @@ Price Collapse: ${item.technicalIndicators.priceCollapse ? 'CRASHED 📉' : 'Nor
 
 === YOUR EXPERT ANALYSIS CRITERIA (MEAN-REVERSION STRATEGY) ===
 
+IMPORTANT: You are analyzing for LONG-TERM MEAN-REVERSION, not momentum trading. Be more LENIENT with opportunities.
+The user holds items for WEEKS. Price accuracy matters more than momentum.
+
 You hold items for WEEKS if needed. You profit from buying UNDERVALUED items that will bounce back to their historical averages.
 
-✅ PRIMARY BUY SIGNALS (items to flag):
-1. **15%+ below 90-day average** - Item recently tanked but has a history of bouncing back within 90 days
-2. **20%+ below 365-day average** - Deep value play; item trades well below yearly average with high confidence of recovery
-3. **Bottom 25th percentile of 365d range** - Currently at/near yearly lows but has proven recovery in the past
-4. **Consistency score HIGH (75%+)** - Item bounces reliably; not a "dead" item
-5. **Price has bounced back 25%+ multiple times in history** - Proven recovery pattern, not declining trend
-
-✅ SECONDARY BUY SIGNALS (boost confidence):
-- 90d momentum is positive even if recent momentum is negative (bottoming out + recovering)
-- Item was higher in price for significant periods in 90d/365d history
-- Price dips are followed by recoveries in historical data (cyclical pattern)
-- Multiple items in same category are similarly undervalued (sector dip, not item-specific failure)
+PRIMARY SIGNALS (include items showing ANY of these):
+- 10%+ below 90d avg (good discount for bounce back)
+- 15%+ below 365d avg (deep value, likely recovery)
+- Price in bottom 30% of 365d range with decent consistency
+- Price bounced 15%+ before and likely to repeat
 
 ❌ HARD SKIPS (reject these):
 - Consistently declining 30d/90d/365d averages (item losing fundamental value)
@@ -235,9 +231,18 @@ LONG-TERM (4 weeks - 3 months) - Target: 20-60% profit:
 
 === OUTPUT FORMAT ===
 
-Return ONLY BUY opportunities (no sells). Provide up to 15 candidates ranked by confidence.
-Minimum confidence: 35% for real undervaluation signals.
-RESPOND ONLY WITH VALID JSON ARRAY:
+Return ONLY BUY opportunities (no sells). Analyze EVERY item and include it if ANY of these apply:
+- 10%+ below 90d average (and has had higher prices historically)
+- 15%+ below 365d average (and is not in a downtrend)
+- Price in bottom 30% of 365d range with consistency > 70%
+- Item has bounced 15%+ multiple times in the past
+
+Provide as many candidates as meet the criteria (expect 8-20+ from a 30-item batch).
+Minimum confidence: 25% is OK if the discount is real and recovery is plausible.
+
+You are being too selective. Include borderline candidates for manual review - the user will decide which to trade.
+
+RESPOND ONLY WITH VALID JSON ARRAY. Include item even if confidence is 40-50% as long as discount is real:
 [
   {
     "itemId": 123,
@@ -248,7 +253,8 @@ RESPOND ONLY WITH VALID JSON ARRAY:
   }
 ]
 
-If items are scarce, return them anyway. Prefer showing undervalued candidates for manual review rather than returning an empty list.`;
+Return at least 5-8 items from any batch. If you're only finding 1-2, expand your criteria. Items don't need perfect signals - real mean-reversion plays often look mediocre at first glance.
+If items are scarce even at 25% confidence, return them anyway. Prefer showing undervalued candidates for manual review rather than returning an empty list.`;
 
   try {
     const message = await aiClient.chat.completions.create({
