@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { usePortfolioStore } from '@/lib/portfolioStore';
 import { useDashboardStore } from '@/lib/store';
+import { useTradeHistoryStore } from '@/lib/tradeHistoryStore';
 import PriceChart from './PriceChart';
 import { getItemDetails, getItemHistory, getItemPrice, resolveIconUrl } from '@/lib/api/osrs';
 
@@ -23,6 +24,7 @@ export default function PortfolioItemPage() {
   const params = useParams();
   const itemId = Number(params?.id);
   const items = usePortfolioStore((state) => state.items);
+  const tradeHistory = useTradeHistoryStore((state) => state.trades);
   const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
   const isFavorite = favorites.some(item => item.id === itemId);
   const [timeframe, setTimeframe] = useState<Timeframe>('30d');
@@ -36,6 +38,27 @@ export default function PortfolioItemPage() {
     );
   }, [matchingItems]);
   const sales = useMemo(() => matchingItems.flatMap((item) => item.sales ?? []), [matchingItems]);
+  const tradeSales = useMemo(() => {
+    return tradeHistory
+      .filter((trade) => trade.itemId === itemId)
+      .map((trade) => ({
+        id: `trade-${trade.id}`,
+        quantity: trade.quantitySold,
+        sellPrice: trade.sellPrice,
+        dateSold: trade.sellDate,
+      }));
+  }, [tradeHistory, itemId]);
+
+  const displaySales = useMemo(() => {
+    const seen = new Set<string>();
+    const merged = [...sales, ...tradeSales].filter((sale) => {
+      const key = `${sale.dateSold}-${sale.quantity}-${sale.sellPrice}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+    return merged.sort((a, b) => b.dateSold - a.dateSold);
+  }, [sales, tradeSales]);
 
   const { data: itemDetails } = useQuery({
     queryKey: ['item-details', itemId],
@@ -343,12 +366,12 @@ export default function PortfolioItemPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
-                {sales.length === 0 ? (
+                {displaySales.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-6 text-center text-slate-500">No sales recorded yet.</td>
                   </tr>
                 ) : (
-                  sales.map((sale) => (
+                  displaySales.map((sale) => (
                     <tr key={sale.id}>
                       <td className="px-6 py-3 text-slate-300">{format(new Date(sale.dateSold), 'MMM dd, yyyy')}</td>
                       <td className="px-6 py-3 text-right text-slate-200">{sale.sellPrice.toLocaleString()}gp</td>
