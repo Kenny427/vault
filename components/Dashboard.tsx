@@ -6,7 +6,7 @@ import SearchBar from './SearchBar';
 import FlipCard from './FlipCard';
 import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
-import { getItemPrice, getItemHistory, getPopularItems } from '@/lib/api/osrs';
+import { getPopularItems } from '@/lib/api/osrs';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
@@ -50,52 +50,12 @@ export default function Dashboard() {
     setError('');
 
     try {
-      // Fetch price and history for all items across multiple timeframes
-      const itemsWithData: Array<{
-        id: number;
-        name: string;
-        currentPrice: number;
-        history30: any[];
-        history90: any[];
-        history180: any[];
-        history365: any[];
-      }> = [];
-
-      for (const item of itemsToAnalyze) {
-        try {
-          const price = await getItemPrice(item.id);
-          const currentPrice = price ? (price.high + price.low) / 2 : undefined;
-
-          if (!currentPrice) continue;
-
-          // Fetch price histories for different timeframes
-          const history30 = await getItemHistory(item.id, 30 * 24 * 60 * 60, currentPrice);
-          const history90 = await getItemHistory(item.id, 90 * 24 * 60 * 60, currentPrice);
-          const history180 = await getItemHistory(item.id, 180 * 24 * 60 * 60, currentPrice);
-          const history365 = await getItemHistory(item.id, 365 * 24 * 60 * 60, currentPrice);
-
-          if (history30 && history30.length > 0) {
-            itemsWithData.push({
-              id: item.id,
-              name: item.name,
-              currentPrice,
-              history30,
-              history90: history90 && history90.length > 0 ? history90 : history30,
-              history180: history180 && history180.length > 0 ? history180 : history30,
-              history365: history365 && history365.length > 0 ? history365 : history30,
-            });
-          }
-        } catch (error) {
-          console.error(`Error fetching data for ${item.name}:`, error);
-        }
-      }
-
-      // Analyze with AI via API route
-      if (itemsWithData.length > 0) {
+      // Analyze with AI via API route (server handles data fetching)
+      if (itemsToAnalyze.length > 0) {
         const response = await fetch('/api/analyze-flips', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(itemsWithData),
+          body: JSON.stringify(itemsToAnalyze.map(item => ({ id: item.id, name: item.name }))),
         });
 
         const contentType = response.headers.get('content-type') || '';
