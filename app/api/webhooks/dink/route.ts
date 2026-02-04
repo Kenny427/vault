@@ -5,10 +5,17 @@ let allWebhooks: any[] = [];
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    
-    console.log('🔔 RAW WEBHOOK RECEIVED:', JSON.stringify(body, null, 2));
-    
+    const rawText = await request.text();
+    let body: any = rawText;
+
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      // Non-JSON payloads are expected from some webhook sources
+    }
+
+    console.log('🔔 RAW WEBHOOK RECEIVED:', typeof body === 'string' ? body : JSON.stringify(body, null, 2));
+
     // Store raw body for debugging
     allWebhooks.push({
       received: new Date().toISOString(),
@@ -16,12 +23,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Try to parse various possible formats
-    let message = body.message || body.text || body.payload || '';
-    
-    // If no message, try stringifying the entire body
+    let message = (body && body.message) || (body && body.text) || (body && body.payload) || '';
+
+    // If no message, use raw text as message
     if (!message) {
-      message = typeof body === 'string' ? body : JSON.stringify(body);
-      console.log('📝 Using stringified body as message:', message);
+      message = typeof body === 'string' ? body : rawText;
+      console.log('📝 Using raw text as message:', message);
     }
 
     console.log('📝 Parsed message:', message);
