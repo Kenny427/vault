@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/authContext';
 import { usePortfolioStore } from '@/lib/portfolioStore';
 import { useDashboardStore } from '@/lib/store';
 import { useEffect, useState } from 'react';
+import { initializeVisibilityHandler } from '@/lib/visibilityHandler';
 
 export default function Home() {
   const [queryClient] = useState(() => new QueryClient({
@@ -23,7 +24,12 @@ export default function Home() {
   const { loadFavoritesFromSupabase: loadFavorites } = useDashboardStore();
   const [syncing, setSyncing] = useState(false);
 
-  // Load data from Supabase when user logs in
+  // Initialize visibility handler once
+  useEffect(() => {
+    initializeVisibilityHandler();
+  }, []);
+
+  // Load data from Supabase when user logs in (only once)
   useEffect(() => {
     if (session && !loading) {
       setSyncing(true);
@@ -32,7 +38,8 @@ export default function Home() {
         loadFavorites(),
       ]).finally(() => setSyncing(false));
     }
-  }, [session, loading, loadPortfolio, loadFavorites]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, loading]); // Only re-run when session/loading changes
 
   if (loading || syncing) {
     return (
