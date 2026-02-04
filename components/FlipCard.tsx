@@ -2,8 +2,6 @@
 
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
-import { useState } from 'react';
-import { analyzeOpportunityWithAI, AIAnalysis } from '@/lib/api/aiAnalysis';
 
 interface FlipCardProps {
   opportunity: FlipOpportunity;
@@ -13,9 +11,6 @@ interface FlipCardProps {
 export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) {
   const { watchlist, addToWatchlist, removeFromWatchlist } = useDashboardStore();
   const isInWatchlist = watchlist.some(item => item.id === opportunity.itemId);
-  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [showAI, setShowAI] = useState(false);
 
   const toggleWatchlist = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -27,26 +22,6 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
         name: opportunity.itemName,
         addedAt: Date.now(),
       });
-    }
-  };
-
-  const handleAIAnalysis = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (aiAnalysis) {
-      setShowAI(!showAI);
-      return;
-    }
-
-    setAiLoading(true);
-    try {
-      const analysis = await analyzeOpportunityWithAI(opportunity);
-      setAiAnalysis(analysis);
-      setShowAI(true);
-    } catch (error) {
-      console.error('AI analysis error:', error);
-      alert('AI analysis failed. Make sure OPENAI_API_KEY is set in environment.');
-    } finally {
-      setAiLoading(false);
     }
   };
 
@@ -264,76 +239,14 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
       </div>
 
       {/* View Details Button */}
-      <div className="p-3 border-t border-slate-700 bg-gradient-to-r from-osrs-accent/10 to-transparent space-y-2">
+      <div className="p-3 border-t border-slate-700 bg-gradient-to-r from-osrs-accent/10 to-transparent">
         <button
           onClick={onViewDetails}
           className="w-full py-2 px-3 bg-osrs-accent hover:bg-osrs-accent/90 text-slate-900 font-bold rounded transition-colors text-sm"
         >
           📊 View Full Chart & Analysis
         </button>
-        <button
-          onClick={handleAIAnalysis}
-          disabled={aiLoading}
-          className="w-full py-2 px-3 bg-purple-900/50 hover:bg-purple-900/70 text-purple-300 border border-purple-700 font-semibold rounded transition-colors text-sm disabled:opacity-50"
-        >
-          {aiLoading ? '🤖 Analyzing...' : (aiAnalysis ? '🤖 View AI Analysis' : '🤖 Get AI Validation')}
-        </button>
       </div>
-
-      {/* AI Analysis Panel */}
-      {showAI && aiAnalysis && (
-        <div className="p-4 border-t border-purple-700/50 bg-purple-900/20 space-y-3">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold text-purple-300">🤖 AI Analysis</h3>
-            <button
-              onClick={() => setShowAI(false)}
-              className="text-xs text-purple-400 hover:text-purple-300"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className={`p-2 rounded border ${aiAnalysis.isViableTrade ? 'bg-green-900/20 border-green-700/50' : 'bg-red-900/20 border-red-700/50'}`}>
-            <p className="text-sm font-semibold">
-              {aiAnalysis.isViableTrade ? '✅ Viable Trade' : '⚠️ Risky Trade'}
-            </p>
-            <p className="text-xs mt-1">{aiAnalysis.reasoning}</p>
-          </div>
-
-          {aiAnalysis.confidenceBoost > 0 && (
-            <div className="p-2 bg-blue-900/20 border border-blue-700/50 rounded">
-              <p className="text-xs text-blue-300">
-                <span className="font-semibold">AI Confidence Boost:</span> +{aiAnalysis.confidenceBoost}%
-              </p>
-              <p className="text-xs text-slate-300 mt-1">
-                Adjusted confidence: {Math.min(100, opportunity.confidence + aiAnalysis.confidenceBoost).toFixed(0)}%
-              </p>
-            </div>
-          )}
-
-          {aiAnalysis.risks.length > 0 && (
-            <div className="p-2 bg-red-900/20 border border-red-700/50 rounded">
-              <p className="text-xs font-semibold text-red-400 mb-1">⚠️ Identified Risks:</p>
-              <ul className="text-xs text-red-300 space-y-1 ml-2">
-                {aiAnalysis.risks.map((risk, i) => (
-                  <li key={i}>• {risk}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {aiAnalysis.opportunities.length > 0 && (
-            <div className="p-2 bg-green-900/20 border border-green-700/50 rounded">
-              <p className="text-xs font-semibold text-green-400 mb-1">✨ Positive Signals:</p>
-              <ul className="text-xs text-green-300 space-y-1 ml-2">
-                {aiAnalysis.opportunities.map((opp, i) => (
-                  <li key={i}>• {opp}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
