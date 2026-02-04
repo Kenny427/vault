@@ -74,7 +74,7 @@ const POPULAR_CATEGORIES = [
   'shark', 'manta ray', 'dark crab', 'anglerfish',
   
   // Heavily botted items (price crash opportunities)
-  'zulrah', 'toxic blowpipe', 'serpentine helm', 'magic fang', 'tanzanite fang',
+  'zulrah', 'zulrah scale', "zulrah's scales", 'toxic blowpipe', 'serpentine helm', 'magic fang', 'tanzanite fang',
   'vorkath', 'superior dragon bones', 'blue dragon', 'dragon bones', 'dragon hide',
   'green dragonhide', 'red dragonhide', 'black dragonhide',
   'limpwurt root', 'mort myre fungus', 'snape grass', 'white berries',

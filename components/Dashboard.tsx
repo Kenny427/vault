@@ -60,11 +60,19 @@ export default function Dashboard() {
       console.log('Skipping analysis - cooldown active');
       return;
     }
-    const itemsToAnalyze = watchlist.length > 0 ? watchlist : (await getPopularItems()).map(item => ({
-      id: item.id,
-      name: item.name,
-      addedAt: Date.now(),
-    }));
+    const customPool = typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('osrs-custom-pool') || '[]')
+      : [];
+
+    const itemsToAnalyze = customPool.length > 0
+      ? customPool
+      : watchlist.length > 0
+        ? watchlist
+        : (await getPopularItems()).map(item => ({
+            id: item.id,
+            name: item.name,
+            addedAt: Date.now(),
+          }));
 
     if (itemsToAnalyze.length === 0) {
       setOpportunities([]);
@@ -121,6 +129,7 @@ export default function Dashboard() {
         setLastRefresh(now);
         if (typeof window !== 'undefined') {
           localStorage.setItem('osrs-last-refresh', now.toISOString());
+          localStorage.setItem('osrs-cached-opps', JSON.stringify(allOpportunities));
         }
       } else {
         setOpportunities([]);
@@ -140,6 +149,22 @@ export default function Dashboard() {
       analyzeWithAI(false);
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('osrs-cached-opps');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setOpportunities(parsed);
+          }
+        } catch {
+          // Ignore invalid cache
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -187,12 +212,20 @@ export default function Dashboard() {
               </div>
               <h1 className="text-2xl font-semibold text-slate-100">Vault</h1>
             </div>
-            <button
-              onClick={logout}
-              className="px-4 py-2 text-sm text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
-            >
-              Sign Out
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push('/admin')}
+                className="px-4 py-2 text-sm text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
+              >
+                Admin Pool
+              </button>
+              <button
+                onClick={logout}
+                className="px-4 py-2 text-sm text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
 
           <div className="max-w-2xl">
