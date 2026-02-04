@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { usePendingTransactionsStore } from '@/lib/pendingTransactionsStore';
 import { usePortfolioStore } from '@/lib/portfolioStore';
+import { useTradeHistoryStore } from '@/lib/tradeHistoryStore';
 
 export default function PendingTransactionsModal({ onClose }: { onClose: () => void }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -14,6 +15,11 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
   const removeTransaction = usePendingTransactionsStore((state) => state.removeTransaction);
   const markHandled = usePendingTransactionsStore((state) => state.markHandled);
   const addItem = usePortfolioStore((state) => state.addItem);
+  const addSale = usePortfolioStore((state) => state.addSale);
+  const updateItem = usePortfolioStore((state) => state.updateItem);
+  const removeItem = usePortfolioStore((state) => state.removeItem);
+  const items = usePortfolioStore((state) => state.items);
+  const addTrade = useTradeHistoryStore((state) => state.addTrade);
 
   const filteredTransactions = useMemo(() => {
     return filterType === 'ALL'
@@ -77,6 +83,67 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
             sales: [],
             lots: [],
           });
+
+          markHandled(tx.id);
+          removeTransaction(tx.id);
+        }
+
+        if (tx.type === 'SELL') {
+          const match = tx.itemId
+            ? items.find((item) => item.itemId === tx.itemId)
+            : items.find((item) => item.itemName.toLowerCase() === tx.itemName.toLowerCase());
+
+          if (!match) {
+            setError(`No matching portfolio item for ${tx.itemName}`);
+            continue;
+          }
+
+          const sellQty = Math.min(tx.quantity || match.quantity, match.quantity);
+          if (sellQty <= 0) {
+            setError(`Invalid sell quantity for ${tx.itemName}`);
+            continue;
+          }
+
+          const sellPrice = tx.price || 0;
+          if (sellPrice <= 0) {
+            setError(`Missing sell price for ${tx.itemName}`);
+            continue;
+          }
+
+          const totalCost = match.buyPrice * sellQty;
+          const totalRevenue = sellPrice * sellQty;
+          const profit = totalRevenue - totalCost;
+          const roi = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+          const holdDays = Math.floor((tx.timestamp - match.datePurchased) / (1000 * 60 * 60 * 24));
+
+          addTrade({
+            itemId: match.itemId,
+            itemName: match.itemName,
+            quantityBought: match.quantity,
+            buyPrice: match.buyPrice,
+            buyDate: match.datePurchased,
+            quantitySold: sellQty,
+            sellPrice,
+            sellDate: tx.timestamp,
+            profit,
+            roi,
+            holdDays,
+            notes: `DINK auto-sale (${tx.status})`,
+          });
+
+          await addSale(match.id, {
+            quantity: sellQty,
+            sellPrice,
+            dateSold: tx.timestamp,
+            notes: `DINK auto-sale (${tx.status})`,
+          });
+
+          const remaining = match.quantity - sellQty;
+          if (remaining <= 0) {
+            await removeItem(match.id);
+          } else {
+            await updateItem(match.id, { quantity: remaining });
+          }
 
           markHandled(tx.id);
           removeTransaction(tx.id);

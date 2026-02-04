@@ -10,7 +10,6 @@ import RecordTradeModal from './RecordTradeModal';
 import SetAlertModal from './SetAlertModal';
 import ItemNotesModal from './ItemNotesModal';
 import TradeHistory from './TradeHistory';
-import CSVImportModal from './CSVImportModal';
 import PendingTransactionsModal from './PendingTransactionsModal';
 import { getBatchPrices } from '@/lib/api/osrs';
 import { useChat } from '@/lib/chatContext';
@@ -19,7 +18,6 @@ import { usePendingTransactionsStore } from '@/lib/pendingTransactionsStore';
 export default function Portfolio() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
-  const [showImportCSV, setShowImportCSV] = useState(false);
   const [showPendingTransactions, setShowPendingTransactions] = useState(false);
   const [showRecordTradeModal, setShowRecordTradeModal] = useState<{ item: any; currentPrice: number } | null>(null);
   const [showSetAlertModal, setShowSetAlertModal] = useState<{ itemId: number; itemName: string; currentPrice: number } | null>(null);
@@ -103,13 +101,6 @@ export default function Portfolio() {
                 {pendingTransactions.length}
               </span>
             )}
-          </button>
-          <button            onClick={() => setShowImportCSV(true)}
-            className="px-4 py-2 bg-slate-800 text-slate-200 rounded-lg border border-slate-700 hover:bg-slate-700 transition-colors"
-            disabled={showTradeHistory}
-            title="Import from CSV file"
-          >
-            📥 Import CSV
           </button>
           <button
             onClick={() => setShowAddModal(true)}
@@ -308,16 +299,6 @@ export default function Portfolio() {
           itemId={showNotesModal.itemId}
           itemName={showNotesModal.itemName}
           onClose={() => setShowNotesModal(null)}
-        />
-      )}
-
-      {/* CSV Import Modal */}
-      {showImportCSV && (
-        <CSVImportModal
-          onClose={() => {
-            setShowImportCSV(false);
-            setRefreshKey(prev => prev + 1);
-          }}
         />
       )}
 
