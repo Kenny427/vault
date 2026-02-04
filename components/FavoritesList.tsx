@@ -174,13 +174,14 @@ export default function FavoritesList() {
             const isOversold = pricePosition < 30;
             const isOverbought = pricePosition > 70;
 
-            // Volatility
-            const volatility = history.length > 1
+            // Volatility as percentage of 30D average
+            const volatilityStdDev = history.length > 1
               ? Math.sqrt(
                   history.reduce((sum, h) => sum + Math.pow(h.price - (avg30 || 0), 2), 0) / 
                   history.length
                 )
               : 0;
+            const volatilityPercent = avg30 && avg30 > 0 ? (volatilityStdDev / avg30) * 100 : 0;
 
             // Spread for flipping
             const netSell = price?.high ? Math.floor(price.high * 0.98) : 0;
@@ -276,7 +277,7 @@ export default function FavoritesList() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <div className="bg-slate-800/50 p-2 rounded border border-slate-700 text-center">
                       <p className="text-xs text-slate-500">30D AVG</p>
                       <p className="text-sm font-semibold text-slate-200">
@@ -286,13 +287,7 @@ export default function FavoritesList() {
                     <div className="bg-slate-800/50 p-2 rounded border border-slate-700 text-center">
                       <p className="text-xs text-slate-500">VOLATILITY</p>
                       <p className="text-sm font-semibold text-blue-400">
-                        {volatility > 0 ? formatNumber(Math.round(volatility)) : 'N/A'}
-                      </p>
-                    </div>
-                    <div className="bg-slate-800/50 p-2 rounded border border-slate-700 text-center">
-                      <p className="text-xs text-slate-500">SPREAD</p>
-                      <p className="text-sm font-semibold text-slate-200">
-                        {price ? formatNumber(price.high - price.low) : 'N/A'}
+                        {volatilityPercent > 0 ? volatilityPercent.toFixed(1) : 'N/A'}{volatilityPercent > 0 ? '%' : ''}
                       </p>
                     </div>
                   </div>
