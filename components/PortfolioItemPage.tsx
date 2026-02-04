@@ -73,10 +73,12 @@ export default function PortfolioItemPage() {
     const avgBuy = totalQty > 0 ? totalCost / totalQty : 0;
 
     let realizedRevenue = 0;
+    let realizedTax = 0;
     sales.forEach((sale) => {
       const gross = sale.sellPrice * sale.quantity;
       const net = gross * 0.98;
       realizedRevenue += net;
+      realizedTax += gross * 0.02;
     });
 
     const avgSell = soldQty > 0 ? realizedRevenue / soldQty : 0;
@@ -102,6 +104,7 @@ export default function PortfolioItemPage() {
 
     const livePrice = priceData ? (priceData.high + priceData.low) / 2 : avgBuy;
     const unrealizedValue = livePrice * remainingQty * 0.98;
+    const unrealizedTax = livePrice * remainingQty * 0.02;
     const unrealizedProfit = unrealizedValue - remainingCost;
     const totalProfit = realizedProfit + unrealizedProfit;
     const roi = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
@@ -118,6 +121,8 @@ export default function PortfolioItemPage() {
       unrealizedProfit,
       totalProfit,
       roi,
+      realizedTax,
+      unrealizedTax,
       remainingByLot,
     };
   }, [lots, sales, priceData]);
@@ -174,7 +179,7 @@ export default function PortfolioItemPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
             <div className="text-slate-400 text-xs">Holdings</div>
             <div className="text-lg font-semibold text-slate-100">{stats.remainingQty.toLocaleString()}</div>
@@ -186,6 +191,15 @@ export default function PortfolioItemPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
             <div className="text-slate-400 text-xs">Current</div>
             <div className="text-lg font-semibold text-blue-400">{Math.round(stats.currentPrice).toLocaleString()}gp</div>
+          </div>
+          <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+            <div className="text-slate-400 text-xs">Tax (2%)</div>
+            <div className="text-lg font-semibold text-slate-200">
+              {Math.round((stats.realizedTax + stats.unrealizedTax) || 0).toLocaleString()}gp
+            </div>
+            <div className="text-[10px] text-slate-500">
+              Paid {Math.round(stats.realizedTax || 0).toLocaleString()}gp • Est {Math.round(stats.unrealizedTax || 0).toLocaleString()}gp
+            </div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
             <div className="text-slate-400 text-xs">Total P/L</div>
