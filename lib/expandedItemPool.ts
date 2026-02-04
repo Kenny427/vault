@@ -172,7 +172,7 @@ export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   { id: 2442, name: 'Super defence(1)', category: 'potions', tier: 'medium' },
   { id: 139, name: 'Ranging potion(4)', category: 'potions', tier: 'high' },
   { id: 141, name: 'Ranging potion(3)', category: 'potions', tier: 'medium' },
-  { id: 3040, name: 'Magic potion(4)', category: 'potions', tier: 'medium' },
+  { id: 3003, name: 'Magic potion(4)', category: 'potions', tier: 'medium' },
   { id: 12695, name: 'Super combat potion(4)', category: 'potions', tier: 'high' },
   { id: 12697, name: 'Super combat potion(3)', category: 'potions', tier: 'high' },
   { id: 21978, name: 'Stamina potion(4)', category: 'potions', tier: 'high' },

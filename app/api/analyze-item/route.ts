@@ -153,10 +153,26 @@ export async function POST(request: Request) {
     let matchedItem = null;
     const lowerQuery = itemName.toLowerCase();
     
-    // Try exact match first
+    // Try exact match first (most precise)
     matchedItem = popularItems.find(i => i.name.toLowerCase() === lowerQuery);
     
-    // If no exact match, find item name within the query
+    // If no exact match, try to match with dose numbers (e.g., "Super attack(1)" should match exactly, not Super attack(4))
+    if (!matchedItem) {
+      // If query contains a dose number like (1), (2), (3), (4), match only items with the same dose
+      const doseMatch = lowerQuery.match(/\((\d)\)/);
+      if (doseMatch) {
+        const targetDose = doseMatch[1];
+        // First try items with the same dose
+        matchedItem = popularItems.find(i => {
+          const iLower = i.name.toLowerCase();
+          const baseName = lowerQuery.replace(/\s*\(\d\)\s*$/, '').trim();
+          const iBaseName = iLower.replace(/\s*\(\d\)\s*$/, '').trim();
+          return iLower.includes(`(${targetDose})`) && (iBaseName === baseName || iBaseName.includes(baseName) || baseName.includes(iBaseName));
+        });
+      }
+    }
+    
+    // If no dose-specific match, find item name within the query
     if (!matchedItem) {
       matchedItem = popularItems.find(i => {
         const itemLower = i.name.toLowerCase();
@@ -166,16 +182,16 @@ export async function POST(request: Request) {
     
     // If still no match, try partial word matching
     if (!matchedItem) {
-      const queryWords = lowerQuery.split(/\s+/);
+      const queryWords = lowerQuery.split(/\s+/).filter(w => !w.match(/^\(\d\)$/)); // Exclude dose numbers
       matchedItem = popularItems.find(i => {
-        const itemWords = i.name.toLowerCase().split(/\s+/);
+        const itemWords = i.name.toLowerCase().split(/\s+/).filter(w => !w.match(/^\(\d\)$/));
         return itemWords.every(word => queryWords.some(qw => qw.includes(word) || word.includes(qw)));
       });
     }
 
     if (!matchedItem) {
       return NextResponse.json(
-        { error: `Could not find an item matching "${itemName}". Try using exact item names like "Avantoe" or "Runite bolts".` },
+        { error: `Could not find an item matching "${itemName}". Try using exact item names like "Avantoe" or "Runite bolts" or include the dose number like "Super attack(1)".` },
         { status: 404 }
       );
     }
