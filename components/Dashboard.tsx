@@ -77,9 +77,26 @@ export default function Dashboard() {
     try {
       // Analyze with AI via API route (server handles data fetching)
       if (itemsToAnalyze.length > 0) {
+        const ITEM_COOLDOWN_MS = 60 * 60 * 1000; // 1 hour per item
+        const nowMs = Date.now();
+        const storedMap = typeof window !== 'undefined'
+          ? localStorage.getItem('osrs-item-last-analyzed')
+          : null;
+        const lastAnalyzed: Record<number, number> = storedMap ? JSON.parse(storedMap) : {};
+
         const shuffled = [...itemsToAnalyze]
           .map(item => ({ id: item.id, name: item.name }))
+          .filter(item => {
+            const last = lastAnalyzed[item.id] ?? 0;
+            return nowMs - last >= ITEM_COOLDOWN_MS;
+          })
           .sort(() => Math.random() - 0.5);
+
+        if (shuffled.length === 0) {
+          setError('All items are on cooldown. Try again later.');
+          return;
+        }
+
         const payloadItems = shuffled.slice(0, 60);
         const batchSize = 15;
         const allOpportunities: FlipOpportunity[] = [];
@@ -123,6 +140,11 @@ export default function Dashboard() {
         if (typeof window !== 'undefined') {
           localStorage.setItem('osrs-last-refresh', now.toISOString());
           localStorage.setItem('osrs-cached-opps', JSON.stringify(allOpportunities));
+          const updatedMap = { ...lastAnalyzed };
+          payloadItems.forEach(item => {
+            updatedMap[item.id] = nowMs;
+          });
+          localStorage.setItem('osrs-item-last-analyzed', JSON.stringify(updatedMap));
         }
       } else {
         setOpportunities([]);
