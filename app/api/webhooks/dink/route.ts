@@ -1,49 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Temporary in-memory store for debugging (will be lost on redeploy)
-const recentWebhooks: any[] = [];
+let allWebhooks: any[] = [];
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    console.log('🔔 DINK Webhook received:', body);
+    console.log('🔔 RAW WEBHOOK RECEIVED:', JSON.stringify(body, null, 2));
+    
+    // Store raw body for debugging
+    allWebhooks.push({
+      received: new Date().toISOString(),
+      raw: body,
+    });
 
-    // Parse DINK webhook format: %USERNAME% %TYPE% %ITEM% %STATUS%
-    // Expected payload: { message: "Kenny BUY Iron Ore COMPLETED", ... }
-    const message = body.message || body.text || '';
-
+    // Try to parse various possible formats
+    let message = body.message || body.text || body.payload || '';
+    
+    // If no message, try stringifying the entire body
     if (!message) {
-      console.warn('⚠️ No message field found in webhook');
-      return NextResponse.json(
-        { error: 'Missing message field in webhook payload' },
-        { status: 400 }
-      );
+      message = typeof body === 'string' ? body : JSON.stringify(body);
+      console.log('📝 Using stringified body as message:', message);
     }
 
-    console.log('📝 Parsing message:', message);
+    console.log('📝 Parsed message:', message);
 
-    // Parse the message
+    // Parse the message: USERNAME TYPE ITEM [STATUS]
     const parts = message.trim().split(/\s+/);
+    
     if (parts.length < 3) {
-      console.warn('⚠️ Invalid message format:', parts);
+      console.warn('⚠️ Not enough parts:', parts);
       return NextResponse.json(
-        { error: 'Invalid message format. Expected: USERNAME TYPE ITEM [STATUS]' },
-        { status: 400 }
+        { 
+          success: false,
+          message: 'Need at least 3 parts: USERNAME TYPE ITEM',
+          parts,
+        },
+        { status: 200 } // Return 200 so DINK knows we got it
       );
     }
 
     const username = parts[0];
     const type = parts[1]?.toUpperCase();
-    const status = parts[parts.length - 1]; // Last part is status
-    const itemName = parts.slice(2, parts.length - 1).join(' '); // Everything between TYPE and STATUS
+    const status = parts[parts.length - 1];
+    const itemName = parts.slice(2, parts.length - 1).join(' ');
+
+    console.log('✅ Parsed:', { username, type, itemName, status });
 
     if (!['BUY', 'SELL'].includes(type)) {
-      console.warn('⚠️ Invalid type:', type);
-      return NextResponse.json(
-        { error: 'TYPE must be BUY or SELL' },
-        { status: 400 }
-      );
+      console.warn('⚠️ Invalid type, storing anyway:', type);
     }
 
     const transaction = {
@@ -54,11 +60,13 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     };
 
-    console.log('✅ Transaction parsed:', transaction);
-    
-    // Store in temporary memory for debugging
-    recentWebhooks.push(transaction);
-    console.log(`📦 Total webhooks received: ${recentWebhooks.length}`);
+    // Store parsed transaction
+    allWebhooks.push({
+      received: new Date().toISOString(),
+      parsed: transaction,
+    });
+
+    console.log(`📦 Total transactions: ${allWebhooks.length}`);
 
     return NextResponse.json(
       {
@@ -69,17 +77,27 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('❌ Webhook error:', error);
+    
+    allWebhooks.push({
+      received: new Date().toISOString(),
+      error: String(error),
+    });
+
     return NextResponse.json(
-      { error: 'Failed to process webhook', details: String(error) },
-      { status: 500 }
+      { 
+        success: false,
+        error: 'Failed to process webhook', 
+        details: String(error),
+      },
+      { status: 200 } // Return 200 so DINK knows we got it
     );
   }
 }
 
-// Debug endpoint to check received webhooks
+// Debug endpoint to see what DINK is sending
 export async function GET() {
   return NextResponse.json({
-    totalReceived: recentWebhooks.length,
-    recentWebhooks: recentWebhooks.slice(-10),
+    totalReceived: allWebhooks.length,
+    recentWebhooks: allWebhooks.slice(-20),
   });
 }
