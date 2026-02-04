@@ -18,11 +18,7 @@ export async function POST(request: Request) {
       history90: any[];
       history180: any[];
       history365: any[];
-      hasRealData?: boolean;
     }> = [];
-    
-    const realDataItems: string[] = [];
-    const simulatedDataItems: string[] = [];
 
     for (const item of cappedItems) {
       try {
