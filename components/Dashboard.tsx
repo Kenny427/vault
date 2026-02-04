@@ -56,11 +56,11 @@ export default function Dashboard() {
       ? (JSON.parse(localStorage.getItem('osrs-custom-pool') || '[]') as PoolItem[])
       : [];
 
+    // Always analyze full popular pool if no custom pool is set
+    // This ensures we check all 110+ items for opportunities, not just watchlist
     const itemsToAnalyze: PoolItem[] = customPool.length > 0
       ? customPool
-      : watchlist.length > 0
-        ? watchlist
-        : (await getPopularItems()).map(item => ({
+      : (await getPopularItems()).map(item => ({
             id: item.id,
             name: item.name,
             addedAt: Date.now(),
