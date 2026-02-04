@@ -42,9 +42,16 @@ export default function Chat() {
   });
   
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => {
+    // Check if there's a pending request on mount
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ai-chat-loading') === 'true';
+    }
+    return false;
+  });
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Save messages to localStorage whenever they change
   useEffect(() => {
@@ -52,6 +59,21 @@ export default function Chat() {
       localStorage.setItem('ai-chat-messages', JSON.stringify(messages));
     }
   }, [messages]);
+
+  // Save loading state to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ai-chat-loading', loading.toString());
+    }
+  }, [loading]);
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      // Don't abort on unmount - let requests complete in background
+      abortControllerRef.current = null;
+    };
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -90,6 +112,10 @@ export default function Chat() {
     setError('');
     setLoading(true);
 
+    // Create a new AbortController for this request
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       // Extract item name from user input with improved logic
       let itemName = input.trim();
@@ -116,6 +142,8 @@ export default function Chat() {
           itemName,
           userQuestion: input.trim() // Send original question for context
         }),
+        signal: controller.signal, // Allow request to continue even if tab loses focus
+        keepalive: true, // Keep request alive even if page is navigated away
       });
 
       if (!response.ok) {
@@ -135,6 +163,12 @@ export default function Chat() {
 
       setMessages(prev => [...prev, aiMessage]);
     } catch (err: any) {
+      // Don't show error if request was intentionally aborted
+      if (err.name === 'AbortError') {
+        console.log('Request was aborted');
+        return;
+      }
+      
       setError(err.message);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -145,6 +179,7 @@ export default function Chat() {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -216,6 +251,9 @@ export default function Chat() {
                 <div className="w-2 h-2 bg-osrs-accent rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                 <div className="w-2 h-2 bg-osrs-accent rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
               </div>
+              <p className="text-xs text-slate-400 mt-2">
+                Analyzing item data... (This continues even if you switch tabs)
+              </p>
             </div>
           </div>
         )}
