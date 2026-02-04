@@ -28,6 +28,13 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [minConfidenceThreshold, setMinConfidenceThreshold] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('osrs-min-confidence');
+      return saved ? Number(saved) : 55;
+    }
+    return 55;
+  });
   const [lastRefresh, setLastRefresh] = useState<Date | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-last-refresh');
@@ -179,6 +186,7 @@ export default function Dashboard() {
   // Filter opportunities based on settings
   let filteredOpportunities = opportunities.filter(opp => {
     if (opp.opportunityScore < minOpportunityScore) return false;
+    if (opp.confidence < minConfidenceThreshold) return false;
     if (opp.recommendation === 'buy' && !showBuyOpportunities) return false;
     if (opp.recommendation === 'sell' && !showSellOpportunities) return false;
     return true;
@@ -319,7 +327,7 @@ export default function Dashboard() {
         {/* Settings & Filters */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-slate-100 mb-4">🎛️ Analysis Settings</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div>
               <label className="text-sm font-medium text-slate-300 block mb-2">
                 Min Score: {minOpportunityScore}
@@ -332,6 +340,29 @@ export default function Dashboard() {
                 onChange={(e) => setMinOpportunityScore(Number(e.target.value))}
                 className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-osrs-accent"
               />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-300 block mb-2">
+                Risk Level: {minConfidenceThreshold}%
+              </label>
+              <input
+                type="range"
+                min="30"
+                max="95"
+                value={minConfidenceThreshold}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setMinConfidenceThreshold(val);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('osrs-min-confidence', val.toString());
+                  }
+                }}
+                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-osrs-accent"
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                {minConfidenceThreshold >= 80 ? '🟢 Conservative' : minConfidenceThreshold >= 60 ? '🟡 Balanced' : '🔴 Aggressive'}
+              </p>
             </div>
 
             <div>
