@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server';
-import { analyzeFlipsWithAI, clearAnalysisCache } from '@/lib/aiAnalysis';
+import { scoreOpportunitiesByMeanReversion } from '@/lib/analysis';
 import { getItemPrice, getItemHistory } from '@/lib/api/osrs';
 
 export async function POST(request: Request) {
   try {
     const items = await request.json();
     const cappedItems = Array.isArray(items) ? items : [];
-    
-    // Clear cache on each request (manual refresh behavior)
-    clearAnalysisCache();
     
     const itemsWithData: Array<{
       id: number;
@@ -73,7 +70,15 @@ export async function POST(request: Request) {
     
     if (itemsWithData.length === 0) {
       console.log(`   ⚠️  NO ITEMS WITH ADEQUATE PRICE SPREAD - All items may have simulated data`);
-      return NextResponse.json([]);
+      return NextResponse.json({
+        opportunities: [],
+        diagnostic: {
+          requested: cappedItems.length,
+          passedFilter: 0,
+          itemsPassedFilter: [],
+          analysisType: 'rule-based-mean-reversion'
+        }
+      });
     }
 
     itemsWithData.forEach(item => {
@@ -84,20 +89,17 @@ export async function POST(request: Request) {
       console.log(`   ✓ ${item.name}: spread=${spread.toFixed(1)}%, range ${min}-${max}`);
     });
 
-    if (itemsWithData.length === 0) {
-      return NextResponse.json([]);
-    }
-
-    const opportunities = await analyzeFlipsWithAI(itemsWithData);
+    // Rule-based analysis: no AI needed, pure math-based mean-reversion scoring
+    const opportunities = scoreOpportunitiesByMeanReversion(itemsWithData);
     
-    console.log(`\n📈 AI ANALYSIS COMPLETE`);
+    console.log(`\n📈 ANALYSIS COMPLETE (Rule-Based Mean-Reversion)`);
     console.log(`   Returned: ${opportunities.length} opportunities`);
     if (opportunities.length > 0) {
       opportunities.slice(0, 10).forEach(opp => {
-        console.log(`   • ${opp.itemName}: score=${opp.opportunityScore}, confidence=${opp.confidence}%, discount=${opp.deviation.toFixed(1)}%`);
+        console.log(`   • ${opp.itemName}: score=${opp.opportunityScore}, confidence=${opp.confidence}%, upside=${((opp.historicalHigh - opp.currentPrice) / opp.currentPrice * 100).toFixed(1)}%`);
       });
     } else {
-      console.log(`   ⚠️  WARNING: AI returned NO opportunities from ${itemsWithData.length} items`);
+      console.log(`   ℹ️  No opportunities found (all items scored below 40)`);
     }
     
     // Return both opportunities and diagnostic info
@@ -118,13 +120,15 @@ export async function POST(request: Request) {
             max,
             current: item.currentPrice
           };
-        })
+        }),
+        analysisType: 'rule-based-mean-reversion',
+        timestamp: new Date().toISOString()
       }
     };
     
     return NextResponse.json(response);
   } catch (error: any) {
-    console.error('AI analysis API error:', error);
+    console.error('Analysis API error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to analyze opportunities' },
       { status: 500 }

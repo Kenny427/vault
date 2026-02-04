@@ -487,3 +487,145 @@ export function findShortTermFlips(
     );
   });
 }
+
+/**
+ * Rule-based mean-reversion opportunity scoring (no AI required)
+ * 
+ * Scores items based on:
+ * 1. How far below recent averages (discount)
+ * 2. Potential upside to recent highs (recovery potential)
+ * 3. Price volatility (swings = more opportunity)
+ * 
+ * Example: Yew longbow (u) at 273gp when recent high was 427
+ * Should show as opportunity: 36% below high, volatile, will recover
+ */
+export function scoreOpportunitiesByMeanReversion(
+  items: Array<{
+    id: number;
+    name: string;
+    currentPrice: number;
+    history30: any[];
+    history90: any[];
+    history365: any[];
+  }>
+): FlipOpportunity[] {
+  return items.map(item => {
+    const current = item.currentPrice;
+    
+    // Extract prices from history
+    const prices30 = item.history30.map(p => p.price);
+    const prices90 = item.history90.map(p => p.price);
+    const prices365 = item.history365.map(p => p.price);
+    
+    // Calculate averages
+    const avg30 = calculateMean(prices30);
+    const avg90 = calculateMean(prices90);
+    const avg365 = calculateMean(prices365);
+    
+    // Recent high (last 30 days) - what it typically goes up to
+    const recentHigh = Math.max(...prices30);
+    // All-time high in last year
+    const highAll = Math.max(...prices365);
+    // Low for reference
+    const lowAll = Math.min(...prices365);
+    
+    // Calculate discounts from different timeframes
+    const discount30 = ((avg30 - current) / avg30) * 100; // Negative = below average
+    const discount90 = ((avg90 - current) / avg90) * 100;
+    const discount365 = ((avg365 - current) / avg365) * 100;
+    
+    // Calculate upside potential (how much could it recover)
+    const upsideToRecent = ((recentHigh - current) / current) * 100;
+    const upsideToAllTime = ((highAll - current) / current) * 100;
+    
+    // Calculate volatility
+    const allPrices = prices365;
+    const spreadPercent = ((Math.max(...allPrices) - Math.min(...allPrices)) / current) * 100;
+    const stdDev = calculateStdDev(allPrices);
+    const volatilityPercent = (stdDev / avg365) * 100;
+    
+    // SCORING ALGORITHM
+    let score = 0;
+    
+    // Discount scoring: items below average are cheaper
+    if (discount30 >= 5) score += Math.min(15, discount30 * 2); // Max 15 points for 30d discount
+    if (discount90 >= 10) score += Math.min(25, discount90 * 1.5); // Max 25 points for 90d discount
+    if (discount365 >= 15) score += Math.min(30, discount365); // Max 30 points for 365d discount
+    
+    // Upside potential: items with high recovery potential
+    if (upsideToRecent >= 10) score += Math.min(20, upsideToRecent * 1.5); // Can reach recent high
+    if (upsideToAllTime >= 25) score += Math.min(15, upsideToAllTime * 0.5); // Can reach all-time high
+    
+    // Volatility bonus: volatile items have more opportunity
+    if (spreadPercent >= 20) score += Math.min(15, spreadPercent * 0.5);
+    if (volatilityPercent >= 10) score += Math.min(10, volatilityPercent);
+    
+    // Confidence calculation
+    // Higher confidence if item is consistently cheap and volatile
+    let confidence = 0;
+    if (discount90 >= 10) confidence += 30; // Consistently below 90d average
+    if (spreadPercent >= 15) confidence += 40; // Good volatility = swings both ways
+    if (discount365 >= 10) confidence += 30; // Below long-term average
+    confidence = Math.min(100, confidence);
+    
+    // Calculate trend
+    const recentPrices = prices30.slice(-7);
+    const recentAvg = calculateMean(recentPrices);
+    const olderAvg = calculateMean(prices30.slice(0, Math.ceil(prices30.length / 2)));
+    let trend: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+    if (recentAvg > olderAvg * 1.05) trend = 'bullish';
+    else if (recentAvg < olderAvg * 0.95) trend = 'bearish';
+    
+    // Calculate profit potential (example: buy now, sell at average of last 30 days)
+    const estimatedSellPrice = avg30;
+    const taxPercent = 0.01; // GE tax is 1%
+    const profitPerUnit = estimatedSellPrice * (1 - taxPercent) - current;
+    const profitMargin = (profitPerUnit / current) * 100;
+    
+    // Estimate hold time based on how far below average we are
+    let estimatedHoldTime = '1-3 days';
+    if (discount90 >= 20) estimatedHoldTime = '1-2 weeks';
+    if (discount365 >= 25) estimatedHoldTime = '2-4 weeks';
+    if (upsideToAllTime >= 40) estimatedHoldTime = '2-8 weeks';
+    
+    const opportunity: FlipOpportunity = {
+      itemId: item.id,
+      itemName: item.name,
+      currentPrice: current,
+      averagePrice: avg365,
+      averagePrice30: avg30,
+      averagePrice90: avg90,
+      averagePrice180: calculateMean(item.history365.slice(0, 180).map(p => p.price)),
+      averagePrice365: avg365,
+      deviation: volatilityPercent,
+      deviationScore: discount365 * -1, // Negative = undervalued
+      trend,
+      recommendation: score >= 40 ? 'buy' : 'hold',
+      opportunityScore: Math.round(Math.min(100, score)),
+      historicalLow: lowAll,
+      historicalHigh: highAll,
+      buyPrice: current,
+      sellPrice: Math.round(estimatedSellPrice),
+      profitPerUnit: Math.round(profitPerUnit),
+      profitMargin: Math.round(profitMargin * 100) / 100,
+      roi: Math.round(profitMargin * 100) / 100,
+      riskLevel: volatilityPercent > 30 ? 'high' : volatilityPercent > 15 ? 'medium' : 'low',
+      confidence: Math.round(confidence),
+      estimatedHoldTime,
+      volatility: Math.round(volatilityPercent * 100) / 100,
+      volumeScore: Math.min(100, spreadPercent * 3), // Proxy: more volatile = more volume
+      buyWhen: `When price is ${Math.round(discount30)}% below 30-day average (now: ${Math.round(discount30)}%)`,
+      sellWhen: `When price recovers to ${Math.round(estimatedSellPrice)} gp (recent avg)`,
+      momentum: (recentAvg - avg30) / avg30 * 100,
+      acceleration: (recentPrices[recentPrices.length - 1] - recentPrices[0]) / recentPrices[0] * 100,
+      tradingRange: spreadPercent,
+      consistency: 100 - Math.min(100, volatilityPercent), // Lower volatility = more consistent
+      spreadQuality: Math.min(100, (spreadPercent / 50) * 100), // 50% spread = perfect quality
+    };
+    
+    return opportunity;
+  }).filter(opp => {
+    // Only show opportunities with score >= 40 and reasonable upside
+    return opp.opportunityScore >= 40;
+  });
+}
