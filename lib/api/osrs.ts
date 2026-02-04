@@ -55,24 +55,26 @@ const POPULAR_CATEGORIES = [
   'whip', 'trident', 'blowpipe', 'godsword', 'barrows', 'ahrim', 'karil', 'guthan', 'dharok',
   'torag', 'verac', 'bandos', 'armadyl', 'rapier', 'scythe', 'zenyte', 'ancestral',
   'dragon crossbow', 'armadyl crossbow', 'twisted bow', 'bow of faerdhinen',
-  
+
   // Mid-tier PVM gear (dragon only)
   'dragon platebody', 'dragon platelegs', 'dragon plateskirt', 'dragon boots', 'dragon defender',
   'dragon scimitar', 'dragon longsword', 'dragon dagger', 'dragon claws', 'dragon hunter',
-  
+
   // High-volume skilling supplies
-  'yew log', 'magic log', 'yew longbow', 'magic longbow', 'yew shortbow',
+  'yew log', 'magic log', 'yew longbow', 'yew longbow (u)', 'magic longbow', 'magic longbow (u)',
+  'yew shortbow', 'yew shortbow (u)', 'magic shortbow', 'magic shortbow (u)',
   'runite ore', 'runite bar', 'rune bar', 'adamantite bar', 'coal',
-  'mahogany plank', 'oak plank', 'teak plank',
-  
+  'mahogany plank', 'oak plank', 'teak plank', 'plank',
+  'flax', 'bow string', 'giant seaweed', 'sand',
+
   // High-volume runes & ammo
-  'blood rune', 'death rune', 'nature rune', 'law rune', 'astral rune',
-  'dragon arrow', 'rune arrow', 'amethyst arrow', 'dragon bolt', 'onyx bolt',
-  
+  'blood rune', 'death rune', 'nature rune', 'law rune', 'astral rune', 'chaos rune', 'cosmic rune',
+  'dragon arrow', 'rune arrow', 'amethyst arrow', 'broad bolts', 'rune bolts', 'dragon bolts', 'onyx bolt',
+
   // High-volume potions & food
-  'super combat', 'super restore', 'prayer potion', 'saradomin brew', 'stamina potion',
-  'shark', 'manta ray', 'dark crab', 'anglerfish',
-  
+  'super combat', 'super restore', 'prayer potion', 'saradomin brew', 'stamina potion', 'antivenom',
+  'shark', 'manta ray', 'dark crab', 'anglerfish', 'karambwan',
+
   // Heavily botted items (price crash opportunities)
   'zulrah', 'zulrah scale', "zulrah's scales", 'toxic blowpipe', 'serpentine helm', 'magic fang', 'tanzanite fang',
   'vorkath', 'superior dragon bones', 'blue dragon', 'dragon bones', 'dragon hide',
@@ -396,8 +398,12 @@ export async function getPopularItems(): Promise<ItemData[]> {
     const popular = allItems.filter(item => {
       const lowerName = item.name.toLowerCase();
       
-      // Exclude low-tier items
-      const excludeTerms = ['adamant', 'mithril', 'steel', 'iron', 'bronze', '(broken)', '(deg)', 'rusty'];
+      // Exclude low-tier items and noisy variants
+      const excludeTerms = [
+        'adamant', 'mithril', 'steel', 'iron', 'bronze',
+        '(broken)', '(deg)', 'rusty', 'ornament', 'orn', 'kit', 'set',
+        '(p)', '(p+)', '(p++)', ' 0',
+      ];
       if (excludeTerms.some(term => lowerName.includes(term))) {
         return false;
       }
@@ -406,7 +412,7 @@ export async function getPopularItems(): Promise<ItemData[]> {
       return POPULAR_CATEGORIES.some(cat => lowerName.includes(cat));
     });
 
-    return popular.slice(0, 40); // Smaller pool: PVM gear & high-volume supplies
+    return popular.slice(0, 120); // Larger pool: PVM gear + high-volume supplies
   } catch (error) {
     console.error('Failed to get popular items:', error);
     return [];
