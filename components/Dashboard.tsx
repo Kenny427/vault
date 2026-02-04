@@ -14,6 +14,7 @@ import { useAuth } from '@/lib/authContext';
 export default function Dashboard() {
   const router = useRouter();
   const { logout } = useAuth();
+  type PoolItem = { id: number; name: string; addedAt?: number };
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
   const [activeTab, setActiveTab] = useState<'portfolio' | 'favorites' | 'opportunities'>(() => {
@@ -60,11 +61,11 @@ export default function Dashboard() {
       console.log('Skipping analysis - cooldown active');
       return;
     }
-    const customPool = typeof window !== 'undefined'
-      ? JSON.parse(localStorage.getItem('osrs-custom-pool') || '[]')
+    const customPool: PoolItem[] = typeof window !== 'undefined'
+      ? (JSON.parse(localStorage.getItem('osrs-custom-pool') || '[]') as PoolItem[])
       : [];
 
-    const itemsToAnalyze = customPool.length > 0
+    const itemsToAnalyze: PoolItem[] = customPool.length > 0
       ? customPool
       : watchlist.length > 0
         ? watchlist
