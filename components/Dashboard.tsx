@@ -45,11 +45,7 @@ export default function Dashboard() {
   const {
     watchlist,
     minOpportunityScore,
-    setMinOpportunityScore,
-    showBuyOpportunities,
-    setShowBuyOpportunities,
-    showSellOpportunities,
-    setShowSellOpportunities
+    setMinOpportunityScore
   } = useDashboardStore();
 
   // Analyze items with AI
@@ -175,8 +171,7 @@ export default function Dashboard() {
   let filteredOpportunities = opportunities.filter(opp => {
     if (opp.opportunityScore < minOpportunityScore) return false;
     if (opp.confidence < minConfidenceThreshold) return false;
-    if (opp.recommendation === 'buy' && !showBuyOpportunities) return false;
-    if (opp.recommendation === 'sell' && !showSellOpportunities) return false;
+    if (opp.recommendation !== 'buy') return false;
     return true;
   });
 
@@ -367,27 +362,6 @@ export default function Dashboard() {
                 <option value="profit">Profit/Unit</option>
                 <option value="confidence">Confidence</option>
               </select>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <label className="text-sm font-medium text-slate-300 flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showBuyOpportunities}
-                  onChange={(e) => setShowBuyOpportunities(e.target.checked)}
-                  className="w-4 h-4 rounded accent-green-500"
-                />
-                <span>📥 Buy Signals</span>
-              </label>
-              <label className="text-sm font-medium text-slate-300 flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showSellOpportunities}
-                  onChange={(e) => setShowSellOpportunities(e.target.checked)}
-                  className="w-4 h-4 rounded accent-red-500"
-                />
-                <span>📤 Sell Signals</span>
-              </label>
             </div>
 
             <div className="flex items-end">
