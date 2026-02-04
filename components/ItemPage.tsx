@@ -22,6 +22,17 @@ export default function ItemPage() {
   const itemId = Number(params?.id);
   const [timeframe, setTimeframe] = useState<Timeframe>('30d');
 
+  const formatNumber = (value: number) => {
+    const abs = Math.abs(value);
+    if (abs < 100_000) {
+      return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+    if (abs < 1_000_000) {
+      return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+    }
+    return `${(value / 1_000_000).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '')}M`;
+  };
+
   const { data: itemDetails } = useQuery({
     queryKey: ['item-details', itemId],
     queryFn: () => getItemDetails(itemId),
@@ -56,6 +67,57 @@ export default function ItemPage() {
     queryFn: () => getItemHistory(itemId, timeframeSeconds, currentPrice || undefined),
     enabled: Number.isFinite(itemId),
   });
+
+  const { data: history30 } = useQuery({
+    queryKey: ['history', itemId, '30d', currentPrice],
+    queryFn: () => getItemHistory(itemId, 30 * 24 * 60 * 60, currentPrice || undefined),
+    enabled: Number.isFinite(itemId),
+  });
+
+  const { data: history90 } = useQuery({
+    queryKey: ['history', itemId, '90d', currentPrice],
+    queryFn: () => getItemHistory(itemId, 90 * 24 * 60 * 60, currentPrice || undefined),
+    enabled: Number.isFinite(itemId),
+  });
+
+  const { data: history180 } = useQuery({
+    queryKey: ['history', itemId, '180d', currentPrice],
+    queryFn: () => getItemHistory(itemId, 180 * 24 * 60 * 60, currentPrice || undefined),
+    enabled: Number.isFinite(itemId),
+  });
+
+  const { data: history365 } = useQuery({
+    queryKey: ['history', itemId, '1y', currentPrice],
+    queryFn: () => getItemHistory(itemId, 365 * 24 * 60 * 60, currentPrice || undefined),
+    enabled: Number.isFinite(itemId),
+  });
+
+  const calcStats = (history?: { price: number }[]) => {
+    if (!history || history.length === 0) return null;
+    const prices = history.map(p => p.price);
+    const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const variance = prices.reduce((sum, price) => sum + Math.pow(price - avg, 2), 0) / prices.length;
+    const stdDev = Math.sqrt(variance);
+    const volatility = avg ? ((max - min) / avg) * 100 : 0;
+    const recent = prices.slice(-7);
+    const previous = prices.slice(-14, -7);
+    const recentAvg = recent.length ? recent.reduce((a, b) => a + b, 0) / recent.length : avg;
+    const prevAvg = previous.length ? previous.reduce((a, b) => a + b, 0) / previous.length : avg;
+    const momentum = prevAvg ? ((recentAvg - prevAvg) / prevAvg) * 100 : 0;
+    const consistency = avg ? Math.max(0, (1 - stdDev / avg) * 100) : 0;
+    const percentile = max > min ? ((currentPrice - min) / (max - min)) * 100 : 50;
+    const support = avg - stdDev;
+    const resistance = avg + stdDev;
+
+    return { avg, min, max, stdDev, volatility, momentum, consistency, percentile, support, resistance };
+  };
+
+  const stats30 = useMemo(() => calcStats(history30 || undefined), [history30, currentPrice]);
+  const stats90 = useMemo(() => calcStats(history90 || undefined), [history90, currentPrice]);
+  const stats180 = useMemo(() => calcStats(history180 || undefined), [history180, currentPrice]);
+  const stats365 = useMemo(() => calcStats(history365 || undefined), [history365, currentPrice]);
 
   const iconUrl = resolveIconUrl(itemDetails?.icon);
 
@@ -123,20 +185,20 @@ export default function ItemPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
             <div className="text-slate-400 text-xs">Mid</div>
-            <div className="text-lg font-semibold text-osrs-accent">{currentPrice.toLocaleString()}gp</div>
+            <div className="text-lg font-semibold text-osrs-accent">{formatNumber(currentPrice)}gp</div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
             <div className="text-slate-400 text-xs">High / Low</div>
-            <div className="text-lg font-semibold">{highPrice.toLocaleString()} / {lowPrice.toLocaleString()}gp</div>
+            <div className="text-lg font-semibold">{formatNumber(highPrice)} / {formatNumber(lowPrice)}gp</div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
             <div className="text-slate-400 text-xs">Spread</div>
-            <div className="text-lg font-semibold text-blue-400">{spread.toLocaleString()}gp</div>
+            <div className="text-lg font-semibold text-blue-400">{formatNumber(spread)}gp</div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
             <div className="text-slate-400 text-xs">Net / ROI</div>
             <div className={`text-lg font-semibold ${netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {netProfit >= 0 ? '+' : ''}{netProfit.toLocaleString()}gp ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
+              {netProfit >= 0 ? '+' : ''}{formatNumber(netProfit)}gp ({roi >= 0 ? '+' : ''}{roi.toFixed(2)}%)
             </div>
           </div>
         </div>
@@ -167,6 +229,75 @@ export default function ItemPage() {
               {t.label}
             </button>
           ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-300 font-semibold mb-3">Multi-Timeframe Snapshot</div>
+            <div className="space-y-2 text-xs text-slate-300">
+              {[
+                { label: '30D', stats: stats30 },
+                { label: '90D', stats: stats90 },
+                { label: '180D', stats: stats180 },
+                { label: '365D', stats: stats365 },
+              ].map(({ label, stats }) => (
+                <div key={label} className="grid grid-cols-4 gap-2">
+                  <span className="text-slate-400">{label}</span>
+                  <span>{stats ? formatNumber(stats.avg) : '—'}</span>
+                  <span>{stats ? `${stats.volatility.toFixed(1)}%` : '—'}</span>
+                  <span className={stats && stats.momentum >= 0 ? 'text-emerald-300' : 'text-red-300'}>
+                    {stats ? `${stats.momentum.toFixed(1)}%` : '—'}
+                  </span>
+                </div>
+              ))}
+              <div className="grid grid-cols-4 gap-2 text-[10px] text-slate-500 mt-2">
+                <span>TF</span>
+                <span>Avg</span>
+                <span>Vol</span>
+                <span>Momentum</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-300 font-semibold mb-3">Key Levels</div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between text-slate-300">
+                <span>Support (365D)</span>
+                <span>{stats365 ? formatNumber(stats365.support) : '—'}gp</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Resistance (365D)</span>
+                <span>{stats365 ? formatNumber(stats365.resistance) : '—'}gp</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Price Percentile (365D)</span>
+                <span>{stats365 ? `${stats365.percentile.toFixed(0)}th` : '—'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+            <div className="text-sm text-slate-300 font-semibold mb-3">Flip Signals</div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between text-slate-300">
+                <span>Near Support</span>
+                <span>{stats365 && currentPrice <= stats365.support ? 'Yes ✓' : 'No'}</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Oversold (&lt;25th %)</span>
+                <span>{stats365 && stats365.percentile < 25 ? 'Yes ✓' : 'No'}</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Momentum Turning Up</span>
+                <span>{stats30 && stats30.momentum > 0 ? 'Yes ✓' : 'No'}</span>
+              </div>
+              <div className="flex justify-between text-slate-300">
+                <span>Consistent Pattern</span>
+                <span>{stats180 && stats180.consistency > 60 ? 'Yes ✓' : 'No'}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {priceLoading || historyLoading ? (
