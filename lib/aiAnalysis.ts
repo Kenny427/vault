@@ -52,7 +52,7 @@ export async function analyzeFlipsWithAI(
     return cached.data;
   }
 
-  // Calculate multi-timeframe statistics
+  // Calculate multi-timeframe statistics with advanced metrics
   const itemsData = items.map(item => {
     const calcStats = (history: PricePoint[]) => {
       const prices = history.map(p => p.price);
@@ -60,7 +60,19 @@ export async function analyzeFlipsWithAI(
       const min = Math.min(...prices);
       const max = Math.max(...prices);
       const volatility = ((max - min) / avg) * 100;
-      return { avg, min, max, volatility };
+      
+      // Calculate standard deviation for volatility quality
+      const variance = prices.reduce((sum, price) => sum + Math.pow(price - avg, 2), 0) / prices.length;
+      const stdDev = Math.sqrt(variance);
+      
+      // Calculate momentum (recent vs older prices)
+      const recentPrices = prices.slice(-7); // Last 7 data points
+      const olderPrices = prices.slice(0, 7); // First 7 data points
+      const recentAvg = recentPrices.reduce((a, b) => a + b, 0) / recentPrices.length;
+      const olderAvg = olderPrices.reduce((a, b) => a + b, 0) / olderPrices.length;
+      const momentum = ((recentAvg - olderAvg) / olderAvg) * 100;
+      
+      return { avg, min, max, volatility, stdDev, momentum };
     };
 
     const stats30 = calcStats(item.history30);
@@ -74,9 +86,27 @@ export async function analyzeFlipsWithAI(
     const trendDirection = recentAvg < longTermAvg ? 'downward' : 'upward';
     const trendStrength = Math.abs((recentAvg - longTermAvg) / longTermAvg) * 100;
 
-    // Calculate if price is at extremes
+    // Calculate price position within range (percentile)
     const pricePercentile30 = ((item.currentPrice - stats30.min) / (stats30.max - stats30.min)) * 100;
     const pricePercentile365 = ((item.currentPrice - stats365.min) / (stats365.max - stats365.min)) * 100;
+
+    // Calculate support/resistance levels
+    const supportLevel365 = stats365.avg - stats365.stdDev;
+    const resistanceLevel365 = stats365.avg + stats365.stdDev;
+    const nearSupport = item.currentPrice <= supportLevel365;
+    const nearResistance = item.currentPrice >= resistanceLevel365;
+
+    // Calculate recovery potential
+    const recoveryPotential = ((stats365.avg - item.currentPrice) / item.currentPrice) * 100;
+    
+    // Calculate consistency (lower std dev relative to avg = more stable)
+    const consistency30 = (1 - (stats30.stdDev / stats30.avg)) * 100;
+    const consistency365 = (1 - (stats365.stdDev / stats365.avg)) * 100;
+
+    // Detect potential manipulation or crashes
+    const extremeVolatility = stats30.volatility > 50;
+    const priceCollapse = item.currentPrice < stats365.avg * 0.7; // 30%+ below yearly avg
+    const priceSurge = item.currentPrice > stats365.avg * 1.3; // 30%+ above yearly avg
 
     return {
       id: item.id,
@@ -88,13 +118,18 @@ export async function analyzeFlipsWithAI(
           min: stats30.min,
           max: stats30.max,
           volatility: stats30.volatility.toFixed(1),
+          stdDev: stats30.stdDev.toFixed(0),
+          momentum: stats30.momentum.toFixed(2),
           deviation: (((item.currentPrice - stats30.avg) / stats30.avg) * 100).toFixed(2),
+          consistency: consistency30.toFixed(1),
         },
         '90d': {
           avg: stats90.avg.toFixed(0),
           min: stats90.min,
           max: stats90.max,
           volatility: stats90.volatility.toFixed(1),
+          stdDev: stats90.stdDev.toFixed(0),
+          momentum: stats90.momentum.toFixed(2),
           deviation: (((item.currentPrice - stats90.avg) / stats90.avg) * 100).toFixed(2),
         },
         '180d': {
@@ -102,6 +137,8 @@ export async function analyzeFlipsWithAI(
           min: stats180.min,
           max: stats180.max,
           volatility: stats180.volatility.toFixed(1),
+          stdDev: stats180.stdDev.toFixed(0),
+          momentum: stats180.momentum.toFixed(2),
           deviation: (((item.currentPrice - stats180.avg) / stats180.avg) * 100).toFixed(2),
         },
         '365d': {
@@ -109,7 +146,10 @@ export async function analyzeFlipsWithAI(
           min: stats365.min,
           max: stats365.max,
           volatility: stats365.volatility.toFixed(1),
+          stdDev: stats365.stdDev.toFixed(0),
+          momentum: stats365.momentum.toFixed(2),
           deviation: (((item.currentPrice - stats365.avg) / stats365.avg) * 100).toFixed(2),
+          consistency: consistency365.toFixed(1),
         },
       },
       trendAnalysis: {
@@ -118,56 +158,111 @@ export async function analyzeFlipsWithAI(
         pricePercentile30: pricePercentile30.toFixed(0),
         pricePercentile365: pricePercentile365.toFixed(0),
       },
+      technicalIndicators: {
+        supportLevel: supportLevel365.toFixed(0),
+        resistanceLevel: resistanceLevel365.toFixed(0),
+        nearSupport: nearSupport,
+        nearResistance: nearResistance,
+        recoveryPotential: recoveryPotential.toFixed(2),
+        extremeVolatility: extremeVolatility,
+        priceCollapse: priceCollapse,
+        priceSurge: priceSurge,
+      },
     };
   });
 
-  const prompt = `You are an OSRS (Old School RuneScape) Grand Exchange trading EXPERT. Your job is to find AGGRESSIVE flip opportunities across multiple timeframes. Be overpowered - suggest even medium-confidence trades.
+  const prompt = `You are an ELITE OSRS Grand Exchange trading analyst with DEEP market knowledge. Your expertise: identifying hidden value, market manipulation, seasonal patterns, and asymmetric risk/reward opportunities.
 
-Analyze these items using 30, 90, 180, and 365-day price data. Account for seasonal trends, botting farm impacts, and long-term price cycles.
+MISSION: Find SOLID flip opportunities (short & long-term) that will ACTUALLY make profit. Be ruthless - only recommend trades with strong fundamental backing.
 
-ITEMS TO ANALYZE:
+=== ANALYSIS FRAMEWORK ===
+
+ITEMS DATA:
 ${itemsData.map(item => `
-[${item.name}] (ID: ${item.id})
-Current Price: ${item.currentPrice}gp
+━━━ [${item.name}] (ID: ${item.id}) ━━━
+💰 CURRENT: ${item.currentPrice}gp
 
-30-DAY:  Avg=${item.timeframes['30d'].avg}gp, Range=${item.timeframes['30d'].min}-${item.timeframes['30d'].max}, Vol=${item.timeframes['30d'].volatility}%, Dev=${item.timeframes['30d'].deviation}%
-90-DAY:  Avg=${item.timeframes['90d'].avg}gp, Range=${item.timeframes['90d'].min}-${item.timeframes['90d'].max}, Vol=${item.timeframes['90d'].volatility}%, Dev=${item.timeframes['90d'].deviation}%
-180-DAY: Avg=${item.timeframes['180d'].avg}gp, Range=${item.timeframes['180d'].min}-${item.timeframes['180d'].max}, Vol=${item.timeframes['180d'].volatility}%, Dev=${item.timeframes['180d'].deviation}%
-365-DAY: Avg=${item.timeframes['365d'].avg}gp, Range=${item.timeframes['365d'].min}-${item.timeframes['365d'].max}, Vol=${item.timeframes['365d'].volatility}%, Dev=${item.timeframes['365d'].deviation}%
+📊 MULTI-TIMEFRAME ANALYSIS:
+30d:  Avg=${item.timeframes['30d'].avg}gp | Range=${item.timeframes['30d'].min}-${item.timeframes['30d'].max} | Vol=${item.timeframes['30d'].volatility}% | Momentum=${item.timeframes['30d'].momentum}% | StdDev=${item.timeframes['30d'].stdDev} | Consistency=${item.timeframes['30d'].consistency}%
+90d:  Avg=${item.timeframes['90d'].avg}gp | Range=${item.timeframes['90d'].min}-${item.timeframes['90d'].max} | Vol=${item.timeframes['90d'].volatility}% | Momentum=${item.timeframes['90d'].momentum}% | StdDev=${item.timeframes['90d'].stdDev}
+180d: Avg=${item.timeframes['180d'].avg}gp | Range=${item.timeframes['180d'].min}-${item.timeframes['180d'].max} | Vol=${item.timeframes['180d'].volatility}% | Momentum=${item.timeframes['180d'].momentum}% | StdDev=${item.timeframes['180d'].stdDev}
+365d: Avg=${item.timeframes['365d'].avg}gp | Range=${item.timeframes['365d'].min}-${item.timeframes['365d'].max} | Vol=${item.timeframes['365d'].volatility}% | Momentum=${item.timeframes['365d'].momentum}% | StdDev=${item.timeframes['365d'].stdDev} | Consistency=${item.timeframes['365d'].consistency}%
 
-Trend: ${item.trendAnalysis.direction} (${item.trendAnalysis.strength}%)
-Position: ${item.trendAnalysis.pricePercentile30}th percentile (30d), ${item.trendAnalysis.pricePercentile365}th percentile (365d)
+📈 TREND ANALYSIS:
+Direction: ${item.trendAnalysis.direction} | Strength: ${item.trendAnalysis.strength}%
+Price Position: ${item.trendAnalysis.pricePercentile30}th percentile (30d) | ${item.trendAnalysis.pricePercentile365}th percentile (365d)
+
+🎯 TECHNICAL INDICATORS:
+Support Level: ${item.technicalIndicators.supportLevel}gp | Resistance: ${item.technicalIndicators.resistanceLevel}gp
+Near Support: ${item.technicalIndicators.nearSupport ? 'YES ✓' : 'NO'} | Near Resistance: ${item.technicalIndicators.nearResistance ? 'YES ✓' : 'NO'}
+Recovery Potential: ${item.technicalIndicators.recoveryPotential}%
+Extreme Volatility: ${item.technicalIndicators.extremeVolatility ? 'WARNING ⚠' : 'Normal'}
+Price Collapse: ${item.technicalIndicators.priceCollapse ? 'CRASHED 📉' : 'Normal'} | Price Surge: ${item.technicalIndicators.priceSurge ? 'SURGING 📈' : 'Normal'}
 `).join('\n')}
 
-ANALYSIS REQUIREMENTS:
-- Identify items at historical EXTREMES across long timeframes
-- Look for items BOTTOMED OUT (currently near yearly lows but historically higher)
-- Find seasonal patterns (e.g., prices dip for 6+ months then recover)
-- Detect items suppressed by botting that will recover
-- Consider volatility: high volatility = more profit potential
-- Aggressive = confidence 50+, even if short-term risky
+=== YOUR EXPERT ANALYSIS CRITERIA ===
 
-For EACH item with a trade opportunity, respond with JSON:
+✅ STRONG BUY SIGNALS (look for these):
+1. Price near/below support level + positive momentum building
+2. Currently in bottom 20th percentile of 365d range but top 50% historically
+3. Price crashed 20%+ below yearly average BUT consistency score is high (stable item recovering)
+4. Momentum turning positive across multiple timeframes (30d/90d/180d all positive)
+5. Low volatility items with sudden dips (likely manipulation/panic sell - will recover)
+6. High consistency + currently undervalued = mean reversion play
+7. Seasonal recovery patterns (e.g., dipped for 3+ months, now showing reversal)
+
+✅ STRONG SELL SIGNALS (look for these):
+1. Price near/above resistance + negative momentum
+2. Currently in top 20th percentile of 365d range (overbought)
+3. Price 20%+ above yearly average with declining momentum
+4. Extreme volatility + price surge = bubble/manipulation peak
+5. Negative momentum across all timeframes = trend reversal
+
+❌ AVOID (skip these):
+- Flat momentum across all timeframes (stagnant/dead items)
+- Extreme volatility with no clear pattern (too risky)
+- Items with consistently declining averages across all timeframes (dying items)
+- Price exactly at all timeframe averages (no edge)
+
+=== ADVANCED STRATEGIES ===
+
+SHORT-TERM FLIPS (2-7 days):
+- Focus on: Support bounces, oversold conditions (bottom 15th percentile), positive 30d momentum
+- Target: 5-15% profit, high volume items
+
+MEDIUM-TERM TRADES (1-4 weeks):  
+- Focus on: Mean reversion, recovery from crashes, building momentum
+- Target: 15-40% profit, items with high consistency scores
+
+LONG-TERM INVESTMENTS (1-3 months):
+- Focus on: Massively undervalued (30%+ below 365d avg), seasonal patterns, fundamental recovery
+- Target: 40%+ profit, quality items with proven recovery history
+
+=== OUTPUT FORMAT ===
+
+For EACH solid opportunity (minimum 60% confidence for short-term, 55% for long-term), return JSON:
 {
   "itemId": number,
-  "recommendation": "buy" | "sell" | "hold",
-  "confidence": number (50-100, be aggressive),
+  "recommendation": "buy" | "sell",
+  "confidence": number (55-100, be realistic),
   "timeframe": "short-term" | "medium-term" | "long-term",
-  "reasoning": "detailed explanation of why (max 50 words)"
+  "reasoning": "Detailed multi-factor explanation citing specific data (max 60 words)"
 }
 
-RESPOND ONLY WITH A VALID JSON ARRAY. Example:
+RESPOND ONLY WITH VALID JSON ARRAY:
 [
   {
     "itemId": 123,
     "recommendation": "buy",
-    "confidence": 75,
-    "timeframe": "long-term",
-    "reasoning": "Down 30% from 365d avg. Historical pattern shows recovery. Currently at 15th percentile."
+    "confidence": 78,
+    "timeframe": "medium-term",
+    "reasoning": "Price at support (4200gp) 25% below 365d avg. Positive momentum building (30d +8%, 90d +3%). High consistency (82%) indicates stable recovery. Near bottom 12th percentile - strong mean reversion setup."
   }
 ]
 
-If no opportunities, return empty array: []`;
+If NO quality opportunities found, return: []
+
+BE SELECTIVE. Quality > Quantity. Only recommend trades YOU would take with YOUR money.`;
 
   try {
     const message = await aiClient.chat.completions.create({
