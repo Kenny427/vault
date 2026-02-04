@@ -10,8 +10,17 @@ export interface PortfolioItem {
   buyPrice: number;
   datePurchased: number;
   notes?: string;
+  lots?: LotRecord[];
   sales?: SaleRecord[];
   synced?: boolean;
+}
+
+export interface LotRecord {
+  id: string;
+  quantity: number;
+  buyPrice: number;
+  datePurchased: number;
+  notes?: string;
 }
 
 export interface SaleRecord {
@@ -38,41 +47,125 @@ export const usePortfolioStore = create<PortfolioStore>()(
       items: [],
       
       addItem: async (item) => {
-        const newId = `${Date.now()}-${Math.random()}`;
-        set((state) => ({
-          items: [
-            ...state.items,
-            {
-              ...item,
-              id: newId,
-              sales: item.sales ?? [],
-              synced: false,
-            },
-          ],
-        }));
+        const newLotId = `${Date.now()}-${Math.random()}`;
+        let mergedItemId: string | null = null;
+        let mergedQuantity: number | null = null;
+        let mergedBuyPrice: number | null = null;
+
+        set((state) => {
+          const existingIndex = state.items.findIndex((i) => i.itemId === item.itemId);
+
+          if (existingIndex === -1) {
+            const newId = `${Date.now()}-${Math.random()}`;
+            mergedItemId = newId;
+            mergedQuantity = item.quantity;
+            mergedBuyPrice = item.buyPrice;
+            return {
+              items: [
+                ...state.items,
+                {
+                  ...item,
+                  id: newId,
+                  lots: [
+                    {
+                      id: newLotId,
+                      quantity: item.quantity,
+                      buyPrice: item.buyPrice,
+                      datePurchased: item.datePurchased,
+                      notes: item.notes,
+                    },
+                  ],
+                  sales: item.sales ?? [],
+                  synced: false,
+                },
+              ],
+            };
+          }
+
+          const existing = state.items[existingIndex];
+          const existingLots = existing.lots && existing.lots.length > 0
+            ? existing.lots
+            : [
+                {
+                  id: `${existing.id}-lot`,
+                  quantity: existing.quantity,
+                  buyPrice: existing.buyPrice,
+                  datePurchased: existing.datePurchased,
+                  notes: existing.notes,
+                },
+              ];
+
+          const newQuantity = existing.quantity + item.quantity;
+          const weightedBuyPrice = Math.round(
+            (existing.buyPrice * existing.quantity + item.buyPrice * item.quantity) / newQuantity
+          );
+
+          const updated = {
+            ...existing,
+            quantity: newQuantity,
+            buyPrice: weightedBuyPrice,
+            lots: [
+              ...existingLots,
+              {
+                id: newLotId,
+                quantity: item.quantity,
+                buyPrice: item.buyPrice,
+                datePurchased: item.datePurchased,
+                notes: item.notes,
+              },
+            ],
+            synced: false,
+          };
+
+          mergedItemId = existing.id;
+          mergedQuantity = updated.quantity;
+          mergedBuyPrice = updated.buyPrice;
+
+          return {
+            items: state.items.map((i, idx) => (idx === existingIndex ? updated : i)),
+          };
+        });
 
         // Try to sync to Supabase
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          const { error } = await supabase
-            .from('portfolio_items')
-            .insert({
-              user_id: session.user.id,
-              item_id: item.itemId,
-              item_name: item.itemName,
-              quantity: item.quantity,
-              buy_price: item.buyPrice,
-              date_purchased: new Date(item.datePurchased).toISOString(),
-              notes: item.notes,
-              local_id: newId,
-            });
-          
-          if (!error) {
-            set((state) => ({
-              items: state.items.map((i) =>
-                i.id === newId ? { ...i, synced: true } : i
-              ),
-            }));
+          if (mergedItemId) {
+            const itemRow = await supabase
+              .from('portfolio_items')
+              .select('id')
+              .eq('local_id', mergedItemId)
+              .single();
+
+            if (itemRow.data?.id) {
+              await supabase
+                .from('portfolio_items')
+                .update({
+                  quantity: mergedQuantity ?? item.quantity,
+                  buy_price: mergedBuyPrice ?? item.buyPrice,
+                })
+                .eq('id', itemRow.data.id);
+            } else {
+              const { error } = await supabase
+                .from('portfolio_items')
+                .insert({
+                  user_id: session.user.id,
+                  item_id: item.itemId,
+                  item_name: item.itemName,
+                  quantity: mergedQuantity ?? item.quantity,
+                  buy_price: mergedBuyPrice ?? item.buyPrice,
+                  date_purchased: new Date(item.datePurchased).toISOString(),
+                  notes: item.notes,
+                  local_id: mergedItemId,
+                });
+
+              if (!error) {
+                set((state) => ({
+                  items: state.items.map((i) =>
+                    i.id === mergedItemId ? { ...i, synced: true } : i
+                  ),
+                }));
+              }
+            }
           }
         }
       },
