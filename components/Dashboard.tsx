@@ -282,6 +282,7 @@ export default function Dashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(filteredOpportunities.slice(0, 15)),
+        keepalive: true, // Prevents cancellation when tabbing away
       });
 
       if (!response.ok) {

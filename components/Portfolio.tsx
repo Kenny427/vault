@@ -111,6 +111,7 @@ export default function Portfolio() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(portfolioData),
+        keepalive: true, // Prevents cancellation when tabbing away
       });
 
       if (!response.ok) {
