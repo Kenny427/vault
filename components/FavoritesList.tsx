@@ -161,8 +161,7 @@ export default function FavoritesList() {
               ? history.reduce((sum, h) => sum + h.price, 0) / history.length 
               : currentPrice;
 
-            // Calculate price diff from average and percentage
-            const diffFromAvg = currentPrice && avg30 ? currentPrice - avg30 : 0;
+            // Calculate price percentage from average
             const percentFromAvg = currentPrice && avg30 ? ((currentPrice - avg30) / avg30) * 100 : 0;
 
             // Get high/low from history
