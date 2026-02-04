@@ -240,7 +240,8 @@ LONG-TERM INVESTMENTS (1-3 months):
 
 === OUTPUT FORMAT ===
 
-For EACH solid opportunity (minimum 45% confidence for short-term, 40% for long-term), return JSON:
+Return ONLY BUY opportunities (no sells). Provide up to 10 candidates ranked by confidence.
+Minimum confidence: 30% for short-term, 30% for long-term.
 {
   "itemId": number,
   "recommendation": "buy" | "sell",
@@ -260,13 +261,14 @@ RESPOND ONLY WITH VALID JSON ARRAY:
   }
 ]
 
-If NO quality opportunities found, return: []
+If no reasonable opportunities found, return: []
 
-BE SELECTIVE. Quality > Quantity. Only recommend trades YOU would take with YOUR money.`;
+Prefer more candidates for manual review rather than returning an empty list.`;
 
   try {
     const message = await aiClient.chat.completions.create({
       model: 'gpt-4o',
+      temperature: 0,
       max_tokens: 2000,
       messages: [
         {
