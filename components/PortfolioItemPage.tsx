@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { usePortfolioStore } from '@/lib/portfolioStore';
+import { useDashboardStore } from '@/lib/store';
 import PriceChart from './PriceChart';
 import { getItemDetails, getItemHistory, getItemPrice, resolveIconUrl } from '@/lib/api/osrs';
 
@@ -22,6 +23,8 @@ export default function PortfolioItemPage() {
   const params = useParams();
   const itemId = Number(params?.id);
   const items = usePortfolioStore((state) => state.items);
+  const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
+  const isFavorite = favorites.some(item => item.id === itemId);
   const [timeframe, setTimeframe] = useState<Timeframe>('30d');
 
   const matchingItems = useMemo(() => items.filter((item) => item.itemId === itemId), [items, itemId]);
@@ -156,11 +159,33 @@ export default function PortfolioItemPage() {
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
         <div className="flex items-center justify-between">
           <Link href="/" className="text-sm text-slate-300 hover:text-slate-100">← Back to portfolio</Link>
-          {itemDetails?.wiki_url ? (
-            <a href={itemDetails.wiki_url} target="_blank" rel="noreferrer" className="text-sm text-slate-300 hover:text-slate-100">
-              Wiki
-            </a>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {itemDetails?.wiki_url ? (
+              <a href={itemDetails.wiki_url} target="_blank" rel="noreferrer" className="text-sm text-slate-300 hover:text-slate-100">
+                Wiki
+              </a>
+            ) : null}
+            <button
+              onClick={() => {
+                if (isFavorite) {
+                  removeFromFavorites(itemId);
+                } else {
+                  addToFavorites({
+                    id: itemId,
+                    name: itemDetails?.name || `Item ${itemId}`,
+                    addedAt: Date.now(),
+                  });
+                }
+              }}
+              className={`px-3 py-1.5 text-xs rounded border transition-colors ${
+                isFavorite
+                  ? 'bg-osrs-accent text-slate-900 border-osrs-accent'
+                  : 'bg-slate-900 text-slate-300 border-slate-700 hover:border-slate-600'
+              }`}
+            >
+              {isFavorite ? '★ Favorited' : '☆ Add to Favorites'}
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -196,9 +221,6 @@ export default function PortfolioItemPage() {
             <div className="text-slate-400 text-xs">Tax (2%)</div>
             <div className="text-lg font-semibold text-slate-200">
               {Math.round((stats.realizedTax + stats.unrealizedTax) || 0).toLocaleString()}gp
-            </div>
-            <div className="text-[10px] text-slate-500">
-              Paid {Math.round(stats.realizedTax || 0).toLocaleString()}gp • Est {Math.round(stats.unrealizedTax || 0).toLocaleString()}gp
             </div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
