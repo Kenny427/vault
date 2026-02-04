@@ -21,8 +21,6 @@ import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
 type MenuTab = 'admin';
 
-const EXPANDED_POOL_LIMIT = 2000;
-const EXPANDED_POOL_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 const AI_TOP_N = 12;
 const AI_MIN_SCORE = 45;
 
@@ -69,43 +67,6 @@ export default function Dashboard() {
   } = useDashboardStore();
   const analyzeRef = useRef<null | (() => void)>(null);
   const loadingRef = useRef(loading);
-
-  const getExpandedPool = async (): Promise<PoolItem[]> => {
-    if (typeof window === 'undefined') return [];
-
-    const cached = localStorage.getItem('osrs-expanded-pool');
-    const cachedAt = localStorage.getItem('osrs-expanded-pool-ts');
-    if (cached && cachedAt) {
-      const age = Date.now() - Number(cachedAt);
-      if (Number.isFinite(age) && age < EXPANDED_POOL_TTL_MS) {
-        try {
-          const parsed = JSON.parse(cached) as PoolItem[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        } catch {
-          // ignore and refetch
-        }
-      }
-    }
-
-    const response = await fetch(`/api/item-pool?mode=expanded&limit=${EXPANDED_POOL_LIMIT}`);
-    if (!response.ok) return [];
-    const data = await response.json();
-    const items = Array.isArray(data?.items) ? data.items : [];
-    const poolItems = items.map((item: any) => ({
-      id: item.id,
-      name: item.name,
-      addedAt: Date.now(),
-    }));
-
-    if (poolItems.length > 0) {
-      localStorage.setItem('osrs-expanded-pool', JSON.stringify(poolItems));
-      localStorage.setItem('osrs-expanded-pool-ts', Date.now().toString());
-    }
-
-    return poolItems;
-  };
 
   // Analyze items with AI
   const analyzeWithAI = async () => {
