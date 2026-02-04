@@ -55,9 +55,13 @@ const POPULAR_CATEGORIES = [
   'oak logs', 'willow logs', 'maple logs', 'yew logs', 'magic logs', 'teak logs', 'mahogany logs',
   'bow string', 'flax', 'bale of flax', 'feather', 'arrow shaft', 'headless arrow',
 
-  // Unstrung bows
+  // Unstrung bows (good volatility)
   'maple longbow (u)', 'yew longbow (u)', 'magic longbow (u)',
   'maple shortbow (u)', 'yew shortbow (u)', 'magic shortbow (u)',
+
+  // Arrows / bolts (volatile)
+  'bronze bolts', 'iron bolts', 'steel bolts', 'mithril bolts', 'adamant bolts', 'runite bolts', 'dragon bolts',
+  'bronze arrow', 'iron arrow', 'steel arrow', 'mithril arrow', 'adamant arrow', 'rune arrow', 'dragon arrow',
 
   // Ores / bars
   'iron ore', 'coal', 'mithril ore', 'adamantite ore', 'runite ore', 'gold ore',
@@ -67,24 +71,24 @@ const POPULAR_CATEGORIES = [
   'plank', 'oak plank', 'teak plank', 'mahogany plank',
   'steel nails', 'mithril nails', 'adamant nails', 'rune nails',
 
-  // Dragonhides / leathers
+  // Dragonhides / leathers (volatile)
   'green dragonhide', 'blue dragonhide', 'red dragonhide', 'black dragonhide',
   'green dragon leather', 'blue dragon leather', 'red dragon leather', 'black dragon leather',
 
-  // Bones
+  // Bones (volatile)
   'dragon bones', 'babydragon bones', 'wyvern bones', 'superior dragon bones', 'crushed superior dragon bones',
 
-  // Herblore herbs (grimy + clean)
+  // Herblore herbs (grimy + clean) - highly volatile
   'grimy ranarr weed', 'grimy snapdragon', 'grimy toadflax', 'grimy avantoe', 'grimy kwuarm',
   'grimy cadantine', 'grimy torstol', 'grimy dwarf weed', 'grimy lantadyme',
   'ranarr weed', 'snapdragon', 'toadflax', 'avantoe', 'kwuarm', 'cadantine',
   'torstol', 'dwarf weed', 'lantadyme',
 
-  // Seeds
+  // Seeds (volatile)
   'ranarr seed', 'snapdragon seed', 'toadflax seed', 'torstol seed',
   'cadantine seed', 'dwarf weed seed', 'lantadyme seed',
 
-  // Unfinished potions
+  // Unfinished potions (volatile)
   'ranarr potion (unf)', 'snapdragon potion (unf)', 'toadflax potion (unf)', 'avantoe potion (unf)',
   'kwuarm potion (unf)', 'cadantine potion (unf)', 'torstol potion (unf)', 'dwarf weed potion (unf)',
   'lantadyme potion (unf)', 'vial of water',

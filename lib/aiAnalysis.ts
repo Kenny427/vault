@@ -200,70 +200,55 @@ Extreme Volatility: ${item.technicalIndicators.extremeVolatility ? 'WARNING ⚠'
 Price Collapse: ${item.technicalIndicators.priceCollapse ? 'CRASHED 📉' : 'Normal'} | Price Surge: ${item.technicalIndicators.priceSurge ? 'SURGING 📈' : 'Normal'}
 `).join('\n')}
 
-=== YOUR EXPERT ANALYSIS CRITERIA ===
+=== YOUR EXPERT ANALYSIS CRITERIA (MEAN-REVERSION STRATEGY) ===
 
-✅ STRONG BUY SIGNALS (look for these):
-1. Price near/below support level + positive momentum building
-2. Currently in bottom 20th percentile of 365d range but top 50% historically
-3. Price crashed 20%+ below yearly average BUT consistency score is high (stable item recovering)
-4. Momentum turning positive across multiple timeframes (30d/90d/180d all positive)
-5. Low volatility items with sudden dips (likely manipulation/panic sell - will recover)
-6. High consistency + currently undervalued = mean reversion play
-7. Seasonal recovery patterns (e.g., dipped for 3+ months, now showing reversal)
+You hold items for WEEKS if needed. You profit from buying UNDERVALUED items that will bounce back to their historical averages.
 
-✅ STRONG SELL SIGNALS (look for these):
-1. Price near/above resistance + negative momentum
-2. Currently in top 20th percentile of 365d range (overbought)
-3. Price 20%+ above yearly average with declining momentum
-4. Extreme volatility + price surge = bubble/manipulation peak
-5. Negative momentum across all timeframes = trend reversal
+✅ PRIMARY BUY SIGNALS (items to flag):
+1. **15%+ below 90-day average** - Item recently tanked but has a history of bouncing back within 90 days
+2. **20%+ below 365-day average** - Deep value play; item trades well below yearly average with high confidence of recovery
+3. **Bottom 25th percentile of 365d range** - Currently at/near yearly lows but has proven recovery in the past
+4. **Consistency score HIGH (75%+)** - Item bounces reliably; not a "dead" item
+5. **Price has bounced back 25%+ multiple times in history** - Proven recovery pattern, not declining trend
 
-❌ AVOID (skip these):
-- Flat momentum across all timeframes (stagnant/dead items)
-- Extreme volatility with no clear pattern (too risky)
-- Items with consistently declining averages across all timeframes (dying items)
-- Price exactly at all timeframe averages (no edge)
+✅ SECONDARY BUY SIGNALS (boost confidence):
+- 90d momentum is positive even if recent momentum is negative (bottoming out + recovering)
+- Item was higher in price for significant periods in 90d/365d history
+- Price dips are followed by recoveries in historical data (cyclical pattern)
+- Multiple items in same category are similarly undervalued (sector dip, not item-specific failure)
 
-=== ADVANCED STRATEGIES ===
+❌ HARD SKIPS (reject these):
+- Consistently declining 30d/90d/365d averages (item losing fundamental value)
+- Bottom 5th percentile with no prior recovery history (possibly dead/delisted)
+- Price in bottom 15th percentile AND currently in downtrend (weak bounce confidence)
+- Items with erratic % spreads 3x other timeframes (data anomaly)
 
-SHORT-TERM FLIPS (2-7 days):
-- Focus on: Support bounces, oversold conditions (bottom 15th percentile), positive 30d momentum
-- Target: 5-15% profit, high volume items
+=== TIMEFRAME ASSIGNMENTS ===
 
-MEDIUM-TERM TRADES (1-4 weeks):  
-- Focus on: Mean reversion, recovery from crashes, building momentum
-- Target: 15-40% profit, items with high consistency scores
+MEDIUM-TERM (1-4 weeks) - Target: 15-40% profit:
+- 15-25% below 90d avg + good consistency (will bounce back within weeks)
+- Example: Yew longbow (u) at 273gp with 90d avg 350+ = ~22% discount + proven recovery = MEDIUM
 
-LONG-TERM INVESTMENTS (1-3 months):
-- Focus on: Massively undervalued (30%+ below 365d avg), seasonal patterns, fundamental recovery
-- Target: 40%+ profit, quality items with proven recovery history
+LONG-TERM (4 weeks - 3 months) - Target: 20-60% profit:
+- 20-40% below 365d avg + item has recovered from similar dips before
+- Example: Runite bolts at 150gp with 90d range 200-300gp = 25-50% discount + recovery history = LONG
 
 === OUTPUT FORMAT ===
 
-Return ONLY BUY opportunities (no sells). Provide up to 10 candidates ranked by confidence.
-Minimum confidence: 30% for short-term, 30% for long-term.
-{
-  "itemId": number,
-  "recommendation": "buy" | "sell",
-  "confidence": number (55-100, be realistic),
-  "timeframe": "short-term" | "medium-term" | "long-term",
-  "reasoning": "Detailed multi-factor explanation citing specific data (max 60 words)"
-}
-
+Return ONLY BUY opportunities (no sells). Provide up to 15 candidates ranked by confidence.
+Minimum confidence: 35% for real undervaluation signals.
 RESPOND ONLY WITH VALID JSON ARRAY:
 [
   {
     "itemId": 123,
     "recommendation": "buy",
-    "confidence": 78,
+    "confidence": 72,
     "timeframe": "medium-term",
-    "reasoning": "Price at support (4200gp) 25% below 365d avg. Positive momentum building (30d +8%, 90d +3%). High consistency (82%) indicates stable recovery. Near bottom 12th percentile - strong mean reversion setup."
+    "reasoning": "273gp vs 90d avg ~350gp (22% discount). Bounces reliably to 350-400gp historically. High consistency (85%). Price at 12-month low but with proven recovery pattern - strong mean-reversion setup."
   }
 ]
 
-If no reasonable opportunities found, return: []
-
-Prefer more candidates for manual review rather than returning an empty list.`;
+If items are scarce, return them anyway. Prefer showing undervalued candidates for manual review rather than returning an empty list.`;
 
   try {
     const message = await aiClient.chat.completions.create({
