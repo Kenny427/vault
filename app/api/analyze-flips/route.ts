@@ -67,16 +67,16 @@ export async function POST(request: Request) {
         const history365 = await getItemHistory(resolvedId, 365 * 24 * 60 * 60, currentPrice);
 
         // Skip items with only simulated history (too narrow price range = unreliable data)
-        // Real data should have wider spreads; simulated data clusters within ±15% of current
+        // Real data should have wider spreads; simulated data clusters within ±5% of current
         if (history365 && history365.length > 0) {
           const prices365 = history365.map(p => p.price);
           const minPrice = Math.min(...prices365);
           const maxPrice = Math.max(...prices365);
           const spread = ((maxPrice - minPrice) / currentPrice) * 100;
           
-          // If spread is less than 15%, data is likely simulated (only ±7.5% variation)
-          // Real trading data has wider swings
-          if (spread < 15) {
+          // If spread is less than 8%, data is likely simulated (only ±4% variation)
+          // Real trading data has wider swings, even for stable items
+          if (spread < 8) {
             console.log(`  ⊘ Skipping ${item.name}: spread only ${spread.toFixed(1)}% (likely simulated data)`);
             continue;
           }

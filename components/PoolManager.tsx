@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { POPULAR_CATEGORIES } from '@/lib/api/osrs';
+import { EXPANDED_ITEM_POOL, ItemPoolEntry } from '@/lib/expandedItemPool';
 
 interface PoolAIReview {
   add: string[];
@@ -10,7 +10,7 @@ interface PoolAIReview {
 }
 
 export default function PoolManager() {
-  const [poolItems, setPoolItems] = useState<string[]>([]);
+  const [poolItems, setPoolItems] = useState<ItemPoolEntry[]>([]);
   const [newItem, setNewItem] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -18,57 +18,43 @@ export default function PoolManager() {
   const [isReviewing, setIsReviewing] = useState(false);
 
   useEffect(() => {
-    setPoolItems([...POPULAR_CATEGORIES].sort());
+    setPoolItems([...EXPANDED_ITEM_POOL].sort((a, b) => a.name.localeCompare(b.name)));
   }, []);
 
   const categories = {
     all: 'All Items',
-    logs: 'Logs & Fletching',
-    ores: 'Ores & Bars',
+    runes: 'Runes',
+    ammo: 'Ammo',
+    potions: 'Potions',
+    herbs: 'Herbs & Seeds',
+    resources: 'Resources',
     bones: 'Bones',
-    herbs: 'Herblore',
-    dragonhide: 'Dragonhides & Leather',
-    runes: 'Runes & Essence',
-    fish: 'Fish',
-    gems: 'Gems & Jewelry',
-    ammo: 'Ammo & Combat',
-  };
-
-  const categorizeItem = (item: string): string => {
-    const lower = item.toLowerCase();
-    if (lower.includes('log') || lower.includes('bow') || lower.includes('arrow shaft') || lower.includes('feather') || lower.includes('flax')) return 'logs';
-    if (lower.includes('ore') || lower.includes('bar') || lower.includes('coal')) return 'ores';
-    if (lower.includes('bone')) return 'bones';
-    if (lower.includes('herb') || lower.includes('weed') || lower.includes('potion') || lower.includes('seed') || lower.includes('ranarr') || lower.includes('snapdragon') || lower.includes('torstol') || lower.includes('avantoe') || lower.includes('kwuarm') || lower.includes('cadantine') || lower.includes('lantadyme') || lower.includes('dwarf weed') || lower.includes('toadflax')) return 'herbs';
-    if (lower.includes('dragonhide') || lower.includes('dragon leather')) return 'dragonhide';
-    if (lower.includes('rune') || lower.includes('essence')) return 'runes';
-    if (lower.includes('raw ') || lower.includes('fish')) return 'fish';
-    if (lower.includes('uncut') || lower.includes('sapphire') || lower.includes('emerald') || lower.includes('ruby') || lower.includes('diamond') || lower.includes('dragonstone') || lower.includes('zenyte') || lower.includes('ring') || lower.includes('amulet') || lower.includes('necklace') || lower.includes('bracelet')) return 'gems';
-    if (lower.includes('bolt') || lower.includes('arrow') || lower.includes('cannonball') || lower.includes('dart')) return 'ammo';
-    return 'other';
+    food: 'Food',
+    armor: 'Armor',
+    weapons: 'Weapons',
+    jewelry: 'Jewelry',
+    shields: 'Shields',
+    upgrades: 'Upgrades',
+    other: 'Other',
   };
 
   const filteredItems = poolItems.filter(item => {
-    const matchesSearch = item.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || categorizeItem(item) === categoryFilter;
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
   const handleAddItem = () => {
-    const trimmed = newItem.trim().toLowerCase();
+    const trimmed = newItem.trim();
     if (!trimmed) return;
     
-    if (poolItems.some(item => item.toLowerCase() === trimmed)) {
+    if (poolItems.some(item => item.name.toLowerCase() === trimmed.toLowerCase())) {
       alert('Item already exists in pool!');
       return;
     }
 
-    const updatedPool = [...poolItems, trimmed].sort();
-    setPoolItems(updatedPool);
+    alert('To add items, please edit lib/expandedItemPool.ts directly. This ensures proper ID, category, and tier mapping.');
     setNewItem('');
-    
-    // Show code to copy
-    alert(`Item added! To persist this change, add "${trimmed}" to POPULAR_CATEGORIES in lib/api/osrs.ts`);
   };
 
   const handleAIReview = async () => {
@@ -79,7 +65,7 @@ export default function PoolManager() {
       const response = await fetch('/api/analyze-pool', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(poolItems),
+        body: JSON.stringify(poolItems.map(item => item.name)),
         keepalive: true,
       });
 
@@ -97,18 +83,15 @@ export default function PoolManager() {
     }
   };
 
-  const handleRemoveItem = (itemToRemove: string) => {
-    if (!confirm(`Remove "${itemToRemove}" from pool?`)) return;
+  const handleRemoveItem = (itemToRemove: ItemPoolEntry) => {
+    if (!confirm(`Remove "${itemToRemove.name}" from pool?`)) return;
     
-    const updatedPool = poolItems.filter(item => item !== itemToRemove);
-    setPoolItems(updatedPool);
-    
-    alert(`Item removed! To persist this change, remove "${itemToRemove}" from POPULAR_CATEGORIES in lib/api/osrs.ts`);
+    alert(`To remove items, please edit lib/expandedItemPool.ts directly. This ensures the pool stays synchronized.`);
   };
 
   const getCategoryCount = (cat: string) => {
     if (cat === 'all') return poolItems.length;
-    return poolItems.filter(item => categorizeItem(item) === cat).length;
+    return poolItems.filter(item => item.category === cat).length;
   };
 
   return (
@@ -137,7 +120,7 @@ export default function PoolManager() {
           </div>
         </div>
         <p className="text-slate-400 text-sm mb-4">
-          Manage the items analyzed for flip opportunities. Changes here are temporary - update POPULAR_CATEGORIES in lib/api/osrs.ts to persist.
+          Viewing {poolItems.length} curated items from the expanded pool. To add/remove items, edit lib/expandedItemPool.ts directly.
         </p>
 
         {aiReview && (
@@ -253,13 +236,25 @@ export default function PoolManager() {
 
         {/* Items Grid */}
         <div className="bg-slate-800/50 rounded-lg p-4 max-h-96 overflow-y-auto">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {filteredItems.map((item) => (
               <div
-                key={item}
-                className="flex items-center justify-between bg-slate-700/50 hover:bg-slate-700 p-2 rounded group transition-colors"
+                key={item.id}
+                className="flex items-center justify-between bg-slate-700/50 hover:bg-slate-700 p-3 rounded group transition-colors"
               >
-                <span className="text-slate-200 text-sm truncate flex-1">{item}</span>
+                <div className="flex-1">
+                  <div className="text-sm text-slate-100 font-medium">{item.name}</div>
+                  <div className="text-xs text-slate-400 mt-1 flex gap-2">
+                    <span className="px-2 py-0.5 bg-slate-800 rounded">{item.category}</span>
+                    <span className={`px-2 py-0.5 rounded ${
+                      item.tier === 'high' ? 'bg-purple-900/50 text-purple-300' :
+                      item.tier === 'medium' ? 'bg-blue-900/50 text-blue-300' :
+                      'bg-slate-800 text-slate-400'
+                    }`}>
+                      {item.tier}
+                    </span>
+                  </div>
+                </div>
                 <button
                   onClick={() => handleRemoveItem(item)}
                   className="ml-2 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -278,16 +273,19 @@ export default function PoolManager() {
         </div>
 
         {/* Export Button */}
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-between items-center">
+          <div className="text-sm text-slate-400">
+            Total: {poolItems.length} items | Categories: {Object.keys(categories).length - 1}
+          </div>
           <button
             onClick={() => {
-              const code = `export const POPULAR_CATEGORIES = [\n  ${poolItems.map(item => `'${item}'`).join(',\n  ')}\n];`;
-              navigator.clipboard.writeText(code);
-              alert('Pool array copied to clipboard! Paste into lib/api/osrs.ts');
+              const itemNames = poolItems.map(item => item.name).join('\n');
+              navigator.clipboard.writeText(itemNames);
+              alert('Item names copied to clipboard!');
             }}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded transition-colors"
           >
-            📋 Copy Pool to Clipboard
+            📋 Copy Item Names
           </button>
         </div>
       </div>

@@ -111,25 +111,13 @@ export default function Dashboard() {
   const analyzeWithAI = async () => {
     if (loading) return;
 
-    const customPool: PoolItem[] = typeof window !== 'undefined'
-      ? (JSON.parse(localStorage.getItem('osrs-custom-pool') || '[]') as PoolItem[])
-      : [];
-
-    // Use expanded pool (350+ items) if no custom pool, otherwise use custom
-    let expandedPool: PoolItem[] = [];
-    if (customPool.length === 0) {
-      expandedPool = await getExpandedPool();
-    }
-
-    const itemsToAnalyze: PoolItem[] = customPool.length > 0
-      ? customPool
-      : expandedPool.length > 0
-        ? expandedPool
-        : getAllAnalysisItems().map(item => ({
-            id: item.id,
-            name: item.name,
-            addedAt: Date.now(),
-          }));
+    // ALWAYS use the curated pool - no custom pools, no DB pools
+    // This ensures only the 355 carefully selected items are analyzed
+    const itemsToAnalyze: PoolItem[] = getAllAnalysisItems().map(item => ({
+      id: item.id,
+      name: item.name,
+      addedAt: Date.now(),
+    }));
 
     if (itemsToAnalyze.length === 0) {
       setOpportunities([]);
