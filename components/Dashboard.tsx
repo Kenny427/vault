@@ -7,12 +7,8 @@ import FlipCard from './FlipCard';
 import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
 import { getItemPrice, getItemHistory, getPopularItems } from '@/lib/api/osrs';
-import {
-  analyzeFlipOpportunity,
-  FlipOpportunity,
-  findLongTermInvestments,
-  findShortTermFlips,
-} from '@/lib/analysis';
+import { FlipOpportunity } from '@/lib/analysis';
+import { analyzeFlipsWithAI, clearAnalysisCache } from '@/lib/aiAnalysis';
 import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
 
@@ -22,6 +18,10 @@ export default function Dashboard() {
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
   const [activeTab, setActiveTab] = useState<'portfolio' | 'favorites' | 'opportunities'>('portfolio');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  
   const {
     watchlist,
     minOpportunityScore,
@@ -34,69 +34,85 @@ export default function Dashboard() {
     setSelectedTimeframe,
   } = useDashboardStore();
 
-  // Load and analyze watchlist items and popular items
-  useEffect(() => {
-    const loadItems = async () => {
-      // Use watchlist if available, otherwise load popular items
-      let itemsToAnalyze;
-      
-      if (watchlist.length > 0) {
-        itemsToAnalyze = watchlist;
-      } else {
-        const popularItems = await getPopularItems();
-        itemsToAnalyze = popularItems.map(item => ({
-          id: item.id,
-          name: item.name,
-          addedAt: Date.now(),
-        }));
-      }
+  // Analyze items with AI
+  const analyzeWithAI = async () => {
+    const itemsToAnalyze = watchlist.length > 0 ? watchlist : (await getPopularItems()).map(item => ({
+      id: item.id,
+      name: item.name,
+      addedAt: Date.now(),
+    }));
 
-      if (itemsToAnalyze.length === 0) {
-        setOpportunities([]);
-        return;
-      }
+    if (itemsToAnalyze.length === 0) {
+      setOpportunities([]);
+      return;
+    }
 
-      const newOpportunities: FlipOpportunity[] = [];
+    setLoading(true);
+    setError('');
+
+    try {
+      // Fetch price and history for all items across multiple timeframes
+      const itemsWithData: Array<{
+        id: number;
+        name: string;
+        currentPrice: number;
+        history30: any[];
+        history90: any[];
+        history180: any[];
+        history365: any[];
+      }> = [];
 
       for (const item of itemsToAnalyze) {
         try {
           const price = await getItemPrice(item.id);
           const currentPrice = price ? (price.high + price.low) / 2 : undefined;
-          
-          if (!currentPrice) {
-            continue;
-          }
 
-          const history = await getItemHistory(item.id, 30 * 24 * 60 * 60, currentPrice);
+          if (!currentPrice) continue;
 
-          if (price && history && history.length > 0) {
-            const opportunity = analyzeFlipOpportunity(
-              item.id,
-              item.name,
+          // Fetch price histories for different timeframes
+          const history30 = await getItemHistory(item.id, 30 * 24 * 60 * 60, currentPrice);
+          const history90 = await getItemHistory(item.id, 90 * 24 * 60 * 60, currentPrice);
+          const history180 = await getItemHistory(item.id, 180 * 24 * 60 * 60, currentPrice);
+          const history365 = await getItemHistory(item.id, 365 * 24 * 60 * 60, currentPrice);
+
+          if (history30 && history30.length > 0) {
+            itemsWithData.push({
+              id: item.id,
+              name: item.name,
               currentPrice,
-              history
-            );
-
-            if (opportunity) {
-              newOpportunities.push(opportunity);
-            }
+              history30,
+              history90: history90 && history90.length > 0 ? history90 : history30,
+              history180: history180 && history180.length > 0 ? history180 : history30,
+              history365: history365 && history365.length > 0 ? history365 : history30,
+            });
           }
         } catch (error) {
-          console.error(`Error analyzing ${item.name}:`, error);
+          console.error(`Error fetching data for ${item.name}:`, error);
         }
       }
 
-      setOpportunities(
-        newOpportunities.sort((a, b) => b.opportunityScore - a.opportunityScore)
-      );
-    };
+      // Analyze with AI
+      if (itemsWithData.length > 0) {
+        const aiOpportunities = await analyzeFlipsWithAI(itemsWithData);
+        setOpportunities(
+          aiOpportunities.sort((a, b) => b.opportunityScore - a.opportunityScore)
+        );
+        setLastRefresh(new Date());
+      } else {
+        setOpportunities([]);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to analyze opportunities');
+      console.error('AI analysis error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    loadItems();
-    const interval = setInterval(loadItems, 60000); // Refresh every minute
-
-    return () => clearInterval(interval);
+  // Load and analyze watchlist items and popular items
+  useEffect(() => {
+    analyzeWithAI();
   }, [watchlist]);
-
 
   // Filter opportunities based on settings
   let filteredOpportunities = opportunities.filter(opp => {
@@ -120,9 +136,6 @@ export default function Dashboard() {
         return b.opportunityScore - a.opportunityScore;
     }
   });
-
-  const longTermFlips = findLongTermInvestments(opportunities, 15);
-  const shortTermFlips = findShortTermFlips(opportunities, 5);
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -206,6 +219,36 @@ export default function Dashboard() {
         {/* Opportunities Tab Content */}
         {activeTab === 'opportunities' && (
           <>
+            {/* AI Analysis Status & Refresh Button */}
+            <div className="bg-gradient-to-r from-blue-900 to-blue-800 border border-blue-700 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="text-sm text-blue-200">
+                    {loading && <span>🔄 Analyzing with AI...</span>}
+                    {!loading && lastRefresh && (
+                      <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
+                    )}
+                    {!loading && !lastRefresh && <span>Ready to analyze</span>}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    clearAnalysisCache();
+                    analyzeWithAI();
+                  }}
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white rounded font-medium text-sm transition-colors"
+                >
+                  {loading ? 'Analyzing...' : 'Refresh Analysis'}
+                </button>
+              </div>
+              {error && (
+                <div className="mt-2 text-red-200 text-sm">
+                  ⚠️ {error}
+                </div>
+              )}
+            </div>
+
         {/* Settings & Filters */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-slate-100 mb-4">🎛️ Analysis Settings</h2>
@@ -291,38 +334,16 @@ export default function Dashboard() {
 
         {/* Opportunities Grid */}
         <div className="space-y-8">
-          {shortTermFlips.length > 0 && (
+          {filteredOpportunities.length > 0 && (
             <div>
               <h2 className="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
                 <span className="w-8 h-8 bg-orange-900 text-orange-400 rounded flex items-center justify-center text-lg">
-                  ⚡
+                  💰
                 </span>
-                Short-Term Flip Opportunities ({shortTermFlips.length})
+                AI-Detected Flip Opportunities ({filteredOpportunities.length})
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {shortTermFlips.map((opp) => (
-                  <FlipCard
-                    key={opp.itemId}
-                    opportunity={opp}
-                    onViewDetails={() => {
-                      router.push(`/item/${opp.itemId}`);
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {longTermFlips.length > 0 && (
-            <div>
-              <h2 className="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
-                <span className="w-8 h-8 bg-green-900 text-green-400 rounded flex items-center justify-center text-lg">
-                  📈
-                </span>
-                Long-Term Investment Opportunities ({longTermFlips.length})
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {longTermFlips.map((opp) => (
+                {filteredOpportunities.map((opp: FlipOpportunity) => (
                   <FlipCard
                     key={opp.itemId}
                     opportunity={opp}

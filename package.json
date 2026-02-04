@@ -9,12 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.72.1",
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.94.0",
     "@tanstack/react-query": "^5.0.0",
     "axios": "^1.6.0",
     "date-fns": "^2.30.0",
     "next": "^14.0.0",
+    "openai": "^6.17.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^2.10.0",
