@@ -46,9 +46,10 @@ export function initDinkWebhookListener() {
 
       const store = usePendingTransactionsStore.getState();
       const existingIds = new Set(store.transactions.map((tx) => tx.id));
+      const handledIds = new Set(store.handledIds);
 
       parsed.forEach((tx: any) => {
-        if (!tx?.id || existingIds.has(tx.id)) return;
+        if (!tx?.id || existingIds.has(tx.id) || handledIds.has(tx.id)) return;
         if (tx.type !== 'BUY' && tx.type !== 'SELL') return;
 
         store.addTransaction({

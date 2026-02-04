@@ -12,6 +12,7 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
 
   const transactions = usePendingTransactionsStore((state) => state.transactions);
   const removeTransaction = usePendingTransactionsStore((state) => state.removeTransaction);
+  const markHandled = usePendingTransactionsStore((state) => state.markHandled);
   const addItem = usePortfolioStore((state) => state.addItem);
 
   const filteredTransactions = useMemo(() => {
@@ -77,6 +78,7 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
             lots: [],
           });
 
+          markHandled(tx.id);
           removeTransaction(tx.id);
         }
       }
@@ -91,6 +93,7 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
   };
 
   const handleDismiss = (id: string) => {
+    markHandled(id);
     removeTransaction(id);
     setSelectedIds((prev) => {
       const next = new Set(prev);

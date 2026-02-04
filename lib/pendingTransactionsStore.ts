@@ -15,11 +15,13 @@ export interface PendingTransaction {
 
 interface PendingTransactionsStore {
   transactions: PendingTransaction[];
+  handledIds: string[];
   addTransaction: (
     tx: Omit<PendingTransaction, 'id' | 'timestamp'> &
       Partial<Pick<PendingTransaction, 'id' | 'timestamp'>>
   ) => void;
   removeTransaction: (id: string) => void;
+  markHandled: (id: string) => void;
   clearAll: () => void;
   clearByType: (type: 'BUY' | 'SELL') => void;
 }
@@ -28,6 +30,7 @@ export const usePendingTransactionsStore = create<PendingTransactionsStore>()(
   persist(
     (set) => ({
       transactions: [],
+      handledIds: [],
 
       addTransaction: (tx) => {
         const id = tx.id || `${Date.now()}-${Math.random()}`;
@@ -47,6 +50,14 @@ export const usePendingTransactionsStore = create<PendingTransactionsStore>()(
       removeTransaction: (id) => {
         set((state) => ({
           transactions: state.transactions.filter((tx) => tx.id !== id),
+        }));
+      },
+
+      markHandled: (id) => {
+        set((state) => ({
+          handledIds: state.handledIds.includes(id)
+            ? state.handledIds
+            : [id, ...state.handledIds].slice(0, 1000),
         }));
       },
 
