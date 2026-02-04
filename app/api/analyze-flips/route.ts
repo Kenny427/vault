@@ -5,7 +5,7 @@ import { getItemPrice, getItemHistory } from '@/lib/api/osrs';
 export async function POST(request: Request) {
   try {
     const items = await request.json();
-    const cappedItems = Array.isArray(items) ? items.slice(0, 30) : [];
+    const cappedItems = Array.isArray(items) ? items.slice(0, 60) : [];
     
     // Clear cache on each request (manual refresh behavior)
     clearAnalysisCache();

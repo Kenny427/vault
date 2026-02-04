@@ -77,9 +77,10 @@ export default function Dashboard() {
     try {
       // Analyze with AI via API route (server handles data fetching)
       if (itemsToAnalyze.length > 0) {
-        const payloadItems = itemsToAnalyze
+        const shuffled = [...itemsToAnalyze]
           .map(item => ({ id: item.id, name: item.name }))
-          .slice(0, 30);
+          .sort(() => Math.random() - 0.5);
+        const payloadItems = shuffled.slice(0, 60);
         const batchSize = 15;
         const allOpportunities: FlipOpportunity[] = [];
 
