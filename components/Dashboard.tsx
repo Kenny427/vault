@@ -438,23 +438,6 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* All Opportunities */}
-        {filteredOpportunities.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold text-slate-100 mb-4">All Opportunities</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredOpportunities.map((opp) => (
-                <FlipCard
-                  key={opp.itemId}
-                  opportunity={opp}
-                  onViewDetails={() => {
-                    router.push(`/item/${opp.itemId}`);
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
           </>
         )}
       </main>
