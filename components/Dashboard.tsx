@@ -17,8 +17,8 @@ import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
 import { usePriceAlertsStore } from '@/lib/priceAlertsStore';
 
-type TabType = 'portfolio' | 'opportunities' | 'favorites';
-type MenuTab = 'performance' | 'alerts' | 'admin';
+type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
+type MenuTab = 'admin';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -31,7 +31,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-active-tab');
-      const validTabs: TabType[] = ['portfolio', 'opportunities', 'favorites'];
+      const validTabs: TabType[] = ['portfolio', 'opportunities', 'favorites', 'performance', 'alerts'];
       if (saved && validTabs.includes(saved as TabType)) {
         return saved as TabType;
       }
@@ -269,7 +269,7 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tab Navigation - Minimal 3 tabs + Menu */}
+        {/* Tab Navigation - 5 main tabs + Settings Menu */}
         <div className="flex items-center gap-2 mb-6 border-b border-slate-700">
           <button
             onClick={() => {
@@ -298,6 +298,34 @@ export default function Dashboard() {
             }`}
           >
             🎯 Opportunities
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('performance');
+              setActiveMenuTab(null);
+              setShowMenu(false);
+            }}
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'performance' && !activeMenuTab
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            📈 Performance
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('alerts');
+              setActiveMenuTab(null);
+              setShowMenu(false);
+            }}
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'alerts' && !activeMenuTab
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            🔔 Price Alerts
           </button>
           <button
             onClick={() => {
@@ -331,32 +359,10 @@ export default function Dashboard() {
               <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50">
                 <button
                   onClick={() => {
-                    setActiveMenuTab('performance');
-                    setShowMenu(false);
-                  }}
-                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${
-                    activeMenuTab === 'performance' ? 'text-osrs-accent' : 'text-slate-300'
-                  }`}
-                >
-                  📈 Performance
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveMenuTab('alerts');
-                    setShowMenu(false);
-                  }}
-                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${
-                    activeMenuTab === 'alerts' ? 'text-osrs-accent' : 'text-slate-300'
-                  }`}
-                >
-                  🔔 Price Alerts
-                </button>
-                <button
-                  onClick={() => {
                     setActiveMenuTab('admin');
                     setShowMenu(false);
                   }}
-                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors border-t border-slate-700 ${
+                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${
                     activeMenuTab === 'admin' ? 'text-osrs-accent' : 'text-slate-300'
                   }`}
                 >
@@ -518,11 +524,11 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Menu Tab: Performance */}
-        {activeMenuTab === 'performance' && <PerformanceDashboard />}
+        {/* Performance Tab Content */}
+        {activeTab === 'performance' && !activeMenuTab && <PerformanceDashboard />}
 
-        {/* Menu Tab: Price Alerts */}
-        {activeMenuTab === 'alerts' && <PriceAlerts />}
+        {/* Price Alerts Tab Content */}
+        {activeTab === 'alerts' && !activeMenuTab && <PriceAlerts />}
 
         {/* Menu Tab: Pool Manager */}
         {activeMenuTab === 'admin' && <PoolManager />}
