@@ -9,7 +9,15 @@ import { useDashboardStore } from '@/lib/store';
 import { useEffect, useState } from 'react';
 
 export default function Home() {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+      },
+    },
+  }));
   const { session, loading } = useAuth();
   const { loadFromSupabase: loadPortfolio } = usePortfolioStore();
   const { loadFavoritesFromSupabase: loadFavorites } = useDashboardStore();
