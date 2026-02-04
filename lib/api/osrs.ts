@@ -50,7 +50,7 @@ let mappingCacheTime = 0;
 const MAPPING_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
 // Explicit bot-fed pool (user curated)
-const POPULAR_CATEGORIES = [
+export const POPULAR_CATEGORIES = [
   // Logs / fletching base
   'oak logs', 'willow logs', 'maple logs', 'yew logs', 'magic logs', 'teak logs', 'mahogany logs',
   'bow string', 'flax', 'bale of flax', 'feather', 'arrow shaft', 'headless arrow',
