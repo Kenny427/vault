@@ -42,8 +42,9 @@ export async function POST(request: Request) {
           const maxPrice = Math.max(...prices365);
           const spread = ((maxPrice - minPrice) / currentPrice) * 100;
           
-          // If spread is less than 8%, data is likely simulated
-          if (spread < 8) {
+          // If spread is less than 15%, data is likely simulated (only ±7.5% variation)
+          // Real trading data has wider swings
+          if (spread < 15) {
             console.log(`  ⊘ Skipping ${item.name}: spread only ${spread.toFixed(1)}% (likely simulated data)`);
             continue;
           }
