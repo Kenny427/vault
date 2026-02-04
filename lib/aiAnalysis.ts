@@ -450,6 +450,57 @@ export function clearAnalysisCache() {
   analysisCache.clear();
 }
 
+export interface PoolAIReview {
+  add: string[];
+  remove: string[];
+  notes: string[];
+}
+
+export async function analyzePoolWithAI(items: string[]): Promise<PoolAIReview> {
+  const aiClient = getClient();
+
+  if (items.length === 0) {
+    return { add: [], remove: [], notes: ['Pool is empty. Add core trading items first.'] };
+  }
+
+  const trimmed = items.map(item => item.trim()).filter(Boolean);
+  const prompt = `You are an expert OSRS GE trader. Review this item pool for flip analysis and suggest improvements.
+
+POOL (${trimmed.length} items):
+${trimmed.map((item, i) => `${i + 1}. ${item}`).join('\n')}
+
+Goals:
+- Recommend up to 12 items to ADD that are liquid, commonly flipped, and stable enough for meaningful spreads.
+- Recommend up to 12 items to REMOVE if they are low-liquidity, too niche, or too unstable.
+- Provide brief notes (max 5) about pool balance and categories to improve.
+
+Return valid JSON only:
+{
+  "add": ["item name", "item name"],
+  "remove": ["item name", "item name"],
+  "notes": ["note", "note"]
+}`;
+
+  try {
+    const completion = await aiClient.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+    });
+
+    const result = JSON.parse(completion.choices[0].message.content || '{}');
+    return {
+      add: Array.isArray(result.add) ? result.add : [],
+      remove: Array.isArray(result.remove) ? result.remove : [],
+      notes: Array.isArray(result.notes) ? result.notes : [],
+    };
+  } catch (error) {
+    console.error('AI pool review failed:', error);
+    throw error;
+  }
+}
+
 // Portfolio AI Review - analyzes all holdings in one batch
 export interface PortfolioAIReview {
   itemId: number;

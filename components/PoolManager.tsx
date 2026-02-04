@@ -3,11 +3,19 @@
 import { useState, useEffect } from 'react';
 import { POPULAR_CATEGORIES } from '@/lib/api/osrs';
 
+interface PoolAIReview {
+  add: string[];
+  remove: string[];
+  notes: string[];
+}
+
 export default function PoolManager() {
   const [poolItems, setPoolItems] = useState<string[]>([]);
   const [newItem, setNewItem] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [aiReview, setAiReview] = useState<PoolAIReview | null>(null);
+  const [isReviewing, setIsReviewing] = useState(false);
 
   useEffect(() => {
     setPoolItems([...POPULAR_CATEGORIES].sort());
@@ -63,6 +71,32 @@ export default function PoolManager() {
     alert(`Item added! To persist this change, add "${trimmed}" to POPULAR_CATEGORIES in lib/api/osrs.ts`);
   };
 
+  const handleAIReview = async () => {
+    if (poolItems.length === 0) return;
+
+    setIsReviewing(true);
+    try {
+      const response = await fetch('/api/analyze-pool', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(poolItems),
+        keepalive: true,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze pool');
+      }
+
+      const review = await response.json();
+      setAiReview(review);
+    } catch (error) {
+      console.error('AI pool review failed:', error);
+      alert('Failed to review pool. Please try again.');
+    } finally {
+      setIsReviewing(false);
+    }
+  };
+
   const handleRemoveItem = (itemToRemove: string) => {
     if (!confirm(`Remove "${itemToRemove}" from pool?`)) return;
     
@@ -80,10 +114,85 @@ export default function PoolManager() {
   return (
     <div className="space-y-6">
       <div className="bg-slate-900 rounded-lg p-6 border border-slate-700">
-        <h2 className="text-2xl font-bold text-slate-100 mb-2">Item Pool Manager</h2>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
+          <h2 className="text-2xl font-bold text-slate-100">Item Pool Manager</h2>
+          <div className="flex gap-2">
+            <button
+              onClick={handleAIReview}
+              disabled={isReviewing || poolItems.length === 0}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white font-semibold rounded transition-colors"
+              title="AI reviews pool and suggests add/remove items"
+            >
+              {isReviewing ? '⏳ Reviewing...' : '🤖 AI Review Pool'}
+            </button>
+            {aiReview && (
+              <button
+                onClick={() => setAiReview(null)}
+                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded transition-colors"
+                title="Clear AI review"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
         <p className="text-slate-400 text-sm mb-4">
           Manage the items analyzed for flip opportunities. Changes here are temporary - update POPULAR_CATEGORIES in lib/api/osrs.ts to persist.
         </p>
+
+        {aiReview && (
+          <div className="mb-6 bg-gradient-to-br from-purple-900/30 to-blue-900/20 border border-purple-700/50 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-purple-300">🤖 AI Pool Suggestions</h3>
+              <span className="text-xs text-slate-400">One batch call</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                <h4 className="text-sm font-semibold text-green-400 mb-2">Add</h4>
+                {aiReview.add.length > 0 ? (
+                  <ul className="space-y-1 text-sm text-slate-200">
+                    {aiReview.add.map((item) => (
+                      <li key={`add-${item}`} className="flex items-center gap-2">
+                        <span className="text-green-400">+</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-500">No additions suggested.</p>
+                )}
+              </div>
+              <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                <h4 className="text-sm font-semibold text-red-400 mb-2">Remove</h4>
+                {aiReview.remove.length > 0 ? (
+                  <ul className="space-y-1 text-sm text-slate-200">
+                    {aiReview.remove.map((item) => (
+                      <li key={`remove-${item}`} className="flex items-center gap-2">
+                        <span className="text-red-400">-</span>
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-slate-500">No removals suggested.</p>
+                )}
+              </div>
+            </div>
+            {aiReview.notes.length > 0 && (
+              <div className="mt-4 bg-slate-800/50 rounded-lg p-3 border border-slate-700">
+                <h4 className="text-sm font-semibold text-slate-300 mb-2">Notes</h4>
+                <ul className="space-y-1 text-sm text-slate-300">
+                  {aiReview.notes.map((note, i) => (
+                    <li key={`note-${i}`} className="flex items-start gap-2">
+                      <span className="text-purple-400 mt-0.5">•</span>
+                      <span>{note}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Add New Item */}
         <div className="flex gap-2 mb-6">
