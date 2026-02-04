@@ -11,7 +11,6 @@ import PoolManager from './PoolManager';
 import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
 import KeyboardShortcuts from './KeyboardShortcuts';
-import { getPopularItems } from '@/lib/api/osrs';
 import { FlipOpportunity, FlipType } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';

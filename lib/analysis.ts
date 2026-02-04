@@ -425,6 +425,8 @@ export function analyzeFlipOpportunity(
     opportunityScore,
     historicalLow,
     historicalHigh,
+    flipType: 'short-term' as FlipType,
+    flipTypeConfidence: 50,
     buyPrice,
     sellPrice,
     profitPerUnit,
@@ -442,6 +444,9 @@ export function analyzeFlipOpportunity(
     tradingRange,
     consistency,
     spreadQuality,
+    recommendedQuantity: 0,
+    totalInvestment: 0,
+    totalProfit: 0,
   };
 }
 
