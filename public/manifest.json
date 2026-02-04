@@ -1,0 +1,35 @@
+{
+  "name": "Vault - OSRS Trading Dashboard",
+  "short_name": "Vault",
+  "description": "Advanced price tracking and flip opportunity detection for Old School RuneScape Grand Exchange",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#eab308",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["finance", "productivity", "utilities"],
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Portfolio",
+      "short_name": "Portfolio",
+      "description": "View your trading portfolio",
+      "url": "/?tab=portfolio",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Opportunities",
+      "short_name": "Opportunities",
+      "description": "Find flip opportunities",
+      "url": "/?tab=opportunities",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    }
+  ]
+}

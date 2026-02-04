@@ -6,12 +6,18 @@ import { usePortfolioStore } from '@/lib/portfolioStore';
 import PortfolioSummary from './PortfolioSummary';
 import AddPortfolioItemModal from './AddPortfolioItemModal';
 import AddPortfolioSaleModal from './AddPortfolioSaleModal';
+import RecordTradeModal from './RecordTradeModal';
+import SetAlertModal from './SetAlertModal';
+import ItemNotesModal from './ItemNotesModal';
 import { getBatchPrices } from '@/lib/api/osrs';
 import { useChat } from '@/lib/chatContext';
 
 export default function Portfolio() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
+  const [showRecordTradeModal, setShowRecordTradeModal] = useState<{ item: any; currentPrice: number } | null>(null);
+  const [showSetAlertModal, setShowSetAlertModal] = useState<{ itemId: number; itemName: string; currentPrice: number } | null>(null);
+  const [showNotesModal, setShowNotesModal] = useState<{ itemId: number; itemName: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const items = usePortfolioStore((state) => state.items);
   const removeItem = usePortfolioStore((state) => state.removeItem);
@@ -172,12 +178,45 @@ export default function Portfolio() {
                         )}
                       </td>
                       <td className="text-right px-6 py-4">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
                           <button
                             onClick={() => openChat(`I'm holding ${remainingQty} ${item.itemName} that I bought at ${item.buyPrice}gp. Current price is ${current ? Math.round(current) : 'unknown'}gp. What should my exit strategy be? When should I sell for optimal profit?`)}
                             className="text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors px-2 py-1 rounded hover:bg-blue-900/20"
                           >
                             Ask AI
+                          </button>
+                          {current && (
+                            <>
+                              <button
+                                onClick={() => setShowRecordTradeModal({ 
+                                  item: { 
+                                    id: item.id,
+                                    itemId: item.itemId, 
+                                    itemName: item.itemName, 
+                                    quantity: item.quantity,
+                                    remainingQuantity: remainingQty,
+                                    buyPrice: item.buyPrice,
+                                    datePurchased: item.datePurchased
+                                  }, 
+                                  currentPrice: Math.round(current) 
+                                })}
+                                className="text-green-400 hover:text-green-300 font-medium text-sm transition-colors px-2 py-1 rounded hover:bg-green-900/20"
+                              >
+                                Record Flip
+                              </button>
+                              <button
+                                onClick={() => setShowSetAlertModal({ itemId: item.itemId, itemName: item.itemName, currentPrice: Math.round(current) })}
+                                className="text-yellow-400 hover:text-yellow-300 font-medium text-sm transition-colors px-2 py-1 rounded hover:bg-yellow-900/20"
+                              >
+                                Set Alert
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => setShowNotesModal({ itemId: item.itemId, itemName: item.itemName })}
+                            className="text-purple-400 hover:text-purple-300 font-medium text-sm transition-colors px-2 py-1 rounded hover:bg-purple-900/20"
+                          >
+                            Notes
                           </button>
                           <button
                             onClick={() => handleRemove(item.id)}
@@ -207,6 +246,37 @@ export default function Portfolio() {
         <AddPortfolioSaleModal
           onClose={() => setShowSaleModal(false)}
           onSuccess={handleSuccess}
+        />
+      )}
+      
+      {/* Record Trade Modal */}
+      {showRecordTradeModal && (
+        <RecordTradeModal
+          item={showRecordTradeModal.item}
+          currentPrice={showRecordTradeModal.currentPrice}
+          onClose={() => {
+            setShowRecordTradeModal(null);
+            setRefreshKey(prev => prev + 1);
+          }}
+        />
+      )}
+      
+      {/* Set Alert Modal */}
+      {showSetAlertModal && (
+        <SetAlertModal
+          itemId={showSetAlertModal.itemId}
+          itemName={showSetAlertModal.itemName}
+          currentPrice={showSetAlertModal.currentPrice}
+          onClose={() => setShowSetAlertModal(null)}
+        />
+      )}
+      
+      {/* Notes Modal */}
+      {showNotesModal && (
+        <ItemNotesModal
+          itemId={showNotesModal.itemId}
+          itemName={showNotesModal.itemName}
+          onClose={() => setShowNotesModal(null)}
         />
       )}
     </div>

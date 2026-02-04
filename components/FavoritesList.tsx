@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useDashboardStore } from '@/lib/store';
 import { getItemPrice, resolveIconUrl, getItemDetails, getItemHistory } from '@/lib/api/osrs';
 import { useChat } from '@/lib/chatContext';
+import SetAlertModal from './SetAlertModal';
+import ItemNotesModal from './ItemNotesModal';
 
 export default function FavoritesList() {
   const router = useRouter();
@@ -14,6 +16,8 @@ export default function FavoritesList() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSetAlertModal, setShowSetAlertModal] = useState<{ itemId: number; itemName: string; currentPrice: number } | null>(null);
+  const [showNotesModal, setShowNotesModal] = useState<{ itemId: number; itemName: string } | null>(null);
 
   // Get current prices for all favorites
   const favoriteIds = useMemo(() => favorites.map(f => f.id), [favorites]);
@@ -310,7 +314,7 @@ export default function FavoritesList() {
                   </div>
                 </div>
 
-                <div className="p-3 bg-slate-900/30 border-t border-slate-700">
+                <div className="p-3 bg-slate-900/30 border-t border-slate-700 space-y-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -324,6 +328,27 @@ export default function FavoritesList() {
                     </svg>
                     Ask AI About This Item
                   </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const currentPrice = price ? Math.round((price.high + price.low) / 2) : 0;
+                        setShowSetAlertModal({ itemId: favorite.id, itemName: favorite.name, currentPrice });
+                      }}
+                      className="py-2 px-3 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold rounded transition-colors text-xs"
+                    >
+                      🔔 Set Alert
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowNotesModal({ itemId: favorite.id, itemName: favorite.name });
+                      }}
+                      className="py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded transition-colors text-xs"
+                    >
+                      📝 Notes
+                    </button>
+                  </div>
                   <p className="text-xs text-slate-500 text-center mt-2">
                     * Based on current bid/ask (2% GE tax included)
                   </p>
@@ -332,6 +357,23 @@ export default function FavoritesList() {
             );
           })}
         </div>
+      )}
+      
+      {/* Modals */}
+      {showSetAlertModal && (
+        <SetAlertModal
+          itemId={showSetAlertModal.itemId}
+          itemName={showSetAlertModal.itemName}
+          currentPrice={showSetAlertModal.currentPrice}
+          onClose={() => setShowSetAlertModal(null)}
+        />
+      )}
+      {showNotesModal && (
+        <ItemNotesModal
+          itemId={showNotesModal.itemId}
+          itemName={showNotesModal.itemName}
+          onClose={() => setShowNotesModal(null)}
+        />
       )}
     </div>
   );

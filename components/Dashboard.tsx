@@ -8,10 +8,19 @@ import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
 import FloatingChat from './FloatingChat';
 import PoolManager from './PoolManager';
+import TradeHistory from './TradeHistory';
+import PerformanceDashboard from './PerformanceDashboard';
+import PriceAlerts from './PriceAlerts';
+import ExportData from './ExportData';
+import KeyboardShortcuts from './KeyboardShortcuts';
+import BulkAnalysis from './BulkAnalysis';
 import { getPopularItems } from '@/lib/api/osrs';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
+import { usePriceAlertsStore } from '@/lib/priceAlertsStore';
+
+type TabType = 'portfolio' | 'favorites' | 'opportunities' | 'admin' | 'trades' | 'performance' | 'alerts' | 'export' | 'bulk';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -19,12 +28,12 @@ export default function Dashboard() {
   type PoolItem = { id: number; name: string; addedAt?: number };
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'favorites' | 'opportunities' | 'admin'>(() => {
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-active-tab');
-      const validTabs: ('portfolio' | 'favorites' | 'opportunities' | 'admin')[] = ['portfolio', 'favorites', 'opportunities', 'admin'];
-      if (saved && validTabs.includes(saved as any)) {
-        return saved as 'portfolio' | 'favorites' | 'opportunities' | 'admin';
+      const validTabs: TabType[] = ['portfolio', 'favorites', 'opportunities', 'admin', 'trades', 'performance', 'alerts', 'export', 'bulk'];
+      if (saved && validTabs.includes(saved as TabType)) {
+        return saved as TabType;
       }
     }
     return 'portfolio';
@@ -153,6 +162,17 @@ export default function Dashboard() {
     }
   };
 
+  // Check price alerts periodically
+  const checkAlerts = usePriceAlertsStore(state => state.checkAlerts);
+  
+  useEffect(() => {
+    if (activeTab === 'opportunities' && opportunities.length > 0) {
+      opportunities.forEach(opp => {
+        checkAlerts(opp.itemId, opp.currentPrice);
+      });
+    }
+  }, [opportunities, activeTab, checkAlerts]);
+
   // Load and analyze watchlist items and popular items
   useEffect(() => {
     // Manual refresh only
@@ -250,20 +270,40 @@ export default function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6 border-b border-slate-700">
+        <div className="flex gap-2 mb-6 border-b border-slate-700 overflow-x-auto">
           <button
             onClick={() => setActiveTab('portfolio')}
-            className={`px-6 py-3 font-semibold transition-all ${
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
               activeTab === 'portfolio'
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
             }`}
           >
-            💼 My Portfolio
+            💼 Portfolio
+          </button>
+          <button
+            onClick={() => setActiveTab('trades')}
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'trades'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            📊 Trade History
+          </button>
+          <button
+            onClick={() => setActiveTab('performance')}
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'performance'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            📈 Performance
           </button>
           <button
             onClick={() => setActiveTab('favorites')}
-            className={`px-6 py-3 font-semibold transition-all ${
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
               activeTab === 'favorites'
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
@@ -273,17 +313,47 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => setActiveTab('opportunities')}
-            className={`px-6 py-3 font-semibold transition-all ${
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
               activeTab === 'opportunities'
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
             }`}
           >
-            🎯 Flip Opportunities
+            🎯 Opportunities
+          </button>
+          <button
+            onClick={() => setActiveTab('alerts')}
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'alerts'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            🔔 Price Alerts
+          </button>
+          <button
+            onClick={() => setActiveTab('bulk')}
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'bulk'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            🔍 Bulk Analysis
+          </button>
+          <button
+            onClick={() => setActiveTab('export')}
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'export'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            📄 Export
           </button>
           <button
             onClick={() => setActiveTab('admin')}
-            className={`px-6 py-3 font-semibold transition-all ${
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
               activeTab === 'admin'
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
@@ -295,6 +365,30 @@ export default function Dashboard() {
 
         {/* Portfolio Tab Content */}
         {activeTab === 'portfolio' && <Portfolio />}
+
+        {/* Trade History Tab */}
+        {activeTab === 'trades' && <TradeHistory />}
+
+        {/* Performance Dashboard Tab */}
+        {activeTab === 'performance' && <PerformanceDashboard />}
+
+        {/* Price Alerts Tab */}
+        {activeTab === 'alerts' && <PriceAlerts />}
+
+        {/* Bulk Analysis Tab */}
+        {activeTab === 'bulk' && (
+          <BulkAnalysis items={opportunities.map(opp => ({
+            itemId: opp.itemId,
+            itemName: opp.itemName,
+            currentPrice: opp.currentPrice,
+            avg30d: opp.averagePrice30,
+            avg90d: opp.averagePrice90,
+            volatility: opp.volatility,
+          }))} />
+        )}
+
+        {/* Export Tab */}
+        {activeTab === 'export' && <ExportData />}
 
         {/* Admin Pool Manager Tab */}
         {activeTab === 'admin' && <PoolManager />}
@@ -451,10 +545,16 @@ export default function Dashboard() {
       {/* Floating AI Chat Widget */}
       <FloatingChat />
 
+      {/* Keyboard Shortcuts Handler */}
+      <KeyboardShortcuts />
+
       {/* Footer */}
       <footer className="bg-slate-900 border-t border-slate-700 mt-12">
         <div className="max-w-7xl mx-auto px-4 py-4 text-center text-slate-500 text-sm">
-          Data updated every 30 seconds - vibecoded by ray
+          <div className="mb-2">Data updated every 30 seconds - vibecoded by ray</div>
+          <div className="text-xs text-slate-600">
+            Keyboard shortcuts: <kbd className="px-2 py-0.5 bg-slate-800 rounded">Ctrl+K</kbd> Open Chat · <kbd className="px-2 py-0.5 bg-slate-800 rounded">Ctrl+/</kbd> Quick Search
+          </div>
         </div>
       </footer>
     </div>

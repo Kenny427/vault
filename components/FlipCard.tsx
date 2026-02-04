@@ -1,8 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useChat } from '@/lib/chatContext';
+import SetAlertModal from './SetAlertModal';
+import ItemNotesModal from './ItemNotesModal';
 
 interface FlipCardProps {
   opportunity: FlipOpportunity;
@@ -13,6 +16,9 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
   const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
   const { openChat } = useChat();
   const isInFavorites = favorites.some(item => item.id === opportunity.itemId);
+  
+  const [showSetAlertModal, setShowSetAlertModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
 
   const formatNumber = (value: number) => {
     const abs = Math.abs(value);
@@ -80,6 +86,15 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
     }
   };
 
+  // Calculate price change percentage from 30d average
+  const priceChange30d = opportunity.averagePrice30 
+    ? ((opportunity.currentPrice - opportunity.averagePrice30) / opportunity.averagePrice30) * 100 
+    : 0;
+  
+  const priceChange90d = opportunity.averagePrice90 
+    ? ((opportunity.currentPrice - opportunity.averagePrice90) / opportunity.averagePrice90) * 100 
+    : 0;
+
   return (
     <div
       className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-lg overflow-hidden hover:border-osrs-accent transition-all cursor-pointer hover:shadow-lg hover:shadow-osrs-accent/20 hover:-translate-y-1"
@@ -138,6 +153,11 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
               {formatNumber(opportunity.currentPrice ?? 0)}
               <span className="text-xs text-slate-400 ml-1">gp</span>
             </p>
+            {priceChange30d !== 0 && (
+              <p className={`text-xs font-semibold mt-1 ${priceChange30d >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {priceChange30d >= 0 ? '↑' : '↓'} {Math.abs(priceChange30d).toFixed(1)}% (30d)
+              </p>
+            )}
           </div>
           <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
             <p className="text-xs text-slate-400 mb-1">30D AVG</p>
@@ -152,6 +172,11 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
               {formatNumber(opportunity.averagePrice180 ?? opportunity.averagePrice ?? 0)}
               <span className="text-xs text-slate-400 ml-1">gp</span>
             </p>
+            {priceChange90d !== 0 && (
+              <p className={`text-xs font-semibold mt-1 ${priceChange90d >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {priceChange90d >= 0 ? '↑' : '↓'} {Math.abs(priceChange90d).toFixed(1)}% (90d)
+              </p>
+            )}
           </div>
         </div>
 
@@ -260,7 +285,7 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
 
       {/* View Details Button */}
       <div className="p-3 border-t border-slate-700 bg-gradient-to-r from-osrs-accent/10 to-transparent">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 mb-2">
           <button
             onClick={() => openChat(`Should I flip ${opportunity.itemName}? Current price is ${opportunity.currentPrice}gp`)}
             className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors text-sm flex items-center justify-center gap-1"
@@ -277,7 +302,44 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
             📊 View Chart
           </button>
         </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowSetAlertModal(true);
+            }}
+            className="py-2 px-3 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold rounded transition-colors text-xs"
+          >
+            🔔 Set Alert
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowNotesModal(true);
+            }}
+            className="py-2 px-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded transition-colors text-xs"
+          >
+            📝 Notes
+          </button>
+        </div>
       </div>
+
+      {/* Modals */}
+      {showSetAlertModal && (
+        <SetAlertModal
+          itemId={opportunity.itemId}
+          itemName={opportunity.itemName}
+          currentPrice={opportunity.currentPrice}
+          onClose={() => setShowSetAlertModal(false)}
+        />
+      )}
+      {showNotesModal && (
+        <ItemNotesModal
+          itemId={opportunity.itemId}
+          itemName={opportunity.itemName}
+          onClose={() => setShowNotesModal(false)}
+        />
+      )}
     </div>
   );
 }

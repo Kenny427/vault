@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getItemPrice, getItemHistory, getPopularItems } from '@/lib/api/osrs';
 import { calculateMean, calculateStdDev } from '@/lib/analysis';
+import { analyzeItemLimiter } from '@/lib/rateLimiter';
 
 async function getGPTAnalysis(itemName: string, itemData: string): Promise<string> {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -124,6 +125,17 @@ Be specific with numbers, percentages, and GP values. DO NOT confuse buying and 
 
 export async function POST(request: Request) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'unknown';
+    const rateCheck = analyzeItemLimiter.check(clientIP);
+    
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: `Rate limit exceeded. Please try again in ${rateCheck.retryAfter} seconds.` },
+        { status: 429, headers: { 'Retry-After': rateCheck.retryAfter!.toString() } }
+      );
+    }
+
     const { itemName, userQuestion } = await request.json();
 
     if (!itemName || typeof itemName !== 'string') {
