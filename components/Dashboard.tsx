@@ -51,20 +51,14 @@ export default function Dashboard() {
     showBuyOpportunities,
     setShowBuyOpportunities,
     showSellOpportunities,
-    setShowSellOpportunities,
-    selectedTimeframe,
-    setSelectedTimeframe,
+    setShowSellOpportunities
   } = useDashboardStore();
 
   // Analyze items with AI
-  const analyzeWithAI = async (force = false) => {
+  const analyzeWithAI = async () => {
     if (loading) return;
     
-    // Check cooldown from localStorage to prevent costly re-runs
-    const savedRefresh = typeof window !== 'undefined' ? localStorage.getItem('osrs-last-refresh') : null;
-    const lastRefreshTime = savedRefresh ? new Date(savedRefresh).getTime() : 0;
     
-    if (!force && lastRefreshTime && Date.now() - lastRefreshTime < ANALYSIS_COOLDOWN) {
       console.log('Skipping analysis - cooldown active');
       return;
     }
@@ -361,7 +355,7 @@ export default function Dashboard() {
                 className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-osrs-accent"
               />
               <p className="text-xs text-slate-400 mt-1">
-                {minConfidenceThreshold >= 80 ? '🟢 Conservative' : minConfidenceThreshold >= 60 ? '🟡 Balanced' : '🔴 Aggressive'}
+                {minConfidenceThreshold >= 70 ? '🟢 Conservative' : minConfidenceThreshold >= 50 ? '🟡 Balanced' : '🔴 Aggressive'}
               </p>
             </div>
 
