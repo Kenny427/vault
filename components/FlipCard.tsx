@@ -118,18 +118,25 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
 
       {/* Price Summary */}
       <div className="p-4 space-y-3 border-b border-slate-700/50">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
-            <p className="text-xs text-slate-400 mb-1">CURRENT PRICE</p>
+            <p className="text-xs text-slate-400 mb-1">CURRENT</p>
             <p className="text-lg font-bold text-slate-100">
               {opportunity.currentPrice.toLocaleString()}
               <span className="text-xs text-slate-400 ml-1">gp</span>
             </p>
           </div>
           <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
-            <p className="text-xs text-slate-400 mb-1">365D AVERAGE</p>
+            <p className="text-xs text-slate-400 mb-1">30D AVG</p>
             <p className="text-lg font-bold text-slate-100">
-              {opportunity.averagePrice365.toLocaleString()}
+              {opportunity.averagePrice30.toLocaleString()}
+              <span className="text-xs text-slate-400 ml-1">gp</span>
+            </p>
+          </div>
+          <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
+            <p className="text-xs text-slate-400 mb-1">180D AVG</p>
+            <p className="text-lg font-bold text-slate-100">
+              {opportunity.averagePrice180.toLocaleString()}
               <span className="text-xs text-slate-400 ml-1">gp</span>
             </p>
           </div>
