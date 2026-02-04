@@ -47,6 +47,8 @@ export function initDinkWebhookListener() {
   };
 
   const pollServer = async () => {
+      // Temporarily disabled to debug refresh issues
+      return;
     try {
       const response = await fetch('/api/webhooks/dink');
       if (!response.ok) return;
@@ -81,7 +83,7 @@ export function initDinkWebhookListener() {
   };
 
   const intervalId = window.setInterval(pollServer, 15000);
-  pollServer();
+  // pollServer(); // Disabled initial poll
 
   window.addEventListener('message', handleMessage);
 
