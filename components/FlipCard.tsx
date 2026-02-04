@@ -350,7 +350,7 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
       <div className="p-3 border-t border-slate-700 bg-gradient-to-r from-osrs-accent/10 to-transparent">
         <div className="grid grid-cols-2 gap-2 mb-2">
           <button
-            onClick={() => openChat(`Should I flip ${opportunity.itemName}? Current price is ${opportunity.currentPrice}gp`)}
+            onClick={() => openChat(`Should I flip ${opportunity.itemName} (ID: ${opportunity.itemId})? Current price is ${opportunity.currentPrice}gp. Check exact item match in OSRS Wiki.`)}
             className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors text-sm flex items-center justify-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
