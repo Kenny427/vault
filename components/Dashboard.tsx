@@ -116,6 +116,8 @@ export default function Dashboard() {
         setOpportunities(
           allOpportunities.sort((a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore)
         );
+        console.log(`📊 AI returned ${allOpportunities.length} opportunities`);
+        console.log(`Min Score filter: ${minOpportunityScore}, Confidence filter: ${minConfidenceThreshold}%`);
         const now = new Date();
         setLastRefresh(now);
         if (typeof window !== 'undefined') {
