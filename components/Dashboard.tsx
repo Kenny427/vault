@@ -8,7 +8,6 @@ import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
 import { getItemPrice, getItemHistory, getPopularItems } from '@/lib/api/osrs';
 import { FlipOpportunity } from '@/lib/analysis';
-import { analyzeFlipsWithAI, clearAnalysisCache } from '@/lib/aiAnalysis';
 import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
 
@@ -91,11 +90,22 @@ export default function Dashboard() {
         }
       }
 
-      // Analyze with AI
+      // Analyze with AI via API route
       if (itemsWithData.length > 0) {
-        const aiOpportunities = await analyzeFlipsWithAI(itemsWithData);
+        const response = await fetch('/api/analyze-flips', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(itemsWithData),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to analyze opportunities');
+        }
+
+        const aiOpportunities = await response.json();
         setOpportunities(
-          aiOpportunities.sort((a, b) => b.opportunityScore - a.opportunityScore)
+          aiOpportunities.sort((a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore)
         );
         setLastRefresh(new Date());
       } else {
@@ -232,10 +242,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    clearAnalysisCache();
-                    analyzeWithAI();
-                  }}
+                  onClick={analyzeWithAI}
                   disabled={loading}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white rounded font-medium text-sm transition-colors"
                 >
