@@ -183,6 +183,9 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
                         />
                       </th>
                       <th className="px-4 py-3 text-left text-slate-300 font-semibold">Item</th>
+                      <th className="px-4 py-3 text-right text-slate-300 font-semibold">Qty</th>
+                      <th className="px-4 py-3 text-right text-slate-300 font-semibold">Price</th>
+                      <th className="px-4 py-3 text-right text-slate-300 font-semibold">Total</th>
                       <th className="px-4 py-3 text-center text-slate-300 font-semibold">Type</th>
                       <th className="px-4 py-3 text-center text-slate-300 font-semibold">Status</th>
                       <th className="px-4 py-3 text-right text-slate-300 font-semibold">Time</th>
@@ -192,7 +195,7 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
                   <tbody className="divide-y divide-slate-700">
                     {filteredTransactions.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
+                        <td colSpan={9} className="px-4 py-8 text-center text-slate-400">
                           No {filterType !== 'ALL' ? filterType.toLowerCase() : ''} transactions
                         </td>
                       </tr>
@@ -213,6 +216,15 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
                             />
                           </td>
                           <td className="px-4 py-3 text-slate-100 font-medium">{tx.itemName}</td>
+                          <td className="px-4 py-3 text-right text-slate-300">
+                            {tx.quantity ? tx.quantity.toLocaleString() : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-right text-slate-300">
+                            {tx.price ? `${tx.price.toLocaleString()} gp` : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-right text-osrs-accent font-semibold">
+                            {tx.quantity && tx.price ? `${(tx.quantity * tx.price).toLocaleString()} gp` : '—'}
+                          </td>
                           <td className="px-4 py-3 text-center">
                             <span
                               className={`px-2 py-1 rounded text-xs font-semibold ${
