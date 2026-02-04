@@ -122,21 +122,21 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
           <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
             <p className="text-xs text-slate-400 mb-1">CURRENT</p>
             <p className="text-lg font-bold text-slate-100">
-              {opportunity.currentPrice.toLocaleString()}
+              {(opportunity.currentPrice ?? 0).toLocaleString()}
               <span className="text-xs text-slate-400 ml-1">gp</span>
             </p>
           </div>
           <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
             <p className="text-xs text-slate-400 mb-1">30D AVG</p>
             <p className="text-lg font-bold text-slate-100">
-              {opportunity.averagePrice30.toLocaleString()}
+              {(opportunity.averagePrice30 ?? opportunity.averagePrice ?? 0).toLocaleString()}
               <span className="text-xs text-slate-400 ml-1">gp</span>
             </p>
           </div>
           <div className="bg-slate-800/50 p-2 rounded border border-slate-700">
             <p className="text-xs text-slate-400 mb-1">180D AVG</p>
             <p className="text-lg font-bold text-slate-100">
-              {opportunity.averagePrice180.toLocaleString()}
+              {(opportunity.averagePrice180 ?? opportunity.averagePrice ?? 0).toLocaleString()}
               <span className="text-xs text-slate-400 ml-1">gp</span>
             </p>
           </div>

@@ -157,11 +157,17 @@ export default function Dashboard() {
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setOpportunities(parsed);
+          const valid = Array.isArray(parsed)
+            ? parsed.filter((opp: any) => typeof opp?.itemId === 'number' && typeof opp?.currentPrice === 'number')
+            : [];
+
+          if (valid.length > 0) {
+            setOpportunities(valid);
+          } else {
+            localStorage.removeItem('osrs-cached-opps');
           }
         } catch {
-          // Ignore invalid cache
+          localStorage.removeItem('osrs-cached-opps');
         }
       }
     }
