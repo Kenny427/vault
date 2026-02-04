@@ -12,8 +12,16 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
   const { watchlist, addToWatchlist, removeFromWatchlist } = useDashboardStore();
   const isInWatchlist = watchlist.some(item => item.id === opportunity.itemId);
 
-  const formatNumber = (value: number) =>
-    value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const formatNumber = (value: number) => {
+    const abs = Math.abs(value);
+    if (abs < 100_000) {
+      return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    }
+    if (abs < 1_000_000) {
+      return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+    }
+    return `${(value / 1_000_000).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '')}M`;
+  };
 
   const toggleWatchlist = (e: React.MouseEvent) => {
     e.stopPropagation();
