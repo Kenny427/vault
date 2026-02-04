@@ -240,7 +240,7 @@ LONG-TERM INVESTMENTS (1-3 months):
 
 === OUTPUT FORMAT ===
 
-For EACH solid opportunity (minimum 60% confidence for short-term, 55% for long-term), return JSON:
+For EACH solid opportunity (minimum 45% confidence for short-term, 40% for long-term), return JSON:
 {
   "itemId": number,
   "recommendation": "buy" | "sell",

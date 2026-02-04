@@ -31,9 +31,9 @@ export default function Dashboard() {
   const [minConfidenceThreshold, setMinConfidenceThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-min-confidence');
-      return saved ? Number(saved) : 55;
+      return saved ? Number(saved) : 45;
     }
-    return 55;
+    return 45;
   });
   const [lastRefresh, setLastRefresh] = useState<Date | null>(() => {
     if (typeof window !== 'undefined') {
@@ -310,8 +310,8 @@ export default function Dashboard() {
         {/* Settings & Filters */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-slate-100 mb-4">🎛️ Analysis Settings</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="space-y-3">
               <label className="text-sm font-medium text-slate-300 block mb-2">
                 Min Score: {minOpportunityScore}
               </label>
@@ -325,7 +325,7 @@ export default function Dashboard() {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <label className="text-sm font-medium text-slate-300 block mb-2">
                 Risk Level: {minConfidenceThreshold}%
               </label>
@@ -348,7 +348,7 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               <label className="text-sm font-medium text-slate-300 block mb-2">
                 Sort By
               </label>
