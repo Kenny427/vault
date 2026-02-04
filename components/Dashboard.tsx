@@ -145,10 +145,7 @@ export default function Dashboard() {
 
   // Load and analyze watchlist items and popular items
   useEffect(() => {
-    if (activeTab === 'opportunities') {
-      // Only auto-analyze if cooldown expired (prevents costly tab close re-runs)
-      analyzeWithAI(false);
-    }
+    // Manual refresh only
   }, [activeTab]);
 
   useEffect(() => {
