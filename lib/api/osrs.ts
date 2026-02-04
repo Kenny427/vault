@@ -51,12 +51,16 @@ const MAPPING_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
 // Popular item categories to prioritize
 const POPULAR_CATEGORIES = [
-  'rune', 'dragon', 'barrows', 'godsword',
-  'longbow', 'shortbow', 'crossbow',
-  'logs', 'plank',
-  'ore', 'bar',
-  'potion', 'prayer',
-  'essence', 'tablet',
+  // PVM gear & weapons
+  'whip', 'trident', 'blowpipe', 'godsword', 'dragon', 'barrows', 'ahrim', 'karil', 'guthan', 'dharok',
+  'torag', 'verac', 'bandos', 'armadyl', 'saradomin', 'zamorak', 'rapier', 'scythe', 'bow', 'crossbow',
+  'amethyst', 'onyx', 'zenyte',
+  // Ammo & runes
+  'bolt', 'arrow', 'rune', 'blood', 'death', 'chaos', 'nature', 'cosmic',
+  // Potions & supplies
+  'potion', 'super', 'prayer', 'restore', 'stamina', 'sanfew', 'antivenom',
+  // Food & skilling supplies with volume
+  'shark', 'karambwan', 'angler', 'food', 'log', 'plank', 'ore', 'bar',
 ];
 
 const priceCache = new Map<number, { data: PriceData; timestamp: number }>();
@@ -346,7 +350,7 @@ export async function getPopularItems(): Promise<ItemData[]> {
       return POPULAR_CATEGORIES.some(cat => lowerName.includes(cat));
     });
 
-    return popular.slice(0, 100); // Top 100 popular items
+    return popular.slice(0, 40); // Smaller pool: PVM gear & high-volume supplies
   } catch (error) {
     console.error('Failed to get popular items:', error);
     return [];

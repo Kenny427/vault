@@ -16,7 +16,15 @@ export default function Dashboard() {
   const { logout } = useAuth();
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'favorites' | 'opportunities'>('portfolio');
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'favorites' | 'opportunities'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('osrs-active-tab');
+      if (saved === 'portfolio' || saved === 'favorites' || saved === 'opportunities') {
+        return saved;
+      }
+    }
+    return 'portfolio';
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -52,8 +60,10 @@ export default function Dashboard() {
     try {
       // Analyze with AI via API route (server handles data fetching)
       if (itemsToAnalyze.length > 0) {
-        const payloadItems = itemsToAnalyze.map(item => ({ id: item.id, name: item.name }));
-        const batchSize = 20;
+        const payloadItems = itemsToAnalyze
+          .map(item => ({ id: item.id, name: item.name }))
+          .slice(0, 30);
+        const batchSize = 15;
         const allOpportunities: FlipOpportunity[] = [];
 
         for (let i = 0; i < payloadItems.length; i += batchSize) {
@@ -106,6 +116,12 @@ export default function Dashboard() {
   useEffect(() => {
     analyzeWithAI();
   }, [watchlist]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('osrs-active-tab', activeTab);
+    }
+  }, [activeTab]);
 
   // Filter opportunities based on settings
   let filteredOpportunities = opportunities.filter(opp => {
