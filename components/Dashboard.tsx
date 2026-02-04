@@ -179,8 +179,11 @@ export default function Dashboard() {
 
             if (aiResponse.ok) {
               const aiData = await aiResponse.json();
-              const aiOpps = Array.isArray(aiData?.opportunities) ? aiData.opportunities : [];
-              const aiMap = new Map(aiOpps.map((op: FlipOpportunity) => [op.itemId, op]));
+              type AIShortlistOpportunity = Partial<FlipOpportunity> & { itemId: number };
+              const aiOpps: AIShortlistOpportunity[] = Array.isArray(aiData?.opportunities)
+                ? aiData.opportunities.filter((op: any) => typeof op?.itemId === 'number')
+                : [];
+              const aiMap = new Map(aiOpps.map(op => [op.itemId, op]));
 
               const merged = sortedOpps.map(op => {
                 const ai = aiMap.get(op.itemId);
