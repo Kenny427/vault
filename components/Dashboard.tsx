@@ -18,12 +18,6 @@ import { usePriceAlertsStore } from '@/lib/priceAlertsStore';
 import { initDinkWebhookListener } from '@/lib/dinkWebhook';
 import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 
-interface AIRankedOpportunity extends FlipOpportunity {
-  aiScore: number;
-  aiReasoning: string;
-  aiConfidence: number;
-}
-
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
 type MenuTab = 'admin';
 
@@ -32,8 +26,6 @@ export default function Dashboard() {
   const { logout } = useAuth();
   type PoolItem = { id: number; name: string; addedAt?: number };
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
-  const [aiRankedOpportunities, setAIRankedOpportunities] = useState<AIRankedOpportunity[] | null>(null);
-  const [isRanking, setIsRanking] = useState(false);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
   const [flipTypeFilter, setFlipTypeFilter] = useState<FlipType | 'all'>('all');
   const [showMenu, setShowMenu] = useState(false);
@@ -272,35 +264,10 @@ export default function Dashboard() {
     }
   });
 
-  // Handle AI ranking
-  const handleAIRank = async () => {
-    if (filteredOpportunities.length === 0) return;
-    
-    setIsRanking(true);
-    try {
-      const response = await fetch('/api/rank-opportunities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(filteredOpportunities.slice(0, 15)),
-        keepalive: true, // Prevents cancellation when tabbing away
-      });
 
-      if (!response.ok) {
-        throw new Error('Failed to rank opportunities');
-      }
 
-      const ranked = await response.json();
-      setAIRankedOpportunities(ranked);
-    } catch (error) {
-      console.error('AI ranking failed:', error);
-      alert('Failed to rank opportunities. Please try again.');
-    } finally {
-      setIsRanking(false);
-    }
-  };
 
-  // Use AI-ranked opportunities if available, otherwise use filtered
-  const displayOpportunities = aiRankedOpportunities || filteredOpportunities;
+     const displayOpportunities = filteredOpportunities;
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -459,25 +426,6 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  {!loading && filteredOpportunities.length > 0 && (
-                    <button
-                      onClick={handleAIRank}
-                      disabled={isRanking}
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded font-medium text-sm transition-colors"
-                      title="AI ranks top opportunities in one batch"
-                    >
-                      {isRanking ? '⏳ Ranking...' : aiRankedOpportunities ? '✨ Re-rank with AI' : '✨ AI Rank Top 15'}
-                    </button>
-                  )}
-                  {aiRankedOpportunities && (
-                    <button
-                      onClick={() => setAIRankedOpportunities(null)}
-                      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded font-medium text-sm transition-colors"
-                      title="Clear AI rankings"
-                    >
-                      Clear AI
-                    </button>
-                  )}
                   <button
                     onClick={() => analyzeWithAI()}
                     disabled={loading}
@@ -490,11 +438,6 @@ export default function Dashboard() {
               {error && (
                 <div className="mt-2 text-red-200 text-sm">
                   ⚠️ {error}
-                </div>
-              )}
-              {aiRankedOpportunities && (
-                <div className="mt-3 text-sm text-purple-300 bg-purple-900/30 p-2 rounded">
-                  🤖 Showing AI-ranked top {aiRankedOpportunities.length} opportunities
                 </div>
               )}
             </div>
@@ -642,10 +585,10 @@ export default function Dashboard() {
                 <span className="w-8 h-8 bg-orange-900 text-orange-400 rounded flex items-center justify-center text-lg">
                   💰
                 </span>
-                {aiRankedOpportunities ? `AI-Ranked Opportunities (${displayOpportunities.length})` : `AI-Detected Flip Opportunities (${displayOpportunities.length})`}
+                {`AI-Detected Flip Opportunities (${displayOpportunities.length})`}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {displayOpportunities.map((opp: FlipOpportunity | AIRankedOpportunity) => (
+                {displayOpportunities.map((opp: FlipOpportunity) => (
                   <FlipCard
                     key={opp.itemId}
                     opportunity={opp}

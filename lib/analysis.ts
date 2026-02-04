@@ -32,7 +32,6 @@ export interface FlipOpportunity {
   historicalLow: number;
   historicalHigh: number;
   
-  // Flip classification
   flipType: FlipType; // Type of flip opportunity
   flipTypeConfidence: number; // How confident we are in the flip type (0-100)
   
@@ -56,6 +55,11 @@ export interface FlipOpportunity {
   tradingRange: number; // % difference between high and low
   consistency: number; // How consistent the price movement is (0-100)
   spreadQuality: number; // Quality of buy/sell spread (0-100)
+
+  // Optional diagnostics
+  volume1h?: number; // Real 1h volume from API when available
+  spreadStability?: number; // 0-100, stability of spread over 7-30d
+  outlierFlag?: boolean; // Recent extreme spike/dump flag
   
   // Investment planning (for large budgets)
   recommendedQuantity: number; // Suggested buy quantity
@@ -526,6 +530,7 @@ export function scoreOpportunitiesByMeanReversion(
     id: number;
     name: string;
     currentPrice: number;
+    volume1h?: number;
     history30: any[];
     history90: any[];
     history365: any[];
@@ -538,11 +543,13 @@ export function scoreOpportunitiesByMeanReversion(
     const prices30 = item.history30.map(p => p.price);
     const prices90 = item.history90.map(p => p.price);
     const prices365 = item.history365.map(p => p.price);
+    const prices7 = prices30.slice(-7);
     
     // Calculate averages
     const avg30 = calculateMean(prices30);
     const avg90 = calculateMean(prices90);
     const avg365 = calculateMean(prices365);
+    const avg7 = calculateMean(prices7);
     
     // Recent high (last 30 days) - what it typically goes up to
     const recentHigh = Math.max(...prices30);
@@ -565,6 +572,19 @@ export function scoreOpportunitiesByMeanReversion(
     const spreadPercent = ((Math.max(...allPrices) - Math.min(...allPrices)) / current) * 100;
     const stdDev = calculateStdDev(allPrices);
     const volatilityPercent = (stdDev / avg365) * 100;
+
+    // Spread sustainability: compare 7d vs 30d spread for stability
+    const spread30 = avg30 > 0 ? ((Math.max(...prices30) - Math.min(...prices30)) / avg30) * 100 : 0;
+    const spread7 = avg7 > 0 && prices7.length > 0
+      ? ((Math.max(...prices7) - Math.min(...prices7)) / avg7) * 100
+      : 0;
+    const spreadStabilityScore = Math.max(0, 100 - Math.abs(spread7 - spread30) * 2);
+
+    // Real liquidity from OSRS volume (1h)
+    const volume1h = typeof item.volume1h === 'number' ? item.volume1h : null;
+    const volumeScoreApi = volume1h !== null
+      ? Math.min(100, Math.log10(volume1h + 1) * 30)
+      : 0;
 
     // Liquidity proxy: average absolute daily change (higher = more active)
     const absChanges30 = prices30.slice(1).map((p, i) => Math.abs(p - prices30[i]));
@@ -601,6 +621,8 @@ export function scoreOpportunitiesByMeanReversion(
       // Liquidity + stability bonuses
       if (liquidityScore >= 40) score += 8;
       if (spreadStability >= 50) score += 7;
+      if (spreadStabilityScore >= 50) score += 8;
+      if (volumeScoreApi >= 40) score += 8;
     }
     
     // Confidence calculation
@@ -611,6 +633,8 @@ export function scoreOpportunitiesByMeanReversion(
     if (discount365 >= 10) confidence += 30; // Below long-term average
     if (liquidityScore >= 40) confidence += 10; // Active trading
     if (spreadStability >= 50) confidence += 10; // Stable spread behavior
+    if (spreadStabilityScore >= 50) confidence += 10; // Stable spreads 7-30d
+    if (volumeScoreApi >= 40) confidence += 10; // Real liquidity
     confidence = Math.min(100, confidence);
     
     // Calculate trend
@@ -695,6 +719,9 @@ export function scoreOpportunitiesByMeanReversion(
     const totalInvestment = recommendedQuantity * current;
     const totalProfit = recommendedQuantity * profitPerUnit;
     
+    const outlierSpike = current > avg90 * 1.6;
+    const outlierDump = current < avg90 * 0.5;
+
     const opportunity: FlipOpportunity = {
       itemId: item.id,
       itemName: item.name,
@@ -722,14 +749,17 @@ export function scoreOpportunitiesByMeanReversion(
       confidence: Math.round(confidence),
       estimatedHoldTime,
       volatility: Math.round(volatilityPercent * 100) / 100,
-      volumeScore: Math.min(100, (spreadPercent * 2) + (liquidityScore * 0.4)), // Blend volatility + liquidity
+      volumeScore: Math.min(100, (spreadPercent * 1.6) + (liquidityScore * 0.3) + (volumeScoreApi * 0.4)), // Blend volatility + liquidity + real volume
       buyWhen: `When price is ${Math.round(discount30)}% below 30-day average (now: ${Math.round(discount30)}%)`,
       sellWhen: `When price recovers to ${Math.round(estimatedSellPrice)} gp (recent avg)`,
       momentum: (recentAvg - avg30) / avg30 * 100,
       acceleration: (recentPrices[recentPrices.length - 1] - recentPrices[0]) / recentPrices[0] * 100,
       tradingRange: spreadPercent,
       consistency: 100 - Math.min(100, volatilityPercent), // Lower volatility = more consistent
-      spreadQuality: Math.min(100, (spreadPercent / 50) * 100), // 50% spread = perfect quality
+      spreadQuality: Math.min(100, ((spreadPercent / 50) * 100) * 0.7 + (spreadStabilityScore * 0.3)),
+      volume1h: volume1h ?? undefined,
+      spreadStability: spreadStabilityScore,
+      outlierFlag: outlierSpike || outlierDump,
       recommendedQuantity,
       totalInvestment,
       totalProfit,
@@ -741,8 +771,12 @@ export function scoreOpportunitiesByMeanReversion(
     const trendOkay = opp.trend !== 'bearish' || opp.flipType === 'bot-dump' || opp.flipType === 'quick-flip' || isVolatile;
     const volatilityOkay = isVolatile || opp.volatility <= 50;
 
-    const liquidityOkay = opp.volumeScore >= 30;
+    const liquidityOkay = opp.volume1h === undefined
+      ? true
+      : opp.volume1h >= (opp.currentPrice > 100_000 ? 20 : opp.currentPrice > 10_000 ? 50 : 100);
     const momentumOkay = opp.momentum >= -5 || opp.flipType === 'bot-dump' || opp.flipType === 'quick-flip';
+
+    const outlierOkay = !opp.outlierFlag || opp.flipType === 'bot-dump';
 
     // QUALITY GATES: reduce false positives while keeping real opportunities
     return (
@@ -756,6 +790,7 @@ export function scoreOpportunitiesByMeanReversion(
       opp.consistency >= 25 &&
       liquidityOkay &&
       momentumOkay &&
+      outlierOkay &&
       trendOkay &&
       volatilityOkay
     );
