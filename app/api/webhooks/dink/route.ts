@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 let allWebhooks: any[] = [];
 let parsedTransactions: any[] = [];
 let seenTransactionIds = new Set<string>();
+let lastSeenBySignature = new Map<string, number>();
 
 const hashString = (value: string) => {
   let hash = 0;
@@ -14,13 +15,22 @@ const hashString = (value: string) => {
   return `tx_${Math.abs(hash)}`;
 };
 
-const createTransactionId = (signature: string) => hashString(signature);
+const createTransactionId = (signature: string, bucket: number) => hashString(`${signature}|${bucket}`);
 
 const normalizeType = (status?: string) => {
   const normalized = (status || '').toUpperCase();
   if (normalized.includes('BOUGHT') || normalized.includes('BUY')) return 'BUY';
   if (normalized.includes('SOLD') || normalized.includes('SELL')) return 'SELL';
   return 'UNKNOWN';
+};
+
+const shouldAcceptSignature = (signature: string, now: number) => {
+  const lastSeen = lastSeenBySignature.get(signature);
+  if (!lastSeen || now - lastSeen > 2000) {
+    lastSeenBySignature.set(signature, now);
+    return true;
+  }
+  return false;
 };
 
 const parseFromPayloadJson = (payload: any) => {
@@ -30,6 +40,7 @@ const parseFromPayloadJson = (payload: any) => {
   if (!item?.name) return null;
 
   const status = payload.extra?.status || payload.content || 'UNKNOWN';
+  const now = Date.now();
   const signature = [
     payload.playerName || 'unknown',
     payload.world || 'unknown',
@@ -40,9 +51,16 @@ const parseFromPayloadJson = (payload: any) => {
     item.quantity,
     item.priceEach,
     payload.extra?.slot ?? 'unknown',
+    payload.extra?.targetQuantity ?? 'unknown',
+    payload.extra?.targetPrice ?? 'unknown',
+    payload.extra?.marketPrice ?? 'unknown',
   ].join('|');
+
+  if (!shouldAcceptSignature(signature, now)) return null;
+
+  const bucket = Math.floor(now / 2000);
   return {
-    id: createTransactionId(signature),
+    id: createTransactionId(signature, bucket),
     username: payload.playerName || 'Unknown',
     type: normalizeType(status),
     itemName: item.name,
@@ -50,7 +68,7 @@ const parseFromPayloadJson = (payload: any) => {
     quantity: item.quantity,
     price: item.priceEach,
     itemId: item.id,
-    timestamp: Date.now(),
+    timestamp: now,
   };
 };
 
@@ -139,14 +157,22 @@ export async function POST(request: NextRequest) {
       console.warn('⚠️ Invalid type, storing anyway:', type);
     }
 
+    const now = Date.now();
     const signature = [username, type, itemName, status].join('|');
+    if (!shouldAcceptSignature(signature, now)) {
+      return NextResponse.json(
+        { success: true, transaction: null, skipped: true },
+        { status: 200 }
+      );
+    }
+    const bucket = Math.floor(now / 2000);
     const transaction = {
-      id: createTransactionId(signature),
+      id: createTransactionId(signature, bucket),
       username,
       type,
       itemName,
       status,
-      timestamp: Date.now(),
+      timestamp: now,
     };
 
     if (!seenTransactionIds.has(transaction.id)) {
@@ -193,6 +219,6 @@ export async function GET() {
   return NextResponse.json({
     totalReceived: allWebhooks.length,
     recentWebhooks: allWebhooks.slice(-20),
-    parsedTransactions: parsedTransactions.slice(-50),
+    parsedTransactions: parsedTransactions.slice(-200),
   });
 }

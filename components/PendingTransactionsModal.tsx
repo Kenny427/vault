@@ -112,7 +112,8 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
 
           const totalCost = match.buyPrice * sellQty;
           const totalRevenue = sellPrice * sellQty;
-          const profit = totalRevenue - totalCost;
+          const netRevenue = totalRevenue * 0.98;
+          const profit = netRevenue - totalCost;
           const roi = totalCost > 0 ? (profit / totalCost) * 100 : 0;
           const holdDays = Math.floor((tx.timestamp - match.datePurchased) / (1000 * 60 * 60 * 24));
 

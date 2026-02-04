@@ -20,7 +20,8 @@ export default function RecordTradeModal({ item, currentPrice, onClose }: Record
 
   const totalCost = item.buyPrice * quantityToSell;
   const totalRevenue = sellPrice * quantityToSell;
-  const profit = totalRevenue - totalCost;
+  const netRevenue = totalRevenue * 0.98;
+  const profit = netRevenue - totalCost;
   const roi = (profit / totalCost) * 100;
   const holdDays = Math.floor((Date.now() - item.datePurchased) / (1000 * 60 * 60 * 24));
 
@@ -113,7 +114,7 @@ export default function RecordTradeModal({ item, currentPrice, onClose }: Record
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Selling at:</span>
-                <span className="text-slate-300">{sellPrice.toLocaleString()}gp × {quantityToSell}</span>
+                <span className="text-slate-300">{sellPrice.toLocaleString()}gp × {quantityToSell} (after 2% tax)</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-slate-400">Hold time:</span>
