@@ -122,7 +122,7 @@ export default function Dashboard() {
             console.log(`   Requested: ${data.diagnostic.requested} items`);
             console.log(`   Passed spread filter (>15%): ${data.diagnostic.passedFilter} items`);
             if (data.diagnostic.itemsPassedFilter.length > 0) {
-              data.diagnostic.itemsPassedFilter.forEach(item => {
+              data.diagnostic.itemsPassedFilter.forEach((item: any) => {
                 console.log(`   ✓ ${item.name}: spread=${item.spread}%, range ${item.min}-${item.max}`);
               });
             }
