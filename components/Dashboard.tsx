@@ -109,8 +109,24 @@ export default function Dashboard() {
             throw new Error(errorText || 'Unexpected response from analysis API');
           }
 
-          const aiOpportunities = await response.json();
+          const data = await response.json();
+          
+          // Handle both old format (array) and new format (object with opportunities + diagnostic)
+          const aiOpportunities = Array.isArray(data) ? data : data.opportunities || [];
           allOpportunities.push(...aiOpportunities);
+          
+          // Log diagnostic info if available
+          if (data.diagnostic) {
+            const batchNum = Math.floor(i / batchSize) + 1;
+            console.log(`📊 POOL ANALYSIS - Batch ${batchNum}:`);
+            console.log(`   Requested: ${data.diagnostic.requested} items`);
+            console.log(`   Passed spread filter (>15%): ${data.diagnostic.passedFilter} items`);
+            if (data.diagnostic.itemsPassedFilter.length > 0) {
+              data.diagnostic.itemsPassedFilter.forEach(item => {
+                console.log(`   ✓ ${item.name}: spread=${item.spread}%, range ${item.min}-${item.max}`);
+              });
+            }
+          }
         }
 
         setOpportunities(

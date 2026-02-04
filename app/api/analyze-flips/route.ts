@@ -100,7 +100,29 @@ export async function POST(request: Request) {
       console.log(`   ⚠️  WARNING: AI returned NO opportunities from ${itemsWithData.length} items`);
     }
     
-    return NextResponse.json(opportunities);
+    // Return both opportunities and diagnostic info
+    const response = {
+      opportunities,
+      diagnostic: {
+        requested: cappedItems.length,
+        passedFilter: itemsWithData.length,
+        itemsPassedFilter: itemsWithData.map(item => {
+          const prices = item.history30.map(p => p.price);
+          const min = Math.min(...prices);
+          const max = Math.max(...prices);
+          const spread = ((max - min) / item.currentPrice) * 100;
+          return {
+            name: item.name,
+            spread: parseFloat(spread.toFixed(1)),
+            min,
+            max,
+            current: item.currentPrice
+          };
+        })
+      }
+    };
+    
+    return NextResponse.json(response);
   } catch (error: any) {
     console.error('AI analysis API error:', error);
     return NextResponse.json(
