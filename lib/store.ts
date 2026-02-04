@@ -194,13 +194,13 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   },
 
   // Filters and settings
-  minOpportunityScore: 40,
+  minOpportunityScore: 20,
   setMinOpportunityScore: (score) => set({ minOpportunityScore: score }),
 
   showBuyOpportunities: true,
   setShowBuyOpportunities: (show) => set({ showBuyOpportunities: show }),
 
-  showSellOpportunities: true,
+  showSellOpportunities: false,
   setShowSellOpportunities: (show) => set({ showSellOpportunities: show }),
 
   // View preferences
