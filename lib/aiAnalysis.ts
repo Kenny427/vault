@@ -298,6 +298,8 @@ BE SELECTIVE. Quality > Quantity. Only recommend trades YOU would take with YOUR
         const prices365 = item.history365.map(p => p.price);
         
         const avg30 = prices30.reduce((a, b) => a + b, 0) / prices30.length;
+        const avg90 = prices90.reduce((a, b) => a + b, 0) / prices90.length;
+        const avg180 = prices180.reduce((a, b) => a + b, 0) / prices180.length;
         const avg365 = prices365.reduce((a, b) => a + b, 0) / prices365.length;
         const min365 = Math.min(...prices365);
         const max365 = Math.max(...prices365);
@@ -327,6 +329,10 @@ BE SELECTIVE. Quality > Quantity. Only recommend trades YOU would take with YOUR
           itemName: item.name,
           currentPrice: item.currentPrice,
           averagePrice: avg365,
+          averagePrice30: avg30,
+          averagePrice90: avg90,
+          averagePrice180: avg180,
+          averagePrice365: avg365,
           deviation: (((item.currentPrice - avg365) / avg365) * 100),
           deviationScore: (((item.currentPrice - avg365) / Math.sqrt(volatility)) * 10) || 0,
           trend: item.currentPrice < avg365 ? 'bearish' : 'bullish',

@@ -12,6 +12,10 @@ export interface FlipOpportunity {
   itemName: string;
   currentPrice: number;
   averagePrice: number;
+  averagePrice30: number;
+  averagePrice90: number;
+  averagePrice180: number;
+  averagePrice365: number;
   deviation: number; // Standard deviation percentage
   deviationScore: number; // -100 (very cheap) to 100 (very expensive)
   trend: 'bullish' | 'bearish' | 'neutral';
