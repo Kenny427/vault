@@ -98,9 +98,23 @@ export default function Dashboard() {
           body: JSON.stringify(itemsWithData),
         });
 
+        const contentType = response.headers.get('content-type') || '';
+
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to analyze opportunities');
+          let errorMessage = 'Failed to analyze opportunities';
+          if (contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            const errorText = await response.text();
+            if (errorText) errorMessage = errorText;
+          }
+          throw new Error(errorMessage);
+        }
+
+        if (!contentType.includes('application/json')) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Unexpected response from analysis API');
         }
 
         const aiOpportunities = await response.json();
