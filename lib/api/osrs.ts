@@ -49,38 +49,57 @@ let itemMappingCache: ItemData[] = [];
 let mappingCacheTime = 0;
 const MAPPING_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
 
-// Popular item categories to prioritize
+// Explicit bot-fed pool (user curated)
 const POPULAR_CATEGORIES = [
-  // High-end PVM gear & weapons
-  'whip', 'trident', 'blowpipe', 'godsword', 'barrows', 'ahrim', 'karil', 'guthan', 'dharok',
-  'torag', 'verac', 'bandos', 'armadyl', 'rapier', 'scythe', 'zenyte', 'ancestral',
-  'dragon crossbow', 'armadyl crossbow', 'twisted bow', 'bow of faerdhinen',
+  // Logs / fletching base
+  'oak logs', 'willow logs', 'maple logs', 'yew logs', 'magic logs', 'teak logs', 'mahogany logs',
+  'bow string', 'flax', 'bale of flax', 'feather', 'arrow shaft', 'headless arrow',
 
-  // Mid-tier PVM gear (dragon only)
-  'dragon platebody', 'dragon platelegs', 'dragon plateskirt', 'dragon boots', 'dragon defender',
-  'dragon scimitar', 'dragon longsword', 'dragon dagger', 'dragon claws', 'dragon hunter',
+  // Unstrung bows
+  'maple longbow (u)', 'yew longbow (u)', 'magic longbow (u)',
+  'maple shortbow (u)', 'yew shortbow (u)', 'magic shortbow (u)',
 
-  // High-volume skilling supplies
-  'yew log', 'magic log', 'yew longbow', 'yew longbow (u)', 'magic longbow', 'magic longbow (u)',
-  'yew shortbow', 'yew shortbow (u)', 'magic shortbow', 'magic shortbow (u)',
-  'runite ore', 'runite bar', 'rune bar', 'adamantite bar', 'coal',
-  'mahogany plank', 'oak plank', 'teak plank', 'plank',
-  'flax', 'bow string', 'giant seaweed', 'sand',
+  // Ores / bars
+  'iron ore', 'coal', 'mithril ore', 'adamantite ore', 'runite ore', 'gold ore',
+  'steel bar', 'mithril bar', 'adamantite bar', 'runite bar', 'gold bar',
 
-  // High-volume runes & ammo
-  'blood rune', 'death rune', 'nature rune', 'law rune', 'astral rune', 'chaos rune', 'cosmic rune',
-  'dragon arrow', 'rune arrow', 'amethyst arrow', 'broad bolts', 'rune bolts', 'dragon bolts', 'onyx bolt',
+  // Construction inputs
+  'plank', 'oak plank', 'teak plank', 'mahogany plank',
+  'steel nails', 'mithril nails', 'adamant nails', 'rune nails',
 
-  // High-volume potions & food
-  'super combat', 'super restore', 'prayer potion', 'saradomin brew', 'stamina potion', 'antivenom',
-  'shark', 'manta ray', 'dark crab', 'anglerfish', 'karambwan',
+  // Dragonhides / leathers
+  'green dragonhide', 'blue dragonhide', 'red dragonhide', 'black dragonhide',
+  'green dragon leather', 'blue dragon leather', 'red dragon leather', 'black dragon leather',
 
-  // Heavily botted items (price crash opportunities)
-  'zulrah', 'zulrah scale', "zulrah's scales", 'toxic blowpipe', 'serpentine helm', 'magic fang', 'tanzanite fang',
-  'vorkath', 'superior dragon bones', 'blue dragon', 'dragon bones', 'dragon hide',
-  'green dragonhide', 'red dragonhide', 'black dragonhide',
-  'limpwurt root', 'mort myre fungus', 'snape grass', 'white berries',
-  'ranarr weed', 'snapdragon', 'torstol', 'dwarf weed',
+  // Bones
+  'dragon bones', 'babydragon bones', 'wyvern bones', 'superior dragon bones', 'crushed superior dragon bones',
+
+  // Herblore herbs (grimy + clean)
+  'grimy ranarr weed', 'grimy snapdragon', 'grimy toadflax', 'grimy avantoe', 'grimy kwuarm',
+  'grimy cadantine', 'grimy torstol', 'grimy dwarf weed', 'grimy lantadyme',
+  'ranarr weed', 'snapdragon', 'toadflax', 'avantoe', 'kwuarm', 'cadantine',
+  'torstol', 'dwarf weed', 'lantadyme',
+
+  // Seeds
+  'ranarr seed', 'snapdragon seed', 'toadflax seed', 'torstol seed',
+  'cadantine seed', 'dwarf weed seed', 'lantadyme seed',
+
+  // Unfinished potions
+  'ranarr potion (unf)', 'snapdragon potion (unf)', 'toadflax potion (unf)', 'avantoe potion (unf)',
+  'kwuarm potion (unf)', 'cadantine potion (unf)', 'torstol potion (unf)', 'dwarf weed potion (unf)',
+  'lantadyme potion (unf)', 'vial of water',
+
+  // Herblore secondaries
+  'snape grass', 'limpwurt root', 'mort myre fungus', 'potato cactus', 'white berries',
+  'wine of zamorak', 'unicorn horn dust', 'goat horn dust', 'chocolate dust',
+  "red spiders' eggs", 'blue dragon scale', 'eye of newt', 'snakeskin',
+  'buckets of compost', 'supercompost', 'ultracompost', 'volcanic ash',
+
+  // Glassmaking / skilling bulk
+  'bucket of sand', 'soda ash', 'seaweed', 'giant seaweed', 'molten glass',
+
+  // Ammo/components
+  'cannonball', 'dragon bolts (unf)', 'amethyst arrowtips', 'amethyst dart tip', 'dragon dart tip',
 ];
 
 const priceCache = new Map<number, { data: PriceData; timestamp: number }>();
@@ -395,24 +414,14 @@ export async function getPopularItems(): Promise<ItemData[]> {
     const allItems = await fetchItemMapping();
     
     // Filter for popular trading items
+    const allowed = new Set(POPULAR_CATEGORIES.map(name => name.toLowerCase()));
+
     const popular = allItems.filter(item => {
       const lowerName = item.name.toLowerCase();
-      
-      // Exclude low-tier items and noisy variants
-      const excludeTerms = [
-        'adamant', 'mithril', 'steel', 'iron', 'bronze',
-        '(broken)', '(deg)', 'rusty', 'ornament', 'orn', 'kit', 'set',
-        '(p)', '(p+)', '(p++)', ' 0',
-      ];
-      if (excludeTerms.some(term => lowerName.includes(term))) {
-        return false;
-      }
-      
-      // Must match at least one category
-      return POPULAR_CATEGORIES.some(cat => lowerName.includes(cat));
+      return allowed.has(lowerName);
     });
 
-    return popular.slice(0, 120); // Larger pool: PVM gear + high-volume supplies
+    return popular; // Exact bot-fed pool
   } catch (error) {
     console.error('Failed to get popular items:', error);
     return [];
