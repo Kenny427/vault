@@ -45,7 +45,18 @@ export default function Chat() {
   const [loading, setLoading] = useState(() => {
     // Check if there's a pending request on mount
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('ai-chat-loading') === 'true';
+      const isLoading = localStorage.getItem('ai-chat-loading') === 'true';
+      const loadingTimestamp = localStorage.getItem('ai-chat-loading-timestamp');
+      
+      // If loading state is older than 30 seconds, assume request failed and clear it
+      if (isLoading && loadingTimestamp) {
+        const elapsed = Date.now() - parseInt(loadingTimestamp, 10);
+        if (elapsed > 30000) {
+          localStorage.setItem('ai-chat-loading', 'false');
+          return false;
+        }
+      }
+      return isLoading;
     }
     return false;
   });
@@ -60,10 +71,15 @@ export default function Chat() {
     }
   }, [messages]);
 
-  // Save loading state to localStorage
+  // Save loading state to localStorage with timestamp
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('ai-chat-loading', loading.toString());
+      if (loading) {
+        localStorage.setItem('ai-chat-loading-timestamp', Date.now().toString());
+      } else {
+        localStorage.removeItem('ai-chat-loading-timestamp');
+      }
     }
   }, [loading]);
 
@@ -180,6 +196,11 @@ export default function Chat() {
     } finally {
       setLoading(false);
       abortControllerRef.current = null;
+      // Ensure localStorage is cleared
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ai-chat-loading', 'false');
+        localStorage.removeItem('ai-chat-loading-timestamp');
+      }
     }
   };
 
@@ -192,23 +213,43 @@ export default function Chat() {
             <h2 className="text-xl font-bold text-osrs-accent">🤖 AI Flipping Advisor</h2>
             <p className="text-sm text-slate-400 mt-1">Ask me about any item for detailed price analysis</p>
           </div>
-          <button
-            onClick={() => {
-              if (confirm('Clear all chat history?')) {
-                const welcomeMsg: Message = {
-                  id: '0',
-                  type: 'ai',
-                  content: '👋 Hi! I\'m your AI flipping advisor. Ask me about any OSRS item - I\'ll analyze its price history and give you detailed investment analysis. Try asking "Is Avantoe a good flip?" or "Tell me about Runite bolts"',
-                  timestamp: new Date(),
-                };
-                setMessages([welcomeMsg]);
-                localStorage.removeItem('ai-chat-messages');
-              }
-            }}
-            className="text-slate-400 hover:text-red-400 text-sm px-3 py-1 rounded hover:bg-slate-800 transition-colors"
-          >
-            Clear History
-          </button>
+          <div className="flex items-center gap-2">
+            {loading && (
+              <button
+                onClick={() => {
+                  setLoading(false);
+                  if (abortControllerRef.current) {
+                    abortControllerRef.current.abort();
+                  }
+                  localStorage.setItem('ai-chat-loading', 'false');
+                  localStorage.removeItem('ai-chat-loading-timestamp');
+                }}
+                className="text-orange-400 hover:text-orange-300 text-sm px-3 py-1 rounded hover:bg-slate-800 transition-colors border border-orange-600"
+              >
+                Stop Loading
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (confirm('Clear all chat history?')) {
+                  const welcomeMsg: Message = {
+                    id: '0',
+                    type: 'ai',
+                    content: '👋 Hi! I\'m your AI flipping advisor. Ask me about any OSRS item - I\'ll analyze its price history and give you detailed investment analysis. Try asking "Is Avantoe a good flip?" or "Tell me about Runite bolts"',
+                    timestamp: new Date(),
+                  };
+                  setMessages([welcomeMsg]);
+                  localStorage.removeItem('ai-chat-messages');
+                  localStorage.setItem('ai-chat-loading', 'false');
+                  localStorage.removeItem('ai-chat-loading-timestamp');
+                  setLoading(false);
+                }
+              }}
+              className="text-slate-400 hover:text-red-400 text-sm px-3 py-1 rounded hover:bg-slate-800 transition-colors"
+            >
+              Clear History
+            </button>
+          </div>
         </div>
       </div>
 
