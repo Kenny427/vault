@@ -13,18 +13,45 @@ interface Message {
 
 export default function Chat() {
   const { pendingQuestion, clearPendingQuestion } = useChat();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '0',
-      type: 'ai',
-      content: '👋 Hi! I\'m your AI flipping advisor. Ask me about any OSRS item - I\'ll analyze its price history and give you detailed investment analysis. Try asking "Is Avantoe a good flip?" or "Tell me about Runite bolts"',
-      timestamp: new Date(),
-    },
-  ]);
+  
+  // Load messages from localStorage on mount
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ai-chat-messages');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // Convert timestamp strings back to Date objects
+          return parsed.map((msg: any) => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp),
+          }));
+        } catch (e) {
+          console.error('Failed to parse saved messages:', e);
+        }
+      }
+    }
+    return [
+      {
+        id: '0',
+        type: 'ai',
+        content: '👋 Hi! I\'m your AI flipping advisor. Ask me about any OSRS item - I\'ll analyze its price history and give you detailed investment analysis. Try asking "Is Avantoe a good flip?" or "Tell me about Runite bolts"',
+        timestamp: new Date(),
+      },
+    ];
+  });
+  
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Save messages to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && messages.length > 0) {
+      localStorage.setItem('ai-chat-messages', JSON.stringify(messages));
+    }
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -64,10 +91,23 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      // Extract item name from user input
-      // Simple approach: look for key phrases like "about X", "is X", "X good", etc.
-      const itemNameMatch = input.match(/(?:about|is|tell me about|should i buy|flip|invest in)\s+([^?]+)/i);
-      const itemName = itemNameMatch ? itemNameMatch[1].trim() : input.trim();
+      // Extract item name from user input with improved logic
+      let itemName = input.trim();
+      
+      // Pattern 1: "I'm holding X [item name] that I bought at..." (portfolio questions)
+      const holdingMatch = input.match(/holding\s+\d+\s+([^that]+?)\s+that\s+I\s+bought/i);
+      if (holdingMatch) {
+        itemName = holdingMatch[1].trim();
+      } 
+      // Pattern 2: "Tell me about [item]", "Is [item] a good flip?"
+      else {
+        const aboutMatch = input.match(/(?:about|is|tell me about|should i buy|flip|invest in)\s+([^?.,]+)/i);
+        if (aboutMatch) {
+          itemName = aboutMatch[1].trim();
+          // Remove trailing words like "a good flip", "good", etc.
+          itemName = itemName.replace(/\s+(a\s+)?good(\s+flip)?$/i, '').trim();
+        }
+      }
 
       const response = await fetch('/api/analyze-item', {
         method: 'POST',
@@ -109,8 +149,29 @@ export default function Chat() {
     <div className="flex flex-col h-full bg-gradient-to-b from-slate-950 to-slate-900">
       {/* Header */}
       <div className="bg-slate-900 border-b border-slate-700 p-4">
-        <h2 className="text-xl font-bold text-osrs-accent">🤖 AI Flipping Advisor</h2>
-        <p className="text-sm text-slate-400 mt-1">Ask me about any item for detailed price analysis</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-osrs-accent">🤖 AI Flipping Advisor</h2>
+            <p className="text-sm text-slate-400 mt-1">Ask me about any item for detailed price analysis</p>
+          </div>
+          <button
+            onClick={() => {
+              if (confirm('Clear all chat history?')) {
+                const welcomeMsg: Message = {
+                  id: '0',
+                  type: 'ai',
+                  content: '👋 Hi! I\'m your AI flipping advisor. Ask me about any OSRS item - I\'ll analyze its price history and give you detailed investment analysis. Try asking "Is Avantoe a good flip?" or "Tell me about Runite bolts"',
+                  timestamp: new Date(),
+                };
+                setMessages([welcomeMsg]);
+                localStorage.removeItem('ai-chat-messages');
+              }
+            }}
+            className="text-slate-400 hover:text-red-400 text-sm px-3 py-1 rounded hover:bg-slate-800 transition-colors"
+          >
+            Clear History
+          </button>
+        </div>
       </div>
 
       {/* Messages Container */}
