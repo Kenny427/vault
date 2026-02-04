@@ -315,8 +315,8 @@ export default function Dashboard() {
         {/* Settings & Filters */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-lg p-6 mb-8">
           <h2 className="text-xl font-bold text-slate-100 mb-4">🎛️ Analysis Settings</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
+            <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300 block mb-2">
                 Min Score: {minOpportunityScore}
               </label>
@@ -330,7 +330,7 @@ export default function Dashboard() {
               />
             </div>
 
-            <div>
+            <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300 block mb-2">
                 Risk Level: {minConfidenceThreshold}%
               </label>
@@ -353,7 +353,7 @@ export default function Dashboard() {
               </p>
             </div>
 
-            <div>
+            <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300 block mb-2">
                 Sort By
               </label>
@@ -369,7 +369,7 @@ export default function Dashboard() {
               </select>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               <label className="text-sm font-medium text-slate-300 flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -394,7 +394,7 @@ export default function Dashboard() {
               <div className="w-full bg-slate-800 border border-slate-700 rounded p-3 text-center">
                 <p className="text-xs text-slate-400 mb-1">Found</p>
                 <p className="text-2xl font-bold text-osrs-accent">{filteredOpportunities.length}</p>
-                <p className="text-xs text-slate-400">opportunities</p>
+                <p className="text-xs text-slate-400">showing {filteredOpportunities.length} of {opportunities.length}</p>
               </div>
             </div>
           </div>
