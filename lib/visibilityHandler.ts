@@ -18,15 +18,4 @@ export function initializeVisibilityHandler() {
     }
   });
 
-  // Prevent page unload from canceling requests unless truly navigating away
-  let isNavigatingAway = false;
-
-  window.addEventListener('beforeunload', (e) => {
-    isNavigatingAway = true;
-  });
-
-  // Reset navigation flag if user cancels unload
-  window.addEventListener('focus', () => {
-    isNavigatingAway = false;
-  });
 }
