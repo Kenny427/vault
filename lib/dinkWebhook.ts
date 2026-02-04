@@ -35,9 +35,46 @@ export function initDinkWebhookListener() {
     }
   };
 
+  const pollServer = async () => {
+    try {
+      const response = await fetch('/api/webhooks/dink');
+      if (!response.ok) return;
+      const data = await response.json();
+
+      const parsed = Array.isArray(data.parsedTransactions) ? data.parsedTransactions : [];
+      if (parsed.length === 0) return;
+
+      const store = usePendingTransactionsStore.getState();
+      const existingIds = new Set(store.transactions.map((tx) => tx.id));
+
+      parsed.forEach((tx: any) => {
+        if (!tx?.id || existingIds.has(tx.id)) return;
+        if (tx.type !== 'BUY' && tx.type !== 'SELL') return;
+
+        store.addTransaction({
+          id: tx.id,
+          username: tx.username || 'Unknown',
+          type: tx.type,
+          itemName: tx.itemName || 'Unknown',
+          status: tx.status || 'UNKNOWN',
+          timestamp: typeof tx.timestamp === 'number' ? tx.timestamp : Date.now(),
+          quantity: tx.quantity,
+          price: tx.price,
+          itemId: tx.itemId,
+        });
+      });
+    } catch {
+      // Ignore polling errors
+    }
+  };
+
+  const intervalId = window.setInterval(pollServer, 15000);
+  pollServer();
+
   window.addEventListener('message', handleMessage);
 
   return () => {
     window.removeEventListener('message', handleMessage);
+    window.clearInterval(intervalId);
   };
 }

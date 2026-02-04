@@ -10,11 +10,15 @@ export interface PendingTransaction {
   timestamp: number;
   quantity?: number;
   price?: number;
+  itemId?: number;
 }
 
 interface PendingTransactionsStore {
   transactions: PendingTransaction[];
-  addTransaction: (tx: Omit<PendingTransaction, 'id' | 'timestamp'>) => void;
+  addTransaction: (
+    tx: Omit<PendingTransaction, 'id' | 'timestamp'> &
+      Partial<Pick<PendingTransaction, 'id' | 'timestamp'>>
+  ) => void;
   removeTransaction: (id: string) => void;
   clearAll: () => void;
   clearByType: (type: 'BUY' | 'SELL') => void;
@@ -26,13 +30,14 @@ export const usePendingTransactionsStore = create<PendingTransactionsStore>()(
       transactions: [],
 
       addTransaction: (tx) => {
-        const id = `${Date.now()}-${Math.random()}`;
+        const id = tx.id || `${Date.now()}-${Math.random()}`;
+        const timestamp = tx.timestamp || Date.now();
         set((state) => ({
           transactions: [
             {
               ...tx,
               id,
-              timestamp: Date.now(),
+              timestamp,
             },
             ...state.transactions,
           ],

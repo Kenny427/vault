@@ -54,15 +54,17 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
 
       for (const tx of selectedTransactions) {
         if (tx.type === 'BUY') {
-          // Try to fetch item ID
-          let itemId: number | undefined;
-          try {
-            const response = await fetch(`https://prices.runescape.wiki/api/v1/osrs/mapping`);
-            const mapping = await response.json();
-            const item = mapping.find((m: any) => m.name.toLowerCase() === tx.itemName.toLowerCase());
-            itemId = item?.id;
-          } catch {
-            console.log(`Could not find item ID for ${tx.itemName}`);
+          // Try to fetch item ID only if missing
+          let itemId: number | undefined = tx.itemId;
+          if (!itemId) {
+            try {
+              const response = await fetch(`https://prices.runescape.wiki/api/v1/osrs/mapping`);
+              const mapping = await response.json();
+              const item = mapping.find((m: any) => m.name.toLowerCase() === tx.itemName.toLowerCase());
+              itemId = item?.id;
+            } catch {
+              console.log(`Could not find item ID for ${tx.itemName}`);
+            }
           }
 
           await addItem({

@@ -2,16 +2,60 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Temporary in-memory store for debugging (will be lost on redeploy)
 let allWebhooks: any[] = [];
+let parsedTransactions: any[] = [];
+
+const createTransactionId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+const normalizeType = (status?: string) => {
+  const normalized = (status || '').toUpperCase();
+  if (normalized.includes('BOUGHT') || normalized.includes('BUY')) return 'BUY';
+  if (normalized.includes('SOLD') || normalized.includes('SELL')) return 'SELL';
+  return 'UNKNOWN';
+};
+
+const parseFromPayloadJson = (payload: any) => {
+  if (!payload || payload.type !== 'GRAND_EXCHANGE') return null;
+
+  const item = payload.extra?.item;
+  if (!item?.name) return null;
+
+  const status = payload.extra?.status || payload.content || 'UNKNOWN';
+  return {
+    id: createTransactionId(),
+    username: payload.playerName || 'Unknown',
+    type: normalizeType(status),
+    itemName: item.name,
+    status: status,
+    quantity: item.quantity,
+    price: item.priceEach,
+    itemId: item.id,
+    timestamp: Date.now(),
+  };
+};
 
 export async function POST(request: NextRequest) {
   try {
-    const rawText = await request.text();
-    let body: any = rawText;
+    const contentType = request.headers.get('content-type') || '';
+    let body: any = null;
+    let rawText = '';
 
-    try {
-      body = JSON.parse(rawText);
-    } catch {
-      // Non-JSON payloads are expected from some webhook sources
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      const payloadJson = formData.get('payload_json');
+      if (typeof payloadJson === 'string') {
+        rawText = payloadJson;
+        body = JSON.parse(payloadJson);
+      } else {
+        rawText = JSON.stringify(Object.fromEntries(formData.entries()));
+        body = Object.fromEntries(formData.entries());
+      }
+    } else {
+      rawText = await request.text();
+      try {
+        body = JSON.parse(rawText);
+      } catch {
+        body = rawText;
+      }
     }
 
     console.log('🔔 RAW WEBHOOK RECEIVED:', typeof body === 'string' ? body : JSON.stringify(body, null, 2));
@@ -21,6 +65,18 @@ export async function POST(request: NextRequest) {
       received: new Date().toISOString(),
       raw: body,
     });
+
+    // Parse using DINK payload_json when available
+    const payloadTransaction = parseFromPayloadJson(body);
+    if (payloadTransaction) {
+      parsedTransactions.push(payloadTransaction);
+      allWebhooks.push({ received: new Date().toISOString(), parsed: payloadTransaction });
+
+      return NextResponse.json(
+        { success: true, transaction: payloadTransaction },
+        { status: 200 }
+      );
+    }
 
     // Try to parse various possible formats
     let message = (body && body.message) || (body && body.text) || (body && body.payload) || '';
@@ -60,12 +116,15 @@ export async function POST(request: NextRequest) {
     }
 
     const transaction = {
+      id: createTransactionId(),
       username,
       type,
       itemName,
       status,
-      timestamp: new Date().toISOString(),
+      timestamp: Date.now(),
     };
+
+    parsedTransactions.push(transaction);
 
     // Store parsed transaction
     allWebhooks.push({
@@ -106,5 +165,6 @@ export async function GET() {
   return NextResponse.json({
     totalReceived: allWebhooks.length,
     recentWebhooks: allWebhooks.slice(-20),
+    parsedTransactions: parsedTransactions.slice(-50),
   });
 }
