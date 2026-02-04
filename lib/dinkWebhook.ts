@@ -1,12 +1,23 @@
 import { usePendingTransactionsStore } from './pendingTransactionsStore';
 
+// Singleton guard to prevent multiple initializations
+let isInitialized = false;
+let cleanupFunction: (() => void) | null = null;
+
 /**
  * Initialize DINK webhook listener
  * This should be called once when the app loads
  * It listens for messages from DINK plugin and stores them
  */
 export function initDinkWebhookListener() {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') return () => {};
+  
+  // If already initialized, return existing cleanup function
+  if (isInitialized && cleanupFunction) {
+    return cleanupFunction;
+  }
+
+  isInitialized = true;
 
   // Listen for messages from DINK extension/plugin
   // DINK can send messages via window.postMessage
@@ -74,8 +85,12 @@ export function initDinkWebhookListener() {
 
   window.addEventListener('message', handleMessage);
 
-  return () => {
+  cleanupFunction = () => {
+    isInitialized = false;
+    cleanupFunction = null;
     window.removeEventListener('message', handleMessage);
     window.clearInterval(intervalId);
   };
+  
+  return cleanupFunction;
 }
