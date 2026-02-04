@@ -565,6 +565,16 @@ export function scoreOpportunitiesByMeanReversion(
     const spreadPercent = ((Math.max(...allPrices) - Math.min(...allPrices)) / current) * 100;
     const stdDev = calculateStdDev(allPrices);
     const volatilityPercent = (stdDev / avg365) * 100;
+
+    // Liquidity proxy: average absolute daily change (higher = more active)
+    const absChanges30 = prices30.slice(1).map((p, i) => Math.abs(p - prices30[i]));
+    const avgAbsChange30 = calculateMean(absChanges30);
+    const avgAbsChangePct30 = avg30 > 0 ? (avgAbsChange30 / avg30) * 100 : 0;
+    const liquidityScore = Math.min(100, avgAbsChangePct30 * 20); // ~5% avg move = 100
+
+    // Spread stability proxy: lower variance in daily changes = more stable spreads
+    const changePct30 = prices30.slice(1).map((p, i) => Math.abs((p - prices30[i]) / prices30[i]) * 100);
+    const spreadStability = Math.max(0, 100 - (calculateStdDev(changePct30) * 4));
     
     // SCORING ALGORITHM
     let score = 0;
@@ -588,6 +598,9 @@ export function scoreOpportunitiesByMeanReversion(
       // Volatility bonus: volatile items have more opportunity
       if (spreadPercent >= 20) score += Math.min(15, spreadPercent * 0.5);
       if (volatilityPercent >= 10) score += Math.min(10, volatilityPercent);
+      // Liquidity + stability bonuses
+      if (liquidityScore >= 40) score += 8;
+      if (spreadStability >= 50) score += 7;
     }
     
     // Confidence calculation
@@ -596,6 +609,8 @@ export function scoreOpportunitiesByMeanReversion(
     if (discount90 >= 10) confidence += 30; // Consistently below 90d average
     if (spreadPercent >= 15) confidence += 40; // Good volatility = swings both ways
     if (discount365 >= 10) confidence += 30; // Below long-term average
+    if (liquidityScore >= 40) confidence += 10; // Active trading
+    if (spreadStability >= 50) confidence += 10; // Stable spread behavior
     confidence = Math.min(100, confidence);
     
     // Calculate trend
@@ -707,7 +722,7 @@ export function scoreOpportunitiesByMeanReversion(
       confidence: Math.round(confidence),
       estimatedHoldTime,
       volatility: Math.round(volatilityPercent * 100) / 100,
-      volumeScore: Math.min(100, spreadPercent * 3), // Proxy: more volatile = more volume
+      volumeScore: Math.min(100, (spreadPercent * 2) + (liquidityScore * 0.4)), // Blend volatility + liquidity
       buyWhen: `When price is ${Math.round(discount30)}% below 30-day average (now: ${Math.round(discount30)}%)`,
       sellWhen: `When price recovers to ${Math.round(estimatedSellPrice)} gp (recent avg)`,
       momentum: (recentAvg - avg30) / avg30 * 100,
@@ -726,6 +741,9 @@ export function scoreOpportunitiesByMeanReversion(
     const trendOkay = opp.trend !== 'bearish' || opp.flipType === 'bot-dump' || opp.flipType === 'quick-flip' || isVolatile;
     const volatilityOkay = isVolatile || opp.volatility <= 50;
 
+    const liquidityOkay = opp.volumeScore >= 30;
+    const momentumOkay = opp.momentum >= -5 || opp.flipType === 'bot-dump' || opp.flipType === 'quick-flip';
+
     // QUALITY GATES: reduce false positives while keeping real opportunities
     return (
       opp.opportunityScore >= 45 &&
@@ -736,6 +754,8 @@ export function scoreOpportunitiesByMeanReversion(
       (opp.currentPrice < opp.averagePrice90 || opp.volatility > 20) &&
       opp.spreadQuality >= 20 &&
       opp.consistency >= 25 &&
+      liquidityOkay &&
+      momentumOkay &&
       trendOkay &&
       volatilityOkay
     );
