@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/authContext";
+import { ChatProvider } from "@/lib/chatContext";
 
 export const metadata: Metadata = {
   title: "Vault",
@@ -18,7 +19,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-slate-950 text-slate-100">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ChatProvider>
+            {children}
+          </ChatProvider>
+        </AuthProvider>
       </body>
     </html>
   );

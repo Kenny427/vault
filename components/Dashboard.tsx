@@ -7,6 +7,7 @@ import FlipCard from './FlipCard';
 import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
 import FloatingChat from './FloatingChat';
+import PoolManager from './PoolManager';
 import { getPopularItems } from '@/lib/api/osrs';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
@@ -18,12 +19,12 @@ export default function Dashboard() {
   type PoolItem = { id: number; name: string; addedAt?: number };
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
-  const [activeTab, setActiveTab] = useState<'portfolio' | 'favorites' | 'opportunities'>(() => {
+  const [activeTab, setActiveTab] = useState<'portfolio' | 'favorites' | 'opportunities' | 'admin'>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-active-tab');
-      const validTabs: ('portfolio' | 'favorites' | 'opportunities')[] = ['portfolio', 'favorites', 'opportunities'];
+      const validTabs: ('portfolio' | 'favorites' | 'opportunities' | 'admin')[] = ['portfolio', 'favorites', 'opportunities', 'admin'];
       if (saved && validTabs.includes(saved as any)) {
-        return saved as 'portfolio' | 'favorites' | 'opportunities';
+        return saved as 'portfolio' | 'favorites' | 'opportunities' | 'admin';
       }
     }
     return 'portfolio';
@@ -280,10 +281,23 @@ export default function Dashboard() {
           >
             🎯 Flip Opportunities
           </button>
+          <button
+            onClick={() => setActiveTab('admin')}
+            className={`px-6 py-3 font-semibold transition-all ${
+              activeTab === 'admin'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
+            }`}
+          >
+            ⚙️ Pool Manager
+          </button>
         </div>
 
         {/* Portfolio Tab Content */}
         {activeTab === 'portfolio' && <Portfolio />}
+
+        {/* Admin Pool Manager Tab */}
+        {activeTab === 'admin' && <PoolManager />}
 
         {/* Favorites Tab Content */}
         {activeTab === 'favorites' && (

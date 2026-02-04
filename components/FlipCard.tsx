@@ -2,6 +2,7 @@
 
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
+import { useChat } from '@/lib/chatContext';
 
 interface FlipCardProps {
   opportunity: FlipOpportunity;
@@ -10,6 +11,7 @@ interface FlipCardProps {
 
 export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) {
   const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
+  const { openChat } = useChat();
   const isInFavorites = favorites.some(item => item.id === opportunity.itemId);
 
   const formatNumber = (value: number) => {
@@ -258,12 +260,23 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
 
       {/* View Details Button */}
       <div className="p-3 border-t border-slate-700 bg-gradient-to-r from-osrs-accent/10 to-transparent">
-        <button
-          onClick={onViewDetails}
-          className="w-full py-2 px-3 bg-osrs-accent hover:bg-osrs-accent/90 text-slate-900 font-bold rounded transition-colors text-sm"
-        >
-          📊 View Full Chart & Analysis
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => openChat(`Should I flip ${opportunity.itemName}? Current price is ${opportunity.currentPrice}gp`)}
+            className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded transition-colors text-sm flex items-center justify-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            Ask AI
+          </button>
+          <button
+            onClick={onViewDetails}
+            className="py-2 px-3 bg-osrs-accent hover:bg-osrs-accent/90 text-slate-900 font-bold rounded transition-colors text-sm"
+          >
+            📊 View Chart
+          </button>
+        </div>
       </div>
     </div>
   );

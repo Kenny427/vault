@@ -1,0 +1,187 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { POPULAR_CATEGORIES } from '@/lib/api/osrs';
+
+export default function PoolManager() {
+  const [poolItems, setPoolItems] = useState<string[]>([]);
+  const [newItem, setNewItem] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+
+  useEffect(() => {
+    setPoolItems([...POPULAR_CATEGORIES].sort());
+  }, []);
+
+  const categories = {
+    all: 'All Items',
+    logs: 'Logs & Fletching',
+    ores: 'Ores & Bars',
+    bones: 'Bones',
+    herbs: 'Herblore',
+    dragonhide: 'Dragonhides & Leather',
+    runes: 'Runes & Essence',
+    fish: 'Fish',
+    gems: 'Gems & Jewelry',
+    ammo: 'Ammo & Combat',
+  };
+
+  const categorizeItem = (item: string): string => {
+    const lower = item.toLowerCase();
+    if (lower.includes('log') || lower.includes('bow') || lower.includes('arrow shaft') || lower.includes('feather') || lower.includes('flax')) return 'logs';
+    if (lower.includes('ore') || lower.includes('bar') || lower.includes('coal')) return 'ores';
+    if (lower.includes('bone')) return 'bones';
+    if (lower.includes('herb') || lower.includes('weed') || lower.includes('potion') || lower.includes('seed') || lower.includes('ranarr') || lower.includes('snapdragon') || lower.includes('torstol') || lower.includes('avantoe') || lower.includes('kwuarm') || lower.includes('cadantine') || lower.includes('lantadyme') || lower.includes('dwarf weed') || lower.includes('toadflax')) return 'herbs';
+    if (lower.includes('dragonhide') || lower.includes('dragon leather')) return 'dragonhide';
+    if (lower.includes('rune') || lower.includes('essence')) return 'runes';
+    if (lower.includes('raw ') || lower.includes('fish')) return 'fish';
+    if (lower.includes('uncut') || lower.includes('sapphire') || lower.includes('emerald') || lower.includes('ruby') || lower.includes('diamond') || lower.includes('dragonstone') || lower.includes('zenyte') || lower.includes('ring') || lower.includes('amulet') || lower.includes('necklace') || lower.includes('bracelet')) return 'gems';
+    if (lower.includes('bolt') || lower.includes('arrow') || lower.includes('cannonball') || lower.includes('dart')) return 'ammo';
+    return 'other';
+  };
+
+  const filteredItems = poolItems.filter(item => {
+    const matchesSearch = item.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || categorizeItem(item) === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleAddItem = () => {
+    const trimmed = newItem.trim().toLowerCase();
+    if (!trimmed) return;
+    
+    if (poolItems.some(item => item.toLowerCase() === trimmed)) {
+      alert('Item already exists in pool!');
+      return;
+    }
+
+    const updatedPool = [...poolItems, trimmed].sort();
+    setPoolItems(updatedPool);
+    setNewItem('');
+    
+    // Show code to copy
+    alert(`Item added! To persist this change, add "${trimmed}" to POPULAR_CATEGORIES in lib/api/osrs.ts`);
+  };
+
+  const handleRemoveItem = (itemToRemove: string) => {
+    if (!confirm(`Remove "${itemToRemove}" from pool?`)) return;
+    
+    const updatedPool = poolItems.filter(item => item !== itemToRemove);
+    setPoolItems(updatedPool);
+    
+    alert(`Item removed! To persist this change, remove "${itemToRemove}" from POPULAR_CATEGORIES in lib/api/osrs.ts`);
+  };
+
+  const getCategoryCount = (cat: string) => {
+    if (cat === 'all') return poolItems.length;
+    return poolItems.filter(item => categorizeItem(item) === cat).length;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-slate-900 rounded-lg p-6 border border-slate-700">
+        <h2 className="text-2xl font-bold text-slate-100 mb-2">Item Pool Manager</h2>
+        <p className="text-slate-400 text-sm mb-4">
+          Manage the items analyzed for flip opportunities. Changes here are temporary - update POPULAR_CATEGORIES in lib/api/osrs.ts to persist.
+        </p>
+
+        {/* Add New Item */}
+        <div className="flex gap-2 mb-6">
+          <input
+            type="text"
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleAddItem()}
+            placeholder="Enter exact item name (e.g., 'dragon bones')"
+            className="flex-1 px-4 py-2 bg-slate-800 border border-slate-600 rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:border-osrs-accent"
+          />
+          <button
+            onClick={handleAddItem}
+            className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded transition-colors"
+          >
+            Add Item
+          </button>
+        </div>
+
+        {/* Search and Filter */}
+        <div className="flex gap-4 mb-4">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search items..."
+            className="flex-1 px-4 py-2 bg-slate-800 border border-slate-600 rounded text-slate-100 placeholder-slate-500 focus:outline-none focus:border-osrs-accent"
+          />
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-4 py-2 bg-slate-800 border border-slate-600 rounded text-slate-100 focus:outline-none focus:border-osrs-accent"
+          >
+            {Object.entries(categories).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label} ({getCategoryCount(key)})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Category Pills */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {Object.entries(categories).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setCategoryFilter(key)}
+              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                categoryFilter === key
+                  ? 'bg-osrs-accent text-slate-900'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
+            >
+              {label.split(' ')[0]} ({getCategoryCount(key)})
+            </button>
+          ))}
+        </div>
+
+        {/* Items Grid */}
+        <div className="bg-slate-800/50 rounded-lg p-4 max-h-96 overflow-y-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {filteredItems.map((item) => (
+              <div
+                key={item}
+                className="flex items-center justify-between bg-slate-700/50 hover:bg-slate-700 p-2 rounded group transition-colors"
+              >
+                <span className="text-slate-200 text-sm truncate flex-1">{item}</span>
+                <button
+                  onClick={() => handleRemoveItem(item)}
+                  className="ml-2 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Remove"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+          {filteredItems.length === 0 && (
+            <div className="text-center text-slate-500 py-8">
+              No items match your search
+            </div>
+          )}
+        </div>
+
+        {/* Export Button */}
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={() => {
+              const code = `export const POPULAR_CATEGORIES = [\n  ${poolItems.map(item => `'${item}'`).join(',\n  ')}\n];`;
+              navigator.clipboard.writeText(code);
+              alert('Pool array copied to clipboard! Paste into lib/api/osrs.ts');
+            }}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded transition-colors"
+          >
+            📋 Copy Pool to Clipboard
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

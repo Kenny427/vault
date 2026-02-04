@@ -7,6 +7,7 @@ import PortfolioSummary from './PortfolioSummary';
 import AddPortfolioItemModal from './AddPortfolioItemModal';
 import AddPortfolioSaleModal from './AddPortfolioSaleModal';
 import { getBatchPrices } from '@/lib/api/osrs';
+import { useChat } from '@/lib/chatContext';
 
 export default function Portfolio() {
   const [showAddModal, setShowAddModal] = useState(false);
@@ -15,6 +16,7 @@ export default function Portfolio() {
   const items = usePortfolioStore((state) => state.items);
   const removeItem = usePortfolioStore((state) => state.removeItem);
   const [prices, setPrices] = useState<Record<number, { high: number; low: number }>>({});
+  const { openChat } = useChat();
 
   const formatNumber = (value: number) =>
     value.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -170,12 +172,20 @@ export default function Portfolio() {
                         )}
                       </td>
                       <td className="text-right px-6 py-4">
-                        <button
-                          onClick={() => handleRemove(item.id)}
-                          className="text-red-400 hover:text-red-300 font-medium text-sm transition-colors"
-                        >
-                          Remove
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openChat(`I'm holding ${remainingQty} ${item.itemName} that I bought at ${item.buyPrice}gp. Current price is ${current ? Math.round(current) : 'unknown'}gp. What should my exit strategy be? When should I sell for optimal profit?`)}
+                            className="text-blue-400 hover:text-blue-300 font-medium text-sm transition-colors px-2 py-1 rounded hover:bg-blue-900/20"
+                          >
+                            Ask AI
+                          </button>
+                          <button
+                            onClick={() => handleRemove(item.id)}
+                            className="text-red-400 hover:text-red-300 font-medium text-sm transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

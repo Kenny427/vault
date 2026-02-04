@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useChat } from '@/lib/chatContext';
 
 interface Message {
   id: string;
@@ -11,6 +12,7 @@ interface Message {
 }
 
 export default function Chat() {
+  const { pendingQuestion, clearPendingQuestion } = useChat();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '0',
@@ -31,6 +33,19 @@ export default function Chat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Handle pending question from context
+  useEffect(() => {
+    if (pendingQuestion) {
+      setInput(pendingQuestion);
+      clearPendingQuestion();
+      // Auto-submit after a brief delay
+      setTimeout(() => {
+        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+        document.querySelector('form')?.dispatchEvent(submitEvent);
+      }, 100);
+    }
+  }, [pendingQuestion, clearPendingQuestion]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
