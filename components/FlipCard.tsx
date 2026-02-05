@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useChat } from '@/lib/chatContext';
@@ -167,14 +168,15 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
         </button>
       </div>
 
-      {/* Modal */}
-      {showSetAlertModal && (
+      {/* Modal - rendered outside card using portal */}
+      {showSetAlertModal && typeof document !== 'undefined' && createPortal(
         <SetAlertModal
           itemId={opportunity.itemId}
           itemName={opportunity.itemName}
           currentPrice={opportunity.currentPrice}
           onClose={() => setShowSetAlertModal(false)}
-        />
+        />,
+        document.body
       )}
     </div>
   );
