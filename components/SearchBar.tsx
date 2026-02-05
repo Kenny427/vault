@@ -89,10 +89,13 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   };
 
   const handleSelect = (item: ItemData) => {
-    onItemSelect(item);
     setQuery('');
     setSuggestions([]);
     setIsOpen(false);
+    // Call the callback after a tiny delay to ensure state updates first
+    setTimeout(() => {
+      onItemSelect(item);
+    }, 0);
   };
 
   const handleFocus = async () => {
@@ -103,21 +106,11 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   };
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // Only close if clicking completely outside the wrapper
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    // Use click instead of mousedown so it fires after onClick handlers
-    document.addEventListener('click', handleClickOutside);
-    return () => {
-      document.removeEventListener('click', handleClickOutside);
-      if (debounceTimer.current) {
+    if (debounceTimer.current) {
+      return () => {
         clearTimeout(debounceTimer.current);
-      }
-    };
+      };
+    }
   }, []);
 
   return (
@@ -129,6 +122,10 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
+          onBlur={() => {
+            // Close dropdown when input loses focus (unless clicking a suggestion)
+            setTimeout(() => setIsOpen(false), 100);
+          }}
           placeholder="Search items or click to see popular items..."
           className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-osrs-accent transition-colors"
         />
@@ -152,10 +149,11 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
           {suggestions.map((item) => (
             <button
               key={`${item.id}-${item.name}`}
-              onClick={(e) => {
+              type="button"
+              onMouseDown={(e) => {
                 e.preventDefault();
-                handleSelect(item);
               }}
+              onClick={() => handleSelect(item)}
               className="w-full px-4 py-3 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
             >
               <div className="font-medium text-slate-100">{item.name}</div>
