@@ -810,36 +810,36 @@ export function scoreOpportunitiesByMeanReversion(
     
     // FLIP TYPE CLASSIFICATION
     // Analyze characteristics to determine flip type
-    let flipType: FlipType = 'short-term';
+    let flipType: FlipType = 'mean-reversion';
     let flipTypeConfidence = 50;
     
     // Bot Dump Recovery: Sharp recent drop, high volatility, strong recovery potential
     if (discount30 >= 15 && discount30 > discount90 * 1.5 && volatilityPercent > 20 && upsideToRecent >= 20) {
-      flipType = 'bot-dump';
+      flipType = 'high-confidence';
       flipTypeConfidence = 75;
       estimatedHoldTime = '3-7 days';
     }
     // Quick Flip: Below 30d average, moderate volatility, fast turnaround
     else if (discount30 >= 8 && discount30 < 15 && volatilityPercent >= 15 && volatilityPercent < 35) {
-      flipType = 'quick-flip';
+      flipType = 'high-confidence';
       flipTypeConfidence = 70;
       estimatedHoldTime = '1-3 days';
     }
     // Long-Term: Deep discount from 180d/365d, lower volatility preferred
     else if (discount90 >= 20 || discount365 >= 25) {
-      flipType = 'long-term';
+      flipType = 'deep-value';
       flipTypeConfidence = 80;
       estimatedHoldTime = '2-8 weeks';
     }
     // Volatile Play: Very high volatility, major swings, high risk/reward
     else if (volatilityPercent > 40 && spreadPercent > 50) {
-      flipType = 'volatile-play';
+      flipType = 'risky-upside';
       flipTypeConfidence = 70;
       estimatedHoldTime = '1-4 weeks';
     }
     // Safe Hold: Low volatility, consistent recovery, low risk
     else if (volatilityPercent < 20 && confidence >= 70 && discount90 >= 10) {
-      flipType = 'safe-hold';
+      flipType = 'deep-value';
       flipTypeConfidence = 85;
       estimatedHoldTime = '1-3 weeks';
     }
@@ -918,16 +918,16 @@ export function scoreOpportunitiesByMeanReversion(
     
     return opportunity;
   }).filter(opp => {
-    const isVolatile = opp.flipType === 'volatile-play';
-    const trendOkay = opp.trend !== 'bearish' || opp.flipType === 'bot-dump' || opp.flipType === 'quick-flip' || isVolatile;
+    const isVolatile = opp.flipType === 'risky-upside';
+    const trendOkay = opp.trend !== 'bearish' || opp.flipType === 'high-confidence' || opp.flipType === 'risky-upside';
     const volatilityOkay = isVolatile || opp.volatility <= 50;
 
     const liquidityOkay = opp.volume1h === undefined
       ? true
       : opp.volume1h >= (opp.currentPrice > 100_000 ? 20 : opp.currentPrice > 10_000 ? 50 : 100);
-    const momentumOkay = opp.momentum >= -5 || opp.flipType === 'bot-dump' || opp.flipType === 'quick-flip';
+    const momentumOkay = opp.momentum >= -5 || opp.flipType === 'high-confidence';
 
-    const outlierOkay = !opp.outlierFlag || opp.flipType === 'bot-dump';
+    const outlierOkay = !opp.outlierFlag || opp.flipType === 'high-confidence';
 
     // QUALITY GATES: reduce false positives while keeping real opportunities
     return (
