@@ -270,6 +270,14 @@ ${batch
       `✅ Found ${topOpportunities.length} AI-approved opportunities (analyzed: ${aiAnalyzedCount}, approved: ${aiApprovedCount})`
     );
     
+    // Include filter stats in response for frontend tracking
+    const filterStats = filteredItems.map(item => ({
+      itemId: item.itemId,
+      itemName: item.itemName,
+      reason: item.reason,
+      timestamp: new Date().toISOString()
+    }));
+    
     // Generate detailed reasoning for top 3 opportunities
     let detailedReasonings: { itemId: number; itemName: string; detailedAnalysis: string }[] = [];
     
@@ -374,6 +382,7 @@ Format as JSON:
       detailedReasonings,
       summary,
       filteredItems,
+      filterStats,
       filters: {
         minConfidence,
         minPotential,

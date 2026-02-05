@@ -8,6 +8,7 @@ import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
 import FloatingChat from './FloatingChat';
 import PoolManager from './PoolManager';
+import PoolManagementPanel from './PoolManagementPanel';
 import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
@@ -21,7 +22,7 @@ import { initDinkWebhookListener } from '@/lib/dinkWebhook';
 import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
-type MenuTab = 'admin' | 'ai-cache';
+type MenuTab = 'admin' | 'pool-management';
 
 const SCAN_MESSAGES = [
   'Consulting the Grand Exchange spirits…',
@@ -198,6 +199,29 @@ export default function Dashboard() {
       // Store filtered items
       if (data.filteredItems && Array.isArray(data.filteredItems)) {
         setFilteredItems(data.filteredItems);
+      }
+
+      // Track filtered stats for analysis
+      if (data.filterStats && Array.isArray(data.filterStats)) {
+        const statsMap = JSON.parse(localStorage.getItem('osrs-filtered-stats') || '{}');
+        
+        data.filterStats.forEach((filter: any) => {
+          const key = `${filter.itemId}`;
+          if (!statsMap[key]) {
+            statsMap[key] = {
+              itemId: filter.itemId,
+              itemName: filter.itemName,
+              filterCount: 0,
+              lastReason: '',
+              lastFilteredAt: ''
+            };
+          }
+          statsMap[key].filterCount += 1;
+          statsMap[key].lastReason = filter.reason;
+          statsMap[key].lastFilteredAt = filter.timestamp;
+        });
+        
+        localStorage.setItem('osrs-filtered-stats', JSON.stringify(statsMap));
       }
 
       // Convert MeanReversionSignals to FlipOpportunities for UI
@@ -475,6 +499,17 @@ export default function Dashboard() {
                 >
                   ⚙️ Pool Manager
                 </button>
+                <button
+                  onClick={() => {
+                    setActiveMenuTab('pool-management');
+                    setShowMenu(false);
+                  }}
+                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${
+                    activeMenuTab === 'pool-management' ? 'text-osrs-accent' : 'text-slate-300'
+                  }`}
+                >
+                  📊 Pool Stats
+                </button>
               </div>
             )}
           </div>
@@ -677,6 +712,9 @@ export default function Dashboard() {
 
         {/* Menu Tab: Pool Manager */}
         {activeMenuTab === 'admin' && <PoolManager />}
+
+        {/* Menu Tab: Pool Stats */}
+        {activeMenuTab === 'pool-management' && <PoolManagementPanel />}
       </main>
 
       {/* Detailed Analysis Modal */}
