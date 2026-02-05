@@ -16,11 +16,39 @@ interface PoolItemScore {
   seasonalTrend: string; // up, down, flat
   recommendation: 'HOLD' | 'PROMOTE' | 'DEMOTE' | 'REMOVE';
   reasoning: string;
+  aiScore?: number;
+  aiRecommendation?: 'HOLD' | 'PROMOTE' | 'DEMOTE' | 'REMOVE';
+  aiConfidence?: 'low' | 'medium' | 'high';
+  aiReasoning?: string;
+  aiRiskFlags?: string[];
+}
+
+interface AiItemResult {
+  id: number;
+  aiScore: number;
+  recommendation: 'HOLD' | 'PROMOTE' | 'DEMOTE' | 'REMOVE';
+  confidence: 'low' | 'medium' | 'high';
+  reasoning: string;
+  riskFlags: string[];
 }
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+const aiCache = new Map<number, { timestamp: number; result: AiItemResult }>();
+
+function isCacheValid(entry: { timestamp: number }, ttlMs: number) {
+  return Date.now() - entry.timestamp < ttlMs;
+}
+
+function chunkArray<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
 
 /**
  * Pool Optimizer API - Scores all items in the pool for mean-reversion fitness
@@ -35,7 +63,16 @@ const client = new OpenAI({
  */
 export async function POST(request: Request) {
   try {
-    const { sampleSize = 20, fullScan = false } = await request.json();
+    const {
+      sampleSize = 20,
+      fullScan = true,
+      batchSize = 40,
+      cacheHours = 24,
+      skipLowSignal = true,
+      useAi = true,
+    } = await request.json();
+
+    const cacheTtlMs = Math.max(1, cacheHours) * 60 * 60 * 1000;
 
     // Select items to analyze
     const itemsToAnalyze = fullScan 
@@ -80,6 +117,7 @@ export async function POST(request: Request) {
           volatility,
           avgVolume,
           trend,
+          recentAvg,
           priceHistory: prices,
         };
       } catch (err) {
@@ -151,44 +189,101 @@ export async function POST(request: Request) {
     // Sort by score
     scores.sort((a, b) => b.currentScore - a.currentScore);
 
-    // Use AI to identify patterns and suggest new items to add
-    const topPerformers = scores.slice(0, 10);
-    const lowPerformers = scores.filter((s) => s.currentScore < 50);
+    let aiInsights = 'AI analysis disabled';
+    let aiAnalyzedCount = 0;
 
-    const analysisPrompt = `
-You are an OSRS Grand Exchange expert analyzing item pool performance for mean-reversion trading.
+    if (useAi) {
+      // Build AI input list (skip low-signal items unless forced)
+      const itemsForAi = itemsWithData.filter((item) => {
+        if (!skipLowSignal) return true;
+        const lowVolume = item.avgVolume < 100;
+        const tooVolatile = item.volatility > 60;
+        return !(lowVolume || tooVolatile);
+      });
 
-TOP PERFORMERS (Score 90+):
-${topPerformers.map((s) => `- ${s.name}: ${s.currentScore} (Bot: ${s.botActivity}, Volatility: ${s.volatility}%, Liquidity: ${s.liquidity})`).join('\n')}
+      const uncached = itemsForAi.filter((item) => {
+        const cached = aiCache.get(item.id);
+        if (!cached) return true;
+        return Date.now() - cached.timestamp >= cacheTtlMs;
+      });
 
-LOW PERFORMERS (Score <50):
-${lowPerformers.slice(0, 10).map((s) => `- ${s.name}: ${s.currentScore} (Bot: ${s.botActivity}, Volatility: ${s.volatility}%, Liquidity: ${s.liquidity})`).join('\n')}
+      const batches = chunkArray(uncached, Math.max(10, batchSize));
 
-ANALYSIS TASK:
-1. Identify common characteristics of top performers (what makes them good for mean-reversion?)
-2. Explain why low performers are struggling
-3. Suggest 3-5 OSRS items NOT in the current pool that would score 80+
-   - Focus on botted items with stable supply
-   - Must have significant daily trade volume
-   - 10-30% natural price volatility
-   - Include: Item names, estimated bot likelihood, why they fit the strategy
+      for (const batch of batches) {
+        const prompt = `You are an OSRS Grand Exchange flipping strategist. Analyze items for SAFE mean-reversion flipping.
 
-Keep response concise and analytical.
+STRATEGY RULES (must follow):
+- Avoid structural downtrends and value traps.
+- Prefer stable bot-fed supply, high liquidity, and 10–30% natural volatility.
+- Penalize thin volume, extreme volatility, or manipulation risk.
+- Only PROMOTE when price action is stable or recovering with support.
+- Provide concise JSON only.
+
+Return JSON in this exact format:
+{
+  "items": [
+    {
+      "id": 0,
+      "aiScore": 0,
+      "recommendation": "HOLD|PROMOTE|DEMOTE|REMOVE",
+      "confidence": "low|medium|high",
+      "reasoning": "short sentence",
+      "riskFlags": ["flag1", "flag2"]
+    }
+  ]
+}
+
+ITEMS:
+${batch
+  .map(
+    (item) =>
+      `- ID:${item.id} Name:${item.name} Category:${item.category} Bot:${item.botLikelihood} VolumeTier:${item.volumeTier} AvgVol:${Math.round(
+        item.avgVolume
+      )} Volatility:${item.volatility.toFixed(1)}% Trend:${item.trend} RecentAvg:${Math.round(
+        item.recentAvg
+      )} AvgPrice:${Math.round(item.avgPrice)}`
+  )
+  .join('\n')}
 `;
 
-    const aiResponse = await client.chat.completions.create({
-      model: 'gpt-4-turbo',
-      max_tokens: 500,
-      messages: [
-        {
-          role: 'user',
-          content: analysisPrompt,
-        },
-      ],
-    });
+        const aiResponse = await client.chat.completions.create({
+          model: 'gpt-4-turbo',
+          max_tokens: 1200,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+        });
 
-    const aiInsights =
-      aiResponse.choices[0]?.message.content || 'Analysis failed';
+        const responseText = aiResponse.choices[0]?.message.content || '';
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { items: [] };
+
+        if (Array.isArray(parsed.items)) {
+          parsed.items.forEach((result: AiItemResult) => {
+            aiCache.set(result.id, { timestamp: Date.now(), result });
+            aiAnalyzedCount += 1;
+          });
+        }
+      }
+
+      // Summary insights (lightweight)
+      aiInsights = `AI analyzed ${aiAnalyzedCount} items (cache TTL ${cacheHours}h, batch size ${batchSize}).`;
+    }
+
+    // Merge AI results into scores
+    scores.forEach((score) => {
+      const cached = aiCache.get(score.id);
+      if (cached && isCacheValid(cached, cacheTtlMs)) {
+        score.aiScore = cached.result.aiScore;
+        score.aiRecommendation = cached.result.recommendation;
+        score.aiConfidence = cached.result.confidence;
+        score.aiReasoning = cached.result.reasoning;
+        score.aiRiskFlags = cached.result.riskFlags;
+      }
+    });
 
     // Build response
     const summary = {
@@ -197,6 +292,7 @@ Keep response concise and analytical.
       topPerformers: scores.slice(0, 5),
       needsAttention: scores.filter((s) => s.recommendation !== 'HOLD'),
       aiInsights,
+      aiAnalyzedCount,
       allScores: scores,
     };
 
