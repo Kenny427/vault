@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
 import { 
   analyzeMeanReversionOpportunity,
@@ -16,6 +17,11 @@ const client = new OpenAI({
 });
 
 const aiOpportunityCache = new Map<number, { timestamp: number; signal: MeanReversionSignal }>();
+const CACHE_TABLE = 'ai_opportunity_cache';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 
 function isCacheValid(entry: { timestamp: number }, ttlMs: number) {
@@ -41,6 +47,74 @@ type AiOpportunityDecision = {
   volatilityRisk: 'low' | 'medium' | 'high';
   reasoning: string;
 };
+
+type CacheRow = {
+  item_id: number;
+  payload: MeanReversionSignal;
+  updated_at: string;
+};
+
+async function getCachedSignals(itemIds: number[], ttlMs: number) {
+  const cachedSignals = new Map<number, MeanReversionSignal>();
+  const cachedIds = new Set<number>();
+
+  if (supabase) {
+    const cutoff = new Date(Date.now() - ttlMs).toISOString();
+    const batches = chunkArray(itemIds, 100);
+
+    for (const batch of batches) {
+      const { data, error } = await supabase
+        .from(CACHE_TABLE)
+        .select('item_id,payload,updated_at')
+        .in('item_id', batch)
+        .gte('updated_at', cutoff);
+
+      if (error) {
+        console.error('Cache fetch error:', error);
+        continue;
+      }
+
+      (data as CacheRow[] | null)?.forEach((row) => {
+        if (row?.payload) {
+          cachedSignals.set(row.item_id, row.payload);
+          cachedIds.add(row.item_id);
+        }
+      });
+    }
+
+    return { cachedSignals, cachedIds };
+  }
+
+  // Fallback to in-memory cache
+  itemIds.forEach((id) => {
+    const cached = aiOpportunityCache.get(id);
+    if (cached && isCacheValid(cached, ttlMs)) {
+      cachedSignals.set(id, cached.signal);
+      cachedIds.add(id);
+    }
+  });
+
+  return { cachedSignals, cachedIds };
+}
+
+async function saveCachedSignals(rows: CacheRow[]) {
+  if (rows.length === 0) return;
+
+  if (supabase) {
+    const { error } = await supabase
+      .from(CACHE_TABLE)
+      .upsert(rows, { onConflict: 'item_id' });
+
+    if (error) {
+      console.error('Cache upsert error:', error);
+    }
+    return;
+  }
+
+  rows.forEach((row) => {
+    aiOpportunityCache.set(row.item_id, { timestamp: Date.now(), signal: row.payload });
+  });
+}
 
 
 /**
@@ -82,14 +156,17 @@ export async function GET(request: Request) {
     console.log(`📊 Analyzing ${priorityItems.length} items from pool`);
     
     const cacheTtlMs = Math.max(1, cacheHours) * 60 * 60 * 1000;
-    const cachedSignals: MeanReversionSignal[] = [];
+    const { cachedSignals, cachedIds } = await getCachedSignals(
+      priorityItems.map((i) => i.id),
+      cacheTtlMs
+    );
+
+    const cachedSignalList = Array.from(cachedSignals.values());
 
     // Fetch price data and analyze each item (AI will decide final inclusion)
     const analysisPromises = priorityItems.map(async (item) => {
       try {
-        const cached = aiOpportunityCache.get(item.id);
-        if (cached && isCacheValid(cached, cacheTtlMs)) {
-          cachedSignals.push(cached.signal);
+        if (cachedIds.has(item.id)) {
           return null;
         }
 
@@ -141,13 +218,14 @@ export async function GET(request: Request) {
     
     console.log(`📈 Completed analysis: ${completedSignals.length}/${priorityItems.length} items had sufficient data`);
     
-    let topOpportunities: MeanReversionSignal[] = [...cachedSignals];
+    let topOpportunities: MeanReversionSignal[] = [...cachedSignalList];
     let aiAnalyzedCount = 0;
 
     if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
       const batches = chunkArray(completedSignals, Math.max(10, batchSize));
 
       for (const batch of batches) {
+        const upsertRows: CacheRow[] = [];
         const prompt = `You are an elite OSRS Grand Exchange flipping strategist. Apply the user's mean-reversion strategy with strict risk control.
 
       STRATEGY RULES (must follow):
@@ -234,10 +312,16 @@ ${batch
               reversionPotential,
             };
 
-            aiOpportunityCache.set(base.itemId, { timestamp: Date.now(), signal: merged });
+            upsertRows.push({
+              item_id: base.itemId,
+              payload: merged,
+              updated_at: new Date().toISOString(),
+            });
             topOpportunities.push(merged);
           });
         }
+
+        await saveCachedSignals(upsertRows);
       }
     } else if (completedSignals.length > 0) {
       // Fallback to rule-based if AI not configured
@@ -258,7 +342,7 @@ ${batch
       totalAnalyzed: priorityItems.length,
       viableOpportunities: topOpportunities.length,
       aiAnalyzedCount,
-      cachedCount: cachedSignals.length,
+      cachedCount: cachedSignalList.length,
       cacheHours,
       avgConfidence: topOpportunities.length > 0
         ? topOpportunities.reduce((sum, s) => sum + s.confidenceScore, 0) / topOpportunities.length
@@ -314,6 +398,12 @@ export async function POST(request: Request) {
 
     if (action === 'clearCache') {
       aiOpportunityCache.clear();
+      if (supabase) {
+        const { error } = await supabase.from(CACHE_TABLE).delete().neq('item_id', 0);
+        if (error) {
+          return NextResponse.json({ success: false, error: 'Failed to clear cache' }, { status: 500 });
+        }
+      }
       return NextResponse.json({ success: true, cleared: true });
     }
     
