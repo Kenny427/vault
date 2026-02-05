@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getItemPrice, getItemHistory } from '@/lib/api/osrs';
+import { getItemPrice, getItemHistoryWithVolumes } from '@/lib/api/osrs';
 
 interface PortfolioItem {
   itemId: number;
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       try {
         const [currentPrice, history365] = await Promise.all([
           getItemPrice(item.itemId),
-          getItemHistory(item.itemId, 365),
+          getItemHistoryWithVolumes(item.itemId, 365 * 24 * 60 * 60),
         ]);
 
         if (!currentPrice || !history365 || history365.length < 60) {
