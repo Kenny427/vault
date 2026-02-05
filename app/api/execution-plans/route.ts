@@ -126,8 +126,8 @@ FORMAT AS JSON ARRAY:
   }
 ]`;
 
-    const aiResponse = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+    const aiResponse = await client.chat.completions.create({
+      model: 'gpt-4-turbo',
       max_tokens: 2000,
       messages: [
         {
@@ -137,7 +137,7 @@ FORMAT AS JSON ARRAY:
       ],
     });
 
-    const responseText = aiResponse.content[0].type === 'text' ? aiResponse.content[0].text : '';
+    const responseText = aiResponse.choices[0]?.message.content || '';
 
     // Parse JSON
     const jsonMatch = responseText.match(/\[[\s\S]*\]/);

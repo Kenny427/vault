@@ -159,7 +159,7 @@ FORMAT OUTPUT AS JSON:
 }`;
 
     const aiResponse = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'gpt-4-turbo',
       max_tokens: 1500,
       messages: [
         {
@@ -169,7 +169,7 @@ FORMAT OUTPUT AS JSON:
       ],
     });
 
-    const responseText = aiResponse.content[0].type === 'text' ? aiResponse.content[0].text : '';
+    const responseText = aiResponse.choices[0]?.message.content || '';
 
     // Parse JSON from response
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);

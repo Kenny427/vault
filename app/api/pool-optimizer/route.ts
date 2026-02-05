@@ -177,7 +177,7 @@ Keep response concise and analytical.
 `;
 
     const aiResponse = await client.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'gpt-4-turbo',
       max_tokens: 500,
       messages: [
         {
@@ -188,7 +188,7 @@ Keep response concise and analytical.
     });
 
     const aiInsights =
-      aiResponse.content[0].type === 'text' ? aiResponse.content[0].text : 'Analysis failed';
+      aiResponse.choices[0]?.message.content || 'Analysis failed';
 
     // Build response
     const summary = {
