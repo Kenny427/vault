@@ -70,6 +70,23 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
     }, 150); // Reduced from 300ms to 150ms
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      // Select the first suggestion if available
+      if (suggestions.length > 0) {
+        handleSelect(suggestions[0]);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsOpen(false);
+      setQuery('');
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIsOpen(true);
+    }
+  };
+
   const handleSelect = (item: ItemData) => {
     onItemSelect(item);
     setQuery('');
@@ -107,6 +124,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
           type="text"
           value={query}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           placeholder="Search items or click to see popular items..."
           className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-osrs-accent transition-colors"
