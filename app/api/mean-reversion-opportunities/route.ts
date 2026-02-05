@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
 import { 
   analyzeMeanReversionOpportunity,
+  rankInvestmentOpportunities,
   MeanReversionSignal
 } from '@/lib/meanReversionAnalysis';
 import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
