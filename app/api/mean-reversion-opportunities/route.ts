@@ -256,6 +256,9 @@ ${batch
     const summary = {
       totalAnalyzed: priorityItems.length,
       viableOpportunities: topOpportunities.length,
+      aiAnalyzedCount,
+      cachedCount: cachedSignals.length,
+      cacheHours,
       avgConfidence: topOpportunities.length > 0
         ? topOpportunities.reduce((sum, s) => sum + s.confidenceScore, 0) / topOpportunities.length
         : 0,
