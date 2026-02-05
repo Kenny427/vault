@@ -1,15 +1,45 @@
 import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
 import { 
   analyzeMeanReversionOpportunity,
-  filterViableOpportunities,
-  rankInvestmentOpportunities,
   MeanReversionSignal
 } from '@/lib/meanReversionAnalysis';
 import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const AI_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const aiOpportunityCache = new Map<number, { timestamp: number; signal: MeanReversionSignal }>();
+
+function isCacheValid(entry: { timestamp: number }, ttlMs: number) {
+  return Date.now() - entry.timestamp < ttlMs;
+}
+
+function chunkArray<T>(items: T[], size: number) {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+type AiOpportunityDecision = {
+  id: number;
+  include: boolean;
+  confidenceScore: number;
+  investmentGrade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
+  targetSellPrice: number;
+  estimatedHoldingPeriod: string;
+  suggestedInvestment: number;
+  volatilityRisk: 'low' | 'medium' | 'high';
+  reasoning: string;
+};
 
 
 /**
@@ -27,8 +57,11 @@ export async function GET(request: Request) {
     const minPotential = parseInt(searchParams.get('minPotential') || '10');
     const categoryFilter = searchParams.get('category');
     const botFilter = searchParams.get('botLikelihood');
+    const batchSize = parseInt(searchParams.get('batchSize') || '40');
+    const cacheHours = parseInt(searchParams.get('cacheHours') || '24');
+    const skipLowSignal = searchParams.get('skipLowSignal') !== 'false';
     
-    console.log(`🔍 Analyzing mean-reversion opportunities (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
+    console.log(`🔍 Analyzing AI-first opportunities (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
     
     // Filter item pool based on criteria
     let itemsToAnalyze = EXPANDED_ITEM_POOL;
@@ -47,9 +80,18 @@ export async function GET(request: Request) {
     
     console.log(`📊 Analyzing ${priorityItems.length} items from pool`);
     
-    // Fetch price data and analyze each item
+    const cacheTtlMs = Math.max(1, cacheHours) * 60 * 60 * 1000;
+    const cachedSignals: MeanReversionSignal[] = [];
+
+    // Fetch price data and analyze each item (AI will decide final inclusion)
     const analysisPromises = priorityItems.map(async (item) => {
       try {
+        const cached = aiOpportunityCache.get(item.id);
+        if (cached && isCacheValid(cached, cacheTtlMs)) {
+          cachedSignals.push(cached.signal);
+          return null;
+        }
+
         // Fetch 1 year of price history with volume data
         const priceData = await getItemHistoryWithVolumes(item.id, 365 * 24 * 60 * 60);
         
@@ -65,7 +107,7 @@ export async function GET(request: Request) {
           return null;
         }
         
-        // Analyze for mean reversion
+        // Analyze for mean reversion metrics (AI makes final decision)
         const signal = await analyzeMeanReversionOpportunity(
           item.id,
           item.name,
@@ -85,41 +127,138 @@ export async function GET(request: Request) {
     
     // Wait for all analyses to complete
     const allSignals = await Promise.all(analysisPromises);
-    const completedSignals = allSignals.filter((s): s is typeof allSignals[0] => s !== null);
+    let completedSignals = allSignals.filter((s): s is MeanReversionSignal => s !== null);
+
+    if (skipLowSignal) {
+      completedSignals = completedSignals.filter((s) => s.confidenceScore >= 25 && s.reversionPotential >= 5);
+    }
     
     console.log(`📈 Completed analysis: ${completedSignals.length}/${priorityItems.length} items had sufficient data`);
     
-    // Filter and rank
-    const viableSignals = filterViableOpportunities(
-      completedSignals,
-      minConfidence,
-      minPotential
+    let topOpportunities: MeanReversionSignal[] = [...cachedSignals];
+    let aiAnalyzedCount = 0;
+
+    if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
+      const batches = chunkArray(completedSignals, Math.max(10, batchSize));
+
+      for (const batch of batches) {
+        const prompt = `You are an OSRS Grand Exchange flipping strategist. Use the user's mean-reversion strategy.
+
+STRATEGY RULES (must follow):
+- Prefer items 10–30% below medium/long-term averages.
+- Avoid structural downtrends and value traps.
+- Strong bot-fed supply + high liquidity are required.
+- Penalize thin volume, extreme volatility, or manipulation risk.
+- Only INCLUDE if the flip is safe and the upside is meaningful.
+
+Return JSON only in this exact format:
+{
+  "items": [
+    {
+      "id": 0,
+      "include": true,
+      "confidenceScore": 0,
+      "investmentGrade": "A+|A|B+|B|C|D",
+      "targetSellPrice": 0,
+      "estimatedHoldingPeriod": "2-4 weeks",
+      "suggestedInvestment": 0,
+      "volatilityRisk": "low|medium|high",
+      "reasoning": "short sentence"
+    }
+  ]
+}
+
+ITEMS:
+${batch
+  .map(
+    (s) =>
+      `- ID:${s.itemId} Name:${s.itemName} Current:${s.currentPrice} Avg90:${Math.round(
+        s.mediumTerm.avgPrice
+      )} Avg365:${Math.round(s.longTerm.avgPrice)} Deviation:${s.maxDeviation.toFixed(
+        1
+      )}% Potential:${s.reversionPotential.toFixed(1)}% Confidence:${s.confidenceScore} Liquidity:${s.liquidityScore} Bot:${
+        s.botLikelihood
+      } VolRisk:${s.volatilityRisk}`
+  )
+  .join('\n')}
+`;
+
+        const aiResponse = await client.chat.completions.create({
+          model: 'gpt-4-turbo',
+          max_tokens: 1400,
+          messages: [
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+        });
+
+        const responseText = aiResponse.choices[0]?.message.content || '';
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { items: [] };
+
+        if (Array.isArray(parsed.items)) {
+          parsed.items.forEach((decision: AiOpportunityDecision) => {
+            const base = batch.find((b) => b.itemId === decision.id);
+            if (!base) return;
+            aiAnalyzedCount += 1;
+
+            if (!decision.include) {
+              return; // Not cached, reanalyze next refresh
+            }
+
+            const targetSell = decision.targetSellPrice > 0 ? decision.targetSellPrice : base.targetSellPrice;
+            const reversionPotential = ((targetSell - base.currentPrice) / base.currentPrice) * 100;
+
+            const merged: MeanReversionSignal = {
+              ...base,
+              confidenceScore: Math.max(0, Math.min(100, decision.confidenceScore)),
+              investmentGrade: decision.investmentGrade,
+              targetSellPrice: targetSell,
+              estimatedHoldingPeriod: decision.estimatedHoldingPeriod,
+              suggestedInvestment: decision.suggestedInvestment > 0 ? decision.suggestedInvestment : base.suggestedInvestment,
+              volatilityRisk: decision.volatilityRisk,
+              reasoning: decision.reasoning,
+              reversionPotential,
+            };
+
+            aiOpportunityCache.set(base.itemId, { timestamp: Date.now(), signal: merged });
+            topOpportunities.push(merged);
+          });
+        }
+      }
+    } else if (completedSignals.length > 0) {
+      // Fallback to rule-based if AI not configured
+      topOpportunities = [...topOpportunities, ...completedSignals];
+    }
+
+    // Apply minimum thresholds after AI
+    topOpportunities = topOpportunities.filter(
+      (s) => s.confidenceScore >= minConfidence && s.reversionPotential >= minPotential
     );
-    
-    console.log(`📊 Filtering: ${completedSignals.length} analyzed → ${viableSignals.length} viable (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
-    
-    const rankedSignals = rankInvestmentOpportunities(viableSignals);
-    const topOpportunities = rankedSignals; // Return all viable opportunities
-    
-    console.log(`✅ Found ${topOpportunities.length} viable opportunities`);
+
+    console.log(
+      `✅ Found ${topOpportunities.length} AI-approved opportunities (AI analyzed: ${aiAnalyzedCount}, cached: ${cachedSignals.length})`
+    );
     
     // Calculate summary statistics
     const summary = {
       totalAnalyzed: priorityItems.length,
-      viableOpportunities: viableSignals.length,
-      avgConfidence: viableSignals.length > 0
-        ? viableSignals.reduce((sum, s) => sum + s.confidenceScore, 0) / viableSignals.length
+      viableOpportunities: topOpportunities.length,
+      avgConfidence: topOpportunities.length > 0
+        ? topOpportunities.reduce((sum, s) => sum + s.confidenceScore, 0) / topOpportunities.length
         : 0,
-      avgPotential: viableSignals.length > 0
-        ? viableSignals.reduce((sum, s) => sum + s.reversionPotential, 0) / viableSignals.length
+      avgPotential: topOpportunities.length > 0
+        ? topOpportunities.reduce((sum, s) => sum + s.reversionPotential, 0) / topOpportunities.length
         : 0,
-      totalSuggestedInvestment: viableSignals.reduce((sum, s) => sum + s.suggestedInvestment, 0),
+      totalSuggestedInvestment: topOpportunities.reduce((sum, s) => sum + s.suggestedInvestment, 0),
       gradeDistribution: {
-        'A+': viableSignals.filter(s => s.investmentGrade === 'A+').length,
-        'A': viableSignals.filter(s => s.investmentGrade === 'A').length,
-        'B+': viableSignals.filter(s => s.investmentGrade === 'B+').length,
-        'B': viableSignals.filter(s => s.investmentGrade === 'B').length,
-        'C': viableSignals.filter(s => s.investmentGrade === 'C').length,
+        'A+': topOpportunities.filter(s => s.investmentGrade === 'A+').length,
+        'A': topOpportunities.filter(s => s.investmentGrade === 'A').length,
+        'B+': topOpportunities.filter(s => s.investmentGrade === 'B+').length,
+        'B': topOpportunities.filter(s => s.investmentGrade === 'B').length,
+        'C': topOpportunities.filter(s => s.investmentGrade === 'C').length,
       }
     };
     
