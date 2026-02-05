@@ -142,14 +142,15 @@ export async function GET(request: Request) {
       const batches = chunkArray(completedSignals, Math.max(10, batchSize));
 
       for (const batch of batches) {
-        const prompt = `You are an OSRS Grand Exchange flipping strategist. Use the user's mean-reversion strategy.
+        const prompt = `You are an elite OSRS Grand Exchange flipping strategist. Apply the user's mean-reversion strategy with strict risk control.
 
-STRATEGY RULES (must follow):
-- Prefer items 10–30% below medium/long-term averages.
-- Avoid structural downtrends and value traps.
-- Strong bot-fed supply + high liquidity are required.
-- Penalize thin volume, extreme volatility, or manipulation risk.
-- Only INCLUDE if the flip is safe and the upside is meaningful.
+      STRATEGY RULES (must follow):
+      - Prefer items 10–30% below 90d/365d averages (mean-reversion window).
+      - Reject structural downtrends or value traps (big drawdowns without support).
+      - Require strong liquidity and stable bot-fed supply.
+      - Penalize extreme volatility or thin volume.
+      - Favor multi-timeframe alignment: short-term stabilizing and long-term undervalued.
+      - Only INCLUDE if risk is controlled and upside is meaningful.
 
 Return JSON only in this exact format:
 {
@@ -174,11 +175,15 @@ ${batch
     (s) =>
       `- ID:${s.itemId} Name:${s.itemName} Current:${s.currentPrice} Avg90:${Math.round(
         s.mediumTerm.avgPrice
-      )} Avg365:${Math.round(s.longTerm.avgPrice)} Deviation:${s.maxDeviation.toFixed(
+      )} Avg365:${Math.round(s.longTerm.avgPrice)} Dev7:${s.shortTerm.currentDeviation.toFixed(
         1
-      )}% Potential:${s.reversionPotential.toFixed(1)}% Confidence:${s.confidenceScore} Liquidity:${s.liquidityScore} Bot:${
-        s.botLikelihood
-      } VolRisk:${s.volatilityRisk}`
+      )}% Dev90:${s.mediumTerm.currentDeviation.toFixed(1)}% Dev365:${s.longTerm.currentDeviation.toFixed(
+        1
+      )}% Vol7:${s.shortTerm.volatility.toFixed(1)} Vol365:${s.longTerm.volatility.toFixed(
+        1
+      )} Potential:${s.reversionPotential.toFixed(1)}% Confidence:${s.confidenceScore} Liquidity:${s.liquidityScore} Supply:${
+        s.supplyStability
+      } Bot:${s.botLikelihood} VolRisk:${s.volatilityRisk}`
   )
   .join('\n')}
 `;

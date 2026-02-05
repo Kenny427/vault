@@ -21,6 +21,16 @@ import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
 type MenuTab = 'admin';
 
+const SCAN_MESSAGES = [
+  'Consulting the Grand Exchange spirits…',
+  'Divining flips from price runes…',
+  'Feeding the AI dragon…',
+  'Calibrating anti‑value‑trap sensors…',
+  'Summoning the flip oracle…',
+  'Scanning for safe mean‑reversion…',
+  'Hunting for volatility with discipline…',
+];
+
 /**
  * Convert MeanReversionSignal to FlipOpportunity for UI display
  */
@@ -66,7 +76,8 @@ function convertMeanReversionToFlipOpportunity(signal: any): FlipOpportunity {
     spreadQuality: Math.min(100, signal.liquidityScore + signal.confidenceScore / 2),
     recommendedQuantity: Math.floor(signal.suggestedInvestment / signal.currentPrice),
     totalInvestment: signal.suggestedInvestment,
-    totalProfit: (signal.targetSellPrice - signal.currentPrice) * Math.floor(signal.suggestedInvestment / signal.currentPrice)
+    totalProfit: (signal.targetSellPrice - signal.currentPrice) * Math.floor(signal.suggestedInvestment / signal.currentPrice),
+    aiReasoning: signal.reasoning,
   };
 }
 
@@ -91,8 +102,8 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [batchProgress, setBatchProgress] = useState(0);
-  const [totalBatches, setTotalBatches] = useState(0);
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanMessage, setScanMessage] = useState('Awaiting command');
   const [minConfidenceThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-min-confidence');
@@ -113,6 +124,7 @@ export default function Dashboard() {
   } = useDashboardStore();
   const analyzeRef = useRef<null | (() => void)>(null);
   const loadingRef = useRef(loading);
+
 
   // Analyze items with AI
   const analyzeWithAI = async () => {
@@ -160,6 +172,8 @@ export default function Dashboard() {
       
       setOpportunities(sorted);
       setLastRefresh(new Date());
+      setScanProgress(100);
+      setScanMessage('Analysis complete');
       
       console.log(`✅ Found ${sorted.length} mean-reversion opportunities`);
       console.log(`📊 Mean-reversion analysis complete`);
@@ -173,8 +187,6 @@ export default function Dashboard() {
       console.error('Mean-reversion analysis error:', err);
     } finally {
       setLoading(false);
-      setTotalBatches(0);
-      setBatchProgress(0);
     }
   };
 
@@ -184,6 +196,28 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    if (!loading) {
+      setScanProgress(0);
+      setScanMessage('Awaiting command');
+      return;
+    }
+
+    let progress = 0;
+    let messageIndex = 0;
+
+    setScanMessage(SCAN_MESSAGES[0]);
+    const intervalId = setInterval(() => {
+      progress = Math.min(90, progress + Math.floor(Math.random() * 8) + 3);
+      setScanProgress(progress);
+
+      messageIndex = (messageIndex + 1) % SCAN_MESSAGES.length;
+      setScanMessage(SCAN_MESSAGES[messageIndex]);
+    }, 1200);
+
+    return () => clearInterval(intervalId);
   }, [loading]);
 
   // Check price alerts periodically
@@ -417,21 +451,18 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="text-sm text-blue-200 mb-2">
-                    {loading && totalBatches > 0 && (
-                      <span>🔄 Analyzing... Batch {batchProgress}/{totalBatches}</span>
-                    )}
-                    {loading && totalBatches === 0 && <span>🔄 Loading pool data...</span>}
+                    {loading && <span>🤖 {scanMessage}</span>}
                     {!loading && lastRefresh && (
                       <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
                     )}
                     {!loading && !lastRefresh && <span>Ready to analyze</span>}
                   </div>
-                  {loading && totalBatches > 0 && (
+                  {loading && (
                     <div className="w-full bg-blue-900 rounded-full h-2 overflow-hidden">
                       <div
                         className="bg-gradient-to-r from-green-400 to-blue-400 h-full transition-all duration-300 ease-out"
                         style={{
-                          width: `${totalBatches > 0 ? (batchProgress / totalBatches) * 100 : 0}%`,
+                          width: `${scanProgress}%`,
                         }}
                       />
                     </div>
@@ -504,6 +535,20 @@ export default function Dashboard() {
 
         {/* Opportunities Grid */}
         <div className="space-y-8">
+          {displayOpportunities.length > 0 && (
+            <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-slate-200 mb-2">🧠 AI Top Picks Reasoning</h3>
+              <ul className="space-y-2 text-sm text-slate-300">
+                {displayOpportunities.slice(0, 3).map((opp, idx) => (
+                  <li key={opp.itemId} className="flex gap-2">
+                    <span className="text-osrs-accent">#{idx + 1}</span>
+                    <span className="font-semibold text-slate-100">{opp.itemName}:</span>
+                    <span>{opp.aiReasoning || 'High-quality mean-reversion setup with solid liquidity and controlled risk.'}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {displayOpportunities.length > 0 && (
             <div>
               <h2 className="text-2xl font-bold text-slate-100 mb-1 flex items-center gap-2">

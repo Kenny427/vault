@@ -66,6 +66,9 @@ export interface FlipOpportunity {
   recommendedQuantity: number; // Suggested buy quantity
   totalInvestment: number; // Total gp needed
   totalProfit: number; // Total expected profit
+
+  // Optional AI context
+  aiReasoning?: string;
 }
 
 /**
