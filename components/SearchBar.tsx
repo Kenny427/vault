@@ -15,6 +15,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   const [isLoading, setIsLoading] = useState(false);
   const debounceTimer = useRef<NodeJS.Timeout>();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const isSelectingRef = useRef(false);
 
   const { setSearchQuery } = useDashboardStore();
 
@@ -102,10 +103,12 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   };
 
   const handleBlur = () => {
-    // Small delay to allow onClick to fire first
-    setTimeout(() => {
-      setIsOpen(false);
-    }, 150);
+    // Don't close if we're in the process of selecting an item
+    if (isSelectingRef.current) {
+      isSelectingRef.current = false;
+      return;
+    }
+    setIsOpen(false);
   };
 
   useEffect(() => {
@@ -153,6 +156,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                isSelectingRef.current = true;
                 handleSelect(item);
               }}
               className="w-full px-4 py-3 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
