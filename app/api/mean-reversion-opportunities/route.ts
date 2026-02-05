@@ -246,6 +246,81 @@ ${batch
       `✅ Found ${topOpportunities.length} AI-approved opportunities (analyzed: ${aiAnalyzedCount}, approved: ${aiApprovedCount})`
     );
     
+    // Generate detailed reasoning for top 3 opportunities
+    let detailedReasonings: { itemId: number; itemName: string; detailedAnalysis: string }[] = [];
+    
+    if (topOpportunities.length > 0 && process.env.OPENAI_API_KEY) {
+      const top3 = topOpportunities.slice(0, 3);
+      
+      const detailPrompt = `You are analyzing OSRS Grand Exchange flipping opportunities. Provide in-depth analysis for these items:
+
+${top3.map(s => 
+  `- ID:${s.itemId} ${s.itemName}
+    Current: ${s.currentPrice}gp | 90d avg: ${Math.round(s.mediumTerm.avgPrice)}gp | 365d avg: ${Math.round(s.longTerm.avgPrice)}gp
+    Deviation: 7d=${s.shortTerm.currentDeviation.toFixed(1)}% | 90d=${s.mediumTerm.currentDeviation.toFixed(1)}% | 365d=${s.longTerm.currentDeviation.toFixed(1)}%
+    Target: ${s.targetSellPrice}gp | Potential: ${s.reversionPotential.toFixed(1)}% | Grade: ${s.investmentGrade}
+    Volatility: ${s.volatilityRisk} | Liquidity: ${s.liquidityScore}/10 | Supply: ${s.supplyStability}`
+).join('\n\n')}
+
+For EACH item, provide a 3-4 sentence detailed analysis covering:
+1. Why the price is undervalued (multi-timeframe context)
+2. Key support/resistance levels and market dynamics
+3. Risk factors to watch
+4. Expected timeline and catalysts for reversal
+
+Format as JSON:
+{
+  "itemId": number,
+  "detailedAnalysis": "3-4 sentences of in-depth analysis"
+}`;
+
+      const detailResponse = await client.chat.completions.create({
+        model: 'gpt-4-turbo',
+        max_tokens: 800,
+        messages: [
+          {
+            role: 'user',
+            content: detailPrompt,
+          },
+        ],
+      });
+
+      const detailText = detailResponse.choices[0]?.message.content || '';
+      
+      try {
+        // Try to parse JSON array first
+        const jsonMatch = detailText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(parsed)) {
+            detailedReasonings = parsed.map((item: any) => ({
+              itemId: item.itemId,
+              itemName: top3.find(t => t.itemId === item.itemId)?.itemName || '',
+              detailedAnalysis: item.detailedAnalysis,
+            }));
+          }
+        } else {
+          // Try to parse individual objects separated by newlines
+          const objects = detailText.split(/}\s*{/);
+          objects.forEach((obj, idx) => {
+            const wrapped = (idx === 0 ? obj : '{' + obj) + (idx === objects.length - 1 ? '}' : '');
+            try {
+              const parsed = JSON.parse(wrapped);
+              detailedReasonings.push({
+                itemId: parsed.itemId,
+                itemName: top3.find(t => t.itemId === parsed.itemId)?.itemName || '',
+                detailedAnalysis: parsed.detailedAnalysis,
+              });
+            } catch {
+              // Skip parsing errors
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Failed to parse detailed reasoning:', e);
+      }
+    }
+    
     // Calculate summary statistics
     const summary = {
       totalAnalyzed: priorityItems.length,
@@ -272,6 +347,7 @@ ${batch
     return NextResponse.json({
       success: true,
       opportunities: topOpportunities,
+      detailedReasonings,
       summary,
       filters: {
         minConfidence,

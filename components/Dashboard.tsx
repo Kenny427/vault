@@ -10,6 +10,7 @@ import FloatingChat from './FloatingChat';
 import PoolManager from './PoolManager';
 import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
+import DetailedAnalysisModal from './DetailedAnalysisModal';
 import KeyboardShortcuts from './KeyboardShortcuts';
 import { FlipOpportunity, FlipType } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
@@ -107,6 +108,8 @@ export default function Dashboard() {
   const [analysisStats, setAnalysisStats] = useState<{ aiAnalyzedCount: number; aiApprovedCount: number; preFilteredCount: number } | null>(null);
   const [totalAnalyzed, setTotalAnalyzed] = useState<number | null>(null);
   const [showRefreshWarning, setShowRefreshWarning] = useState(false);
+  const [detailedAnalyses, setDetailedAnalyses] = useState<{ itemId: number; itemName: string; detailedAnalysis: string }[]>([]);
+  const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   const [minConfidenceThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-min-confidence');
@@ -182,6 +185,11 @@ export default function Dashboard() {
           preFilteredCount: data.summary.preFilteredCount || 0,
         });
         setTotalAnalyzed(data.summary.totalAnalyzed || 0);
+      }
+
+      // Store detailed analyses
+      if (data.detailedReasonings && Array.isArray(data.detailedReasonings)) {
+        setDetailedAnalyses(data.detailedReasonings);
       }
 
       // Convert MeanReversionSignals to FlipOpportunities for UI
@@ -512,6 +520,14 @@ export default function Dashboard() {
                   >
                     {loading ? 'Analyzing...' : '🔄 Refresh Analysis'}
                   </button>
+                  {!loading && detailedAnalyses.length > 0 && (
+                    <button
+                      onClick={() => setShowDetailedAnalysis(true)}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-medium text-sm transition-colors"
+                    >
+                      📊 View Analysis
+                    </button>
+                  )}
                 </div>
               </div>
               {error && (
@@ -646,6 +662,13 @@ export default function Dashboard() {
         {/* Menu Tab: Pool Manager */}
         {activeMenuTab === 'admin' && <PoolManager />}
       </main>
+
+      {/* Detailed Analysis Modal */}
+      <DetailedAnalysisModal
+        isOpen={showDetailedAnalysis}
+        onClose={() => setShowDetailedAnalysis(false)}
+        analyses={detailedAnalyses}
+      />
 
       {/* Floating AI Chat Widget */}
       <FloatingChat />
