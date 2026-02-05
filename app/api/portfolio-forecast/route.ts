@@ -58,6 +58,8 @@ export async function POST(request: Request) {
           return null; // Skip items without sufficient data
         }
 
+        const currentPriceValue = Math.round((currentPrice.high + currentPrice.low) / 2);
+
         // Calculate historical metrics
         const prices = history365.map((h) => (h.avgHighPrice + h.avgLowPrice) / 2);
         const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
@@ -84,7 +86,7 @@ export async function POST(request: Request) {
           itemName: item.itemName,
           quantity: item.quantity,
           buyPrice: item.buyPrice,
-          currentPrice: currentPrice,
+          currentPrice: currentPriceValue,
           historicalAvg: avg,
           historicalStdDev: stdDev,
           recentAvg,
