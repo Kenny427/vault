@@ -104,14 +104,16 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Only close if clicking completely outside the wrapper
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    // Use click instead of mousedown so it fires after onClick handlers
+    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
@@ -141,7 +143,6 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
         <div 
           ref={dropdownRef}
           className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
-          onMouseDown={(e) => e.stopPropagation()}
         >
           {query.length === 0 && (
             <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-700 sticky top-0 bg-slate-900">
@@ -153,12 +154,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
               key={`${item.id}-${item.name}`}
               onClick={(e) => {
                 e.preventDefault();
-                e.stopPropagation();
                 handleSelect(item);
-              }}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
               }}
               className="w-full px-4 py-3 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
             >

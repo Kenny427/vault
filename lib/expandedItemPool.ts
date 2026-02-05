@@ -23,10 +23,8 @@ export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   { id: 560, name: "Death rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "pvm" },
   { id: 565, name: "Blood rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "pvm" },
   { id: 566, name: "Soul rune", category: "runes", botLikelihood: "very_high", volumeTier: "high", demandType: "pvm" },
-  { id: 562, name: "Chaos rune", category: "runes", botLikelihood: "very_high", volumeTier: "high", demandType: "pvm" },
   { id: 21880, name: "Wrath rune", category: "runes", botLikelihood: "high", volumeTier: "high", demandType: "pvm" },
   { id: 9075, name: "Astral rune", category: "runes", botLikelihood: "very_high", volumeTier: "high", demandType: "constant" },
-  { id: 555, name: "Water rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "constant" },
   
   // === AMMUNITION (PvM Essential) ===
   { id: 11875, name: "Broad bolts", category: "ammo", botLikelihood: "very_high", volumeTier: "massive", demandType: "pvm" },
