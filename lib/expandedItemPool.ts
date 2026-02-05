@@ -148,6 +148,18 @@ export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   { id: 1391, name: "Battlestaff", category: "pvm_drops", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 892, name: "Rune arrow", category: "pvm_drops", botLikelihood: "high", volumeTier: "high", demandType: "pvm" },
   { id: 314, name: "Feather", category: "pvm_drops", botLikelihood: "very_high", volumeTier: "massive", demandType: "skilling" },
+  
+  // === NEW ADDITIONS ===
+  { id: 807, name: "Yew longbow", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 809, name: "Yew longbow(u)", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 3971, name: "Magic longbow", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 3973, name: "Magic longbow(u)", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 9072, name: "Air orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 9073, name: "Water orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 9074, name: "Fire orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 9076, name: "Earth orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 1634, name: "Dynamite", category: "secondaries", botLikelihood: "medium", volumeTier: "medium", demandType: "skilling" },
+  { id: 30072, name: "Aldarium ore", category: "resources", botLikelihood: "medium", volumeTier: "medium", demandType: "skilling" },
 ];
 
 

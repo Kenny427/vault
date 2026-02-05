@@ -146,7 +146,10 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
           {suggestions.map((item) => (
             <button
               key={`${item.id}-${item.name}`}
-              onClick={() => handleSelect(item)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(item);
+              }}
               className="w-full px-4 py-3 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
             >
               <div className="font-medium text-slate-100">{item.name}</div>
