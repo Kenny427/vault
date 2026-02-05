@@ -27,8 +27,17 @@ export default function SetAlertModal({ itemId, itemName, currentPrice, onClose 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-900 border-2 border-osrs-accent/30 rounded-lg max-w-md w-full">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+    >
+      <div 
+        className="bg-slate-900 border-2 border-osrs-accent/30 rounded-lg max-w-md w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-6">
           <h2 className="text-2xl font-bold text-slate-100 mb-1">Set Price Alert</h2>
           <p className="text-slate-400 text-sm mb-6">{itemName}</p>
@@ -127,7 +136,10 @@ export default function SetAlertModal({ itemId, itemName, currentPrice, onClose 
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={onClose}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose();
+                }}
                 className="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-lg transition-colors"
               >
                 Cancel
