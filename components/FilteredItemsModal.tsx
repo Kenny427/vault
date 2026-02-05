@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
 
 interface FilteredItem {
   itemId: number;
