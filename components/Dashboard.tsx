@@ -204,12 +204,6 @@ export default function Dashboard() {
   }, [opportunities, activeTab, checkAlerts]);
 
   // Load and analyze watchlist items and popular items
-  useEffect(() => {
-    // Fetch fresh data when entering opportunities tab
-    if (activeTab === 'opportunities' && analyzeRef.current && !loadingRef.current) {
-      analyzeRef.current();
-    }
-  }, [activeTab]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -239,17 +233,7 @@ export default function Dashboard() {
     }
   }, [activeTab]);
 
-  useEffect(() => {
-    const runRefresh = () => {
-      if (!loadingRef.current && analyzeRef.current) {
-        analyzeRef.current();
-      }
-    };
 
-    // Auto-refresh every 5 minutes in background, regardless of active tab
-    const intervalId = setInterval(runRefresh, 5 * 60 * 1000);
-    return () => clearInterval(intervalId);
-  }, []);
 
   // Filter opportunities based on settings
   let filteredOpportunities = opportunities.filter(opp => {
