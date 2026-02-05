@@ -89,12 +89,10 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   };
 
   const handleSelect = (item: ItemData) => {
-    const selectedItem = item;
+    onItemSelect(item);
     setQuery('');
     setSuggestions([]);
     setIsOpen(false);
-    // Call the callback immediately without setTimeout
-    onItemSelect(selectedItem);
   };
 
   const handleFocus = async () => {
@@ -105,11 +103,19 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   };
 
   useEffect(() => {
-    if (debounceTimer.current) {
-      return () => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
-      };
-    }
+      }
+    };
   }, []);
 
   return (
@@ -135,7 +141,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
         <div 
           ref={dropdownRef}
           className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
-          onMouseLeave={() => setIsOpen(false)}
+          onMouseDown={(e) => e.stopPropagation()}
         >
           {query.length === 0 && (
             <div className="px-4 py-2 text-xs text-slate-500 border-b border-slate-700 sticky top-0 bg-slate-900">
@@ -145,13 +151,16 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
           {suggestions.map((item) => (
             <button
               key={`${item.id}-${item.name}`}
-              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Don't close dropdown yet - let it close naturally
+                onItemSelect(item);
+              }}
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                // Keep the dropdown open and focused while clicking
               }}
-              onClick={() => handleSelect(item)}
               className="w-full px-4 py-3 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
             >
               <div className="font-medium text-slate-100">{item.name}</div>
