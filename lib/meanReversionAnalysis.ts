@@ -349,8 +349,6 @@ function detectTrendReversal(priceData: PriceDataPoint[]): {
 
   // Check if recent trend is less negative or positive vs previous
   const recentTrend = calculateTrendSlope(recent30);
-  const previousTrend = calculateTrendSlope(previous30);
-
   // For a true reversal, need recent trend to be POSITIVE (uptrend), not just less negative
   // A slowdown in decline is not a reversal - it's still a downtrend
   const isActuallyReversing = recentTrend.slope > 0.1; // Must be actually going up
