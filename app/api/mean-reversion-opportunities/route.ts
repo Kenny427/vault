@@ -17,6 +17,10 @@ const client = new OpenAI({
 
 const aiOpportunityCache = new Map<number, { timestamp: number; signal: MeanReversionSignal }>();
 
+export function clearOpportunitiesCache() {
+  aiOpportunityCache.clear();
+}
+
 function isCacheValid(entry: { timestamp: number }, ttlMs: number) {
   return Date.now() - entry.timestamp < ttlMs;
 }
@@ -309,7 +313,12 @@ ${batch
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { itemIds } = body;
+    const { itemIds, action } = body;
+
+    if (action === 'clearCache') {
+      aiOpportunityCache.clear();
+      return NextResponse.json({ success: true, cleared: true });
+    }
     
     if (!itemIds || !Array.isArray(itemIds)) {
       return NextResponse.json(
