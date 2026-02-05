@@ -150,7 +150,6 @@ export async function GET(request: Request) {
     const botFilter = searchParams.get('botLikelihood');
     const batchSize = parseInt(searchParams.get('batchSize') || '40');
     const cacheHours = parseInt(searchParams.get('cacheHours') || '24');
-    const skipLowSignal = searchParams.get('skipLowSignal') !== 'false';
     
     console.log(`🔍 Analyzing AI-first opportunities (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
     
@@ -224,19 +223,16 @@ export async function GET(request: Request) {
     const allSignals = await Promise.all(analysisPromises);
     let completedSignals = allSignals.filter((s): s is MeanReversionSignal => s !== null);
 
-    // Apply STRICT filters before sending to AI (avoid wasting credits on items AI will reject)
+    // Apply reasonable filters before sending to AI (avoid obvious rejections but let AI decide edge cases)
     completedSignals = completedSignals.filter((s) => {
-      // Must have minimum viable metrics
-      if (s.confidenceScore < 30 || s.reversionPotential < 8) return false;
-      
       // Hard guardrail: only items truly below medium & long-term averages
       if (s.currentPrice >= s.mediumTerm.avgPrice || s.currentPrice >= s.longTerm.avgPrice) return false;
       
-      // Must have decent liquidity
-      if (s.liquidityScore < 5) return false;
+      // Must have minimum signal strength (AI can override if sees something we miss)
+      if (s.confidenceScore < 20 || s.reversionPotential < 5) return false;
       
-      // Avoid high volatility traps
-      if (s.volatilityRisk === 'high' && s.confidenceScore < 40) return false;
+      // Must have some liquidity (can't flip illiquid items)
+      if (s.liquidityScore < 3) return false;
       
       return true;
     });
