@@ -334,7 +334,7 @@ ${batch
     );
 
     console.log(
-      `✅ Found ${topOpportunities.length} AI-approved opportunities (AI analyzed: ${aiAnalyzedCount}, cached: ${cachedSignals.length})`
+      `✅ Found ${topOpportunities.length} AI-approved opportunities (AI analyzed: ${aiAnalyzedCount}, cached: ${cachedSignalList.length})`
     );
     
     // Calculate summary statistics
