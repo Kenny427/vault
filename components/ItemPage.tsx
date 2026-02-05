@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import PriceChart from './PriceChart';
+import SearchBar from './SearchBar';
 import { getItemDailyVolume, getItemDetails, getItemHistory, getItemPrice, resolveIconUrl } from '@/lib/api/osrs';
 import { useDashboardStore } from '@/lib/store';
 
@@ -167,6 +168,10 @@ export default function ItemPage() {
               Wiki
             </a>
           ) : null}
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+          <SearchBar onItemSelect={(item) => router.push(`/item/${item.id}`)} />
         </div>
 
         <div className="flex items-center gap-4">

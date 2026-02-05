@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { usePortfolioStore } from '@/lib/portfolioStore';
 import PortfolioSummary from './PortfolioSummary';
 import AddPortfolioItemModal from './AddPortfolioItemModal';
@@ -10,6 +11,7 @@ import RecordTradeModal from './RecordTradeModal';
 import SetAlertModal from './SetAlertModal';
 import TradeHistory from './TradeHistory';
 import PendingTransactionsModal from './PendingTransactionsModal';
+import SearchBar from './SearchBar';
 import { getBatchPrices } from '@/lib/api/osrs';
 import { useChat } from '@/lib/chatContext';
 import { usePendingTransactionsStore } from '@/lib/pendingTransactionsStore';
@@ -37,6 +39,7 @@ interface PortfolioSummaryAI {
 }
 
 export default function Portfolio() {
+  const router = useRouter();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showPendingTransactions, setShowPendingTransactions] = useState(false);
@@ -179,6 +182,10 @@ export default function Portfolio() {
             Add Investment
           </button>
         </div>
+      </div>
+
+      <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+        <SearchBar onItemSelect={(item) => router.push(`/item/${item.id}`)} />
       </div>
 
       {showTradeHistory ? (

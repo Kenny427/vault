@@ -14,6 +14,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const debounceTimer = useRef<NodeJS.Timeout>();
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
   const { setSearchQuery } = useDashboardStore();
 
@@ -84,7 +85,15 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   };
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
@@ -92,7 +101,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   }, []);
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" ref={wrapperRef}>
       <div className="relative">
         <input
           type="text"

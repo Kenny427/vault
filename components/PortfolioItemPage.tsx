@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { usePortfolioStore } from '@/lib/portfolioStore';
 import { useDashboardStore } from '@/lib/store';
 import { useTradeHistoryStore } from '@/lib/tradeHistoryStore';
 import PriceChart from './PriceChart';
+import SearchBar from './SearchBar';
 import { getItemDetails, getItemHistory, getItemPrice, resolveIconUrl } from '@/lib/api/osrs';
 
 const TIMEFRAMES = [
@@ -21,6 +22,7 @@ const TIMEFRAMES = [
 type Timeframe = typeof TIMEFRAMES[number]['value'];
 
 export default function PortfolioItemPage() {
+  const router = useRouter();
   const params = useParams();
   const itemId = Number(params?.id);
   const items = usePortfolioStore((state) => state.items);
@@ -169,6 +171,9 @@ export default function PortfolioItemPage() {
       <div className="min-h-screen bg-slate-950 text-slate-100">
         <div className="max-w-5xl mx-auto px-4 py-10 space-y-4">
           <Link href="/" className="text-sm text-slate-300">← Back to portfolio</Link>
+          <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+            <SearchBar onItemSelect={(item) => router.push(`/item/${item.id}`)} />
+          </div>
           <div className="bg-slate-900 border border-slate-700 rounded-lg p-6">
             <p className="text-slate-400">No portfolio lots found for this item.</p>
           </div>
@@ -209,6 +214,10 @@ export default function PortfolioItemPage() {
               {isFavorite ? '★ Favorited' : '☆ Add to Favorites'}
             </button>
           </div>
+        </div>
+
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
+          <SearchBar onItemSelect={(item) => router.push(`/item/${item.id}`)} />
         </div>
 
         <div className="flex items-center gap-4">
