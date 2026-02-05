@@ -167,7 +167,8 @@ function calculateConfidence(
   deviation: number,
   liquidityScore: number,
   supplyStability: number,
-  volatilityRisk: 'low' | 'medium' | 'high'
+  volatilityRisk: 'low' | 'medium' | 'high',
+  downtrendPenalty: number = 0
 ): number {
   // Start at 0 - must EARN the score
   let confidence = 0;
@@ -188,6 +189,12 @@ function calculateConfidence(
     confidence = Math.max(25, confidence - 10); // Moderate penalty
   } else if (volatilityRisk === 'low') {
     confidence = Math.min(100, confidence + 10); // Small bonus
+  }
+
+  // DOWNTREND PENALTY: Critical - prevents value traps
+  // Applied HARD - don't just reduce, can eliminate opportunities
+  if (downtrendPenalty > 0) {
+    confidence = Math.max(0, confidence - downtrendPenalty);
   }
   
   // SUPPLY STABILITY: Bonus for good stability, penalty for poor
@@ -253,7 +260,8 @@ function generateRecommendation(
   reversionPotential: number,
   confidenceScore: number,
   botLikelihood: string,
-  maxDeviation: number
+  maxDeviation: number,
+  downtrendReasoning?: string
 ): string {
   const reasons: string[] = [];
   
@@ -263,6 +271,10 @@ function generateRecommendation(
   
   if (botLikelihood === 'very high' || botLikelihood === 'high') {
     reasons.push('Heavily botted item with stable supply - predictable reversion');
+  }
+  
+  if (downtrendReasoning && !downtrendReasoning.includes('No strong downtrend') && !downtrendReasoning.includes('No significant')) {
+    reasons.push(downtrendReasoning);
   }
   
   if (reversionPotential > 30) {
@@ -278,6 +290,159 @@ function generateRecommendation(
   }
   
   return reasons.join('. ') + '.';
+}
+
+/**
+ * Calculate trend slope using linear regression
+ * Returns: { slope, direction, strength (0-100) }
+ */
+function calculateTrendSlope(prices: number[]): {
+  slope: number;
+  direction: 'up' | 'down' | 'flat';
+  strength: number;
+} {
+  if (prices.length < 2) {
+    return { slope: 0, direction: 'flat', strength: 0 };
+  }
+
+  // Linear regression to find trend
+  const n = prices.length;
+  const x = Array.from({ length: n }, (_, i) => i);
+  const y = prices;
+
+  const xMean = x.reduce((a, b) => a + b) / n;
+  const yMean = y.reduce((a, b) => a + b) / n;
+
+  const numerator = x.reduce((sum, xi, i) => sum + (xi - xMean) * (y[i] - yMean), 0);
+  const denominator = x.reduce((sum, xi) => sum + (xi - xMean) ** 2, 0);
+
+  const slope = denominator === 0 ? 0 : numerator / denominator;
+
+  // Strength: how well the trend fits (R-squared proxy)
+  const avgPrice = yMean;
+  const ssTotal = y.reduce((sum, yi) => sum + (yi - avgPrice) ** 2, 0);
+  const predicted = x.map(xi => yMean + slope * (xi - xMean));
+  const ssResidual = y.reduce((sum, yi, i) => sum + (yi - predicted[i]) ** 2, 0);
+  const rSquared = ssTotal === 0 ? 0 : 1 - ssResidual / ssTotal;
+  const strength = Math.max(0, Math.min(100, rSquared * 100));
+
+  const direction = slope > 0.1 ? 'up' : slope < -0.1 ? 'down' : 'flat';
+
+  return { slope, direction, strength: Math.round(strength) };
+}
+
+/**
+ * Detect if price is stabilizing or reversing from a downtrend
+ */
+function detectTrendReversal(priceData: PriceDataPoint[]): {
+  isReversing: boolean;
+  reversingStrength: number; // 0-100
+  foundSupport: boolean;
+} {
+  if (priceData.length < 60) {
+    return { isReversing: false, reversingStrength: 0, foundSupport: false };
+  }
+
+  // Get recent 30 prices (30 days) vs older 30 prices (days 30-60)
+  const recent30 = priceData.slice(-30).map(p => (p.avgHighPrice + p.avgLowPrice) / 2);
+  const previous30 = priceData.slice(-60, -30).map(p => (p.avgHighPrice + p.avgLowPrice) / 2);
+
+  // Check if recent trend is less negative or positive vs previous
+  const recentTrend = calculateTrendSlope(recent30);
+  const previousTrend = calculateTrendSlope(previous30);
+
+  // For a true reversal, need recent trend to be POSITIVE (uptrend), not just less negative
+  // A slowdown in decline is not a reversal - it's still a downtrend
+  const isActuallyReversing = recentTrend.slope > 0.1; // Must be actually going up
+  const reversingStrength = isActuallyReversing ? Math.min(100, Math.max(recentTrend.slope * 50, 20)) : 0;
+
+  // Check for support: low volatility near bottom, prices stabilizing
+  // But only count as support if recent trend is flat or up (not still downtrending)
+  const recentLows = recent30.slice(-10);
+  const lowestRecent = Math.min(...recentLows);
+  const highestRecent = Math.max(...recentLows);
+  const rangePercent = ((highestRecent - lowestRecent) / lowestRecent) * 100;
+  const foundSupport = rangePercent < 5 && recentTrend.slope >= -0.05; // Support only if flat/up trend
+
+  const isReversing = isActuallyReversing || foundSupport;
+
+  return { isReversing, reversingStrength: Math.round(reversingStrength), foundSupport };
+}
+
+/**
+ * Calculate downtrend severity and penalty
+ */
+function assessDowntrendPenalty(priceData: PriceDataPoint[]): {
+  penalty: number; // 0-100, penalty to confidence
+  reasoning: string;
+} {
+  if (priceData.length < 90) {
+    return { penalty: 0, reasoning: 'Insufficient historical data' };
+  }
+
+  // Get 365-day trend
+  const allPrices = priceData.map(p => (p.avgHighPrice + p.avgLowPrice) / 2);
+  const trend = calculateTrendSlope(allPrices);
+
+  // Check for downtrend
+  if (trend.direction !== 'down') {
+    return { penalty: 0, reasoning: 'No strong downtrend detected' };
+  }
+
+  // Calculate percentage decline from peak
+  const peak = Math.max(...allPrices);
+  const current = allPrices[allPrices.length - 1];
+  const declinePercent = ((peak - current) / peak) * 100;
+
+  console.log(`[DOWNTREND] Decline: ${declinePercent.toFixed(1)}% from peak, Trend strength: ${trend.strength}%, Data points: ${priceData.length}`);
+
+  // Strong downtrend penalty: more than 20% decline with high confidence
+  if (declinePercent > 20 && trend.strength > 50) {
+    console.log(`[DOWNTREND-CHECK] Passed condition check: decline=${declinePercent.toFixed(1)} > 20 AND strength=${trend.strength} > 50`);
+    // Check if it's stabilizing (mitigates penalty)
+    const { isReversing, reversingStrength } = detectTrendReversal(priceData);
+    console.log(`[DOWNTREND-CHECK] Reversal check: isReversing=${isReversing}, reversingStrength=${reversingStrength}`);
+
+    if (isReversing && reversingStrength > 40) {
+      // Reversing, reduce penalty only if it's STRONGLY reversing AND found support
+      // Weak reversals don't override structural declines
+      if (reversingStrength > 70 && foundSupport) {
+        // Strong reversal with support - item is genuinely recovering
+        const penalty = Math.max(0, 60 - reversingStrength);
+        console.log(`[DOWNTREND-CHECK] Strong reversal (${reversingStrength}%) with support found, reduced penalty to ${penalty}`);
+        return {
+          penalty,
+          reasoning: `Strong downtrend (${declinePercent.toFixed(0)}% from peak) but showing strong reversal signs (${reversingStrength}% strength) with support`,
+        };
+      } else {
+        // Weak reversal or no support - still a risky structural decline
+        console.log(`[DOWNTREND-CHECK] Weak reversal (${reversingStrength}%) without strong support, applying full 70-point penalty`);
+        return {
+          penalty: 70,
+          reasoning: `Strong downtrend (${declinePercent.toFixed(0)}% from peak, ${trend.strength}% consistency) - likely structural decline, not mean-reversion`,
+        };
+      }
+    } else {
+      // Strong downtrend with no reversal
+      console.log(`[DOWNTREND-CHECK] Strong downtrend with no reversal, applying 70-point penalty`);
+      return {
+        penalty: 70,
+        reasoning: `Strong downtrend (${declinePercent.toFixed(0)}% from peak, ${trend.strength}% consistency) - likely structural decline, not mean-reversion`,
+      };
+    }
+  }
+
+  // Moderate downtrend
+  if (declinePercent > 10) {
+    console.log(`[DOWNTREND-CHECK] Moderate downtrend detected: ${declinePercent.toFixed(1)}% decline`);
+    return {
+      penalty: 20,
+      reasoning: `Moderate downtrend (${declinePercent.toFixed(0)}% from peak) - verify reversal signals`,
+    };
+  }
+
+  console.log(`[DOWNTREND-CHECK] No significant downtrend (decline: ${declinePercent.toFixed(1)}%)`);
+  return { penalty: 0, reasoning: 'No significant downtrend' };
 }
 
 /**
@@ -331,12 +496,20 @@ export async function analyzeMeanReversionOpportunity(
   const liquidityScore = calculateLiquidityScore(metrics30d.volumeAvg);
   const volatilityRisk = assessVolatilityRisk(metrics7d.volatility, metrics90d.volatility, currentPrice);
   
-  // Confidence calculation
+  // TREND ANALYSIS: Detect value traps
+  const { penalty: downtrendPenalty, reasoning: downtrendReasoning } = assessDowntrendPenalty(priceData);
+  
+  if (downtrendPenalty > 0) {
+    console.log(`✓ ${itemName}: Applied downtrend penalty of ${downtrendPenalty} - ${downtrendReasoning}`);
+  }
+  
+  // Confidence calculation with trend penalties
   const confidenceScore = calculateConfidence(
     maxDeviation,
     liquidityScore,
     supplyStability,
-    volatilityRisk
+    volatilityRisk,
+    downtrendPenalty
   );
   
   // DEBUG: Log detailed analysis for items with low confidence
@@ -363,7 +536,8 @@ export async function analyzeMeanReversionOpportunity(
     reversionPotential,
     confidenceScore,
     botLikelihood,
-    maxDeviation
+    maxDeviation,
+    downtrendReasoning
   );
   
   return {
