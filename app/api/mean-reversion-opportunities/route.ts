@@ -101,12 +101,28 @@ async function saveCachedSignals(rows: CacheRow[]) {
   if (rows.length === 0) return;
 
   if (supabase) {
+    console.log(`💾 Saving ${rows.length} signals to Supabase cache...`);
     const { error } = await supabase
       .from(CACHE_TABLE)
       .upsert(rows, { onConflict: 'item_id' });
 
     if (error) {
-      console.error('Cache upsert error:', error);
+      console.error('❌ Cache upsert error (table might not exist):', error);
+      console.error('💡 Run this SQL in Supabase SQL Editor:');
+      console.error(`
+        create table if not exists ai_opportunity_cache (
+          item_id bigint primary key,
+          payload jsonb not null,
+          updated_at timestamptz not null default now()
+        );
+        create index if not exists ai_opportunity_cache_updated_at on ai_opportunity_cache (updated_at);
+      `);
+      // Fall back to in-memory cache
+      rows.forEach((row) => {
+        aiOpportunityCache.set(row.item_id, { timestamp: Date.now(), signal: row.payload });
+      });
+    } else {
+      console.log(`✅ Successfully saved ${rows.length} signals to Supabase`);
     }
     return;
   }
@@ -162,6 +178,7 @@ export async function GET(request: Request) {
     );
 
     const cachedSignalList = Array.from(cachedSignals.values());
+    console.log(`♻️ Found ${cachedSignalList.length} cached items (within ${cacheHours}h TTL)`);
 
     // Fetch price data and analyze each item (AI will decide final inclusion)
     const analysisPromises = priorityItems.map(async (item) => {
