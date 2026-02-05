@@ -76,7 +76,7 @@ export default function Dashboard() {
   type PoolItem = { id: number; name: string; addedAt?: number };
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
-  const [flipTypeFilter, setFlipTypeFilter] = useState<FlipType | 'all'>('all');
+  const [flipTypeFilter] = useState<FlipType | 'all'>('all');
   const [showMenu, setShowMenu] = useState(false);
   const [activeMenuTab, setActiveMenuTab] = useState<MenuTab | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>(() => {
@@ -93,7 +93,7 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [batchProgress, setBatchProgress] = useState(0);
   const [totalBatches, setTotalBatches] = useState(0);
-  const [minConfidenceThreshold, setMinConfidenceThreshold] = useState<number>(() => {
+  const [minConfidenceThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-min-confidence');
       return saved ? Number(saved) : 45;
