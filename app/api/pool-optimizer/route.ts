@@ -176,7 +176,7 @@ ANALYSIS TASK:
 Keep response concise and analytical.
 `;
 
-    const aiResponse = await client.messages.create({
+    const aiResponse = await client.chat.completions.create({
       model: 'gpt-4-turbo',
       max_tokens: 500,
       messages: [

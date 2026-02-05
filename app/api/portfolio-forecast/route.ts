@@ -158,7 +158,7 @@ FORMAT OUTPUT AS JSON:
   ]
 }`;
 
-    const aiResponse = await client.messages.create({
+    const aiResponse = await client.chat.completions.create({
       model: 'gpt-4-turbo',
       max_tokens: 1500,
       messages: [
