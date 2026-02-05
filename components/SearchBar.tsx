@@ -15,7 +15,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   const [isLoading, setIsLoading] = useState(false);
   const debounceTimer = useRef<NodeJS.Timeout>();
   const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const isSelectingRef = useRef(false);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const { setSearchQuery } = useDashboardStore();
 
@@ -102,18 +102,16 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
     setIsOpen(true);
   };
 
-  const handleBlur = () => {
-    // Don't close if we're in the process of selecting an item
-    if (isSelectingRef.current) {
-      isSelectingRef.current = false;
-      return;
-    }
-    setIsOpen(false);
-  };
-
   useEffect(() => {
-    // Cleanup timer on unmount
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
@@ -129,7 +127,6 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
-          onBlur={handleBlur}
           placeholder="Search items or click to see popular items..."
           className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-osrs-accent transition-colors"
         />
@@ -142,6 +139,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
 
       {isOpen && suggestions.length > 0 && (
         <div 
+          ref={dropdownRef}
           className="absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
           onMouseDown={(e) => e.stopPropagation()}
         >
@@ -155,8 +153,6 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
               key={`${item.id}-${item.name}`}
               onMouseDown={(e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                isSelectingRef.current = true;
                 handleSelect(item);
               }}
               className="w-full px-4 py-3 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
