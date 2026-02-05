@@ -345,8 +345,6 @@ function detectTrendReversal(priceData: PriceDataPoint[]): {
 
   // Get recent 30 prices (30 days) vs older 30 prices (days 30-60)
   const recent30 = priceData.slice(-30).map(p => (p.avgHighPrice + p.avgLowPrice) / 2);
-  const previous30 = priceData.slice(-60, -30).map(p => (p.avgHighPrice + p.avgLowPrice) / 2);
-
   // Check if recent trend is less negative or positive vs previous
   const recentTrend = calculateTrendSlope(recent30);
   // For a true reversal, need recent trend to be POSITIVE (uptrend), not just less negative
