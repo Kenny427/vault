@@ -105,6 +105,9 @@ export default function Dashboard() {
   const [scanProgress, setScanProgress] = useState(0);
   const [scanMessage, setScanMessage] = useState('Awaiting command');
   const [cacheStats, setCacheStats] = useState<{ aiAnalyzedCount: number; cachedCount: number; cacheHours: number } | null>(null);
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  const [cacheClearError, setCacheClearError] = useState('');
+  const [cacheClearedAt, setCacheClearedAt] = useState<Date | null>(null);
   const [minConfidenceThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-min-confidence');
@@ -196,6 +199,31 @@ export default function Dashboard() {
       console.error('Mean-reversion analysis error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleClearCache = async () => {
+    if (isClearingCache) return;
+    setIsClearingCache(true);
+    setCacheClearError('');
+
+    try {
+      const response = await fetch('/api/mean-reversion-opportunities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clearCache' }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Failed to clear cache');
+      }
+
+      setCacheClearedAt(new Date());
+    } catch (err: any) {
+      setCacheClearError(err.message || 'Failed to clear cache');
+    } finally {
+      setIsClearingCache(false);
     }
   };
 
@@ -620,7 +648,32 @@ export default function Dashboard() {
         {activeTab === 'alerts' && !activeMenuTab && <PriceAlerts />}
 
         {/* Menu Tab: Pool Manager */}
-        {activeMenuTab === 'admin' && <PoolManager />}
+        {activeMenuTab === 'admin' && (
+          <div className="space-y-6">
+            <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
+              <h2 className="text-lg font-semibold text-slate-100 mb-2">AI Cache Controls</h2>
+              <p className="text-sm text-slate-400 mb-4">
+                Clears the 24h AI cache so the next refresh re-analyzes everything.
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleClearCache}
+                  disabled={isClearingCache}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white rounded text-sm font-medium"
+                >
+                  {isClearingCache ? 'Clearing...' : 'Clear AI Cache'}
+                </button>
+                {cacheClearedAt && (
+                  <span className="text-xs text-slate-400">Cleared at {cacheClearedAt.toLocaleTimeString()}</span>
+                )}
+              </div>
+              {cacheClearError && (
+                <div className="mt-2 text-xs text-red-300">⚠️ {cacheClearError}</div>
+              )}
+            </div>
+            <PoolManager />
+          </div>
+        )}
       </main>
 
       {/* Floating AI Chat Widget */}
