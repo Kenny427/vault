@@ -50,7 +50,10 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
   };
 
   return (
-    <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-lg overflow-hidden hover:border-osrs-accent transition-all cursor-pointer hover:shadow-lg hover:shadow-osrs-accent/20 hover:-translate-y-1">
+    <div 
+      onClick={onViewDetails}
+      className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-lg overflow-hidden hover:border-osrs-accent transition-all cursor-pointer hover:shadow-lg hover:shadow-osrs-accent/20 hover:-translate-y-1"
+    >
       {/* Header - Item Name & Favorite */}
       <div className="p-4 border-b border-slate-700 bg-slate-900/50">
         <div className="flex justify-between items-start mb-3">
@@ -61,7 +64,10 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
             <p className="text-xs text-slate-500 mt-1">ID: {opportunity.itemId}</p>
           </div>
           <button
-            onClick={toggleFavorite}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(e);
+            }}
             className={`ml-2 px-3 py-1 rounded text-sm font-bold transition-all ${
               isInFavorites
                 ? 'bg-osrs-accent text-slate-900'
@@ -133,13 +139,19 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
       {/* Quick Actions */}
       <div className="p-3 border-t border-slate-700 bg-slate-900/30 grid grid-cols-3 gap-2">
         <button
-          onClick={() => openChat(`Should I flip ${opportunity.itemName} (ID: ${opportunity.itemId})? Current: ${opportunity.currentPrice}gp, 30d avg: ${opportunity.averagePrice30}gp`)}
+          onClick={(e) => {
+            e.stopPropagation();
+            openChat(`Should I flip ${opportunity.itemName} (ID: ${opportunity.itemId})? Current: ${opportunity.currentPrice}gp, 30d avg: ${opportunity.averagePrice30}gp`);
+          }}
           className="py-2 px-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded transition-colors"
         >
           💬 Ask AI
         </button>
         <button
-          onClick={onViewDetails}
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewDetails();
+          }}
           className="py-2 px-2 bg-osrs-accent hover:bg-osrs-accent/90 text-slate-900 text-xs font-bold rounded transition-colors"
         >
           📊 Chart
