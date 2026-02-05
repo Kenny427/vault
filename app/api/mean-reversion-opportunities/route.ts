@@ -132,6 +132,11 @@ export async function GET(request: Request) {
     if (skipLowSignal) {
       completedSignals = completedSignals.filter((s) => s.confidenceScore >= 25 && s.reversionPotential >= 5);
     }
+
+    // Hard guardrail: only consider items truly below medium & long-term averages
+    completedSignals = completedSignals.filter(
+      (s) => s.currentPrice < s.mediumTerm.avgPrice && s.currentPrice < s.longTerm.avgPrice
+    );
     
     console.log(`📈 Completed analysis: ${completedSignals.length}/${priorityItems.length} items had sufficient data`);
     
