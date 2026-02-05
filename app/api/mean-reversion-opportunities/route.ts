@@ -224,14 +224,22 @@ export async function GET(request: Request) {
     const allSignals = await Promise.all(analysisPromises);
     let completedSignals = allSignals.filter((s): s is MeanReversionSignal => s !== null);
 
-    if (skipLowSignal) {
-      completedSignals = completedSignals.filter((s) => s.confidenceScore >= 25 && s.reversionPotential >= 5);
-    }
-
-    // Hard guardrail: only consider items truly below medium & long-term averages
-    completedSignals = completedSignals.filter(
-      (s) => s.currentPrice < s.mediumTerm.avgPrice && s.currentPrice < s.longTerm.avgPrice
-    );
+    // Apply STRICT filters before sending to AI (avoid wasting credits on items AI will reject)
+    completedSignals = completedSignals.filter((s) => {
+      // Must have minimum viable metrics
+      if (s.confidenceScore < 30 || s.reversionPotential < 8) return false;
+      
+      // Hard guardrail: only items truly below medium & long-term averages
+      if (s.currentPrice >= s.mediumTerm.avgPrice || s.currentPrice >= s.longTerm.avgPrice) return false;
+      
+      // Must have decent liquidity
+      if (s.liquidityScore < 5) return false;
+      
+      // Avoid high volatility traps
+      if (s.volatilityRisk === 'high' && s.confidenceScore < 40) return false;
+      
+      return true;
+    });
     
     console.log(`📈 Completed analysis: ${completedSignals.length}/${priorityItems.length} items had sufficient data`);
     
