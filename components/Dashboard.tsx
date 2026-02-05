@@ -104,11 +104,9 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [scanProgress, setScanProgress] = useState(0);
   const [scanMessage, setScanMessage] = useState('Awaiting command');
-  const [cacheStats, setCacheStats] = useState<{ aiAnalyzedCount: number; cachedCount: number; cacheHours: number } | null>(null);
-  const [isClearingCache, setIsClearingCache] = useState(false);
-  const [cacheClearError, setCacheClearError] = useState('');
-  const [cacheClearedAt, setCacheClearedAt] = useState<Date | null>(null);
+  const [analysisStats, setAnalysisStats] = useState<{ aiAnalyzedCount: number; aiApprovedCount: number; preFilteredCount: number } | null>(null);
   const [totalAnalyzed, setTotalAnalyzed] = useState<number | null>(null);
+  const [showRefreshWarning, setShowRefreshWarning] = useState(false);
   const [minConfidenceThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-min-confidence');
@@ -134,6 +132,16 @@ export default function Dashboard() {
   // Analyze items with AI
   const analyzeWithAI = async () => {
     if (loading) return;
+
+    // Check if refreshed recently (within 30 seconds)
+    if (lastRefresh) {
+      const secondsSinceRefresh = (Date.now() - lastRefresh.getTime()) / 1000;
+      if (secondsSinceRefresh < 30) {
+        setShowRefreshWarning(true);
+        setTimeout(() => setShowRefreshWarning(false), 3000);
+        return;
+      }
+    }
 
     // ALWAYS use the curated pool - no custom pools, no DB pools
     // This ensures only the 355 carefully selected items are analyzed
@@ -167,16 +175,13 @@ export default function Dashboard() {
         throw new Error('Invalid response from analysis API');
       }
 
-      if (data.summary?.aiAnalyzedCount !== undefined) {
-        setCacheStats({
+      if (data.summary) {
+        setAnalysisStats({
           aiAnalyzedCount: data.summary.aiAnalyzedCount || 0,
-          cachedCount: data.summary.cachedCount || 0,
-          cacheHours: data.summary.cacheHours || 24,
+          aiApprovedCount: data.summary.aiApprovedCount || 0,
+          preFilteredCount: data.summary.preFilteredCount || 0,
         });
-      }
-
-      if (data.summary?.totalAnalyzed !== undefined) {
-        setTotalAnalyzed(data.summary.totalAnalyzed);
+        setTotalAnalyzed(data.summary.totalAnalyzed || 0);
       }
 
       // Convert MeanReversionSignals to FlipOpportunities for UI
@@ -207,30 +212,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleClearCache = async () => {
-    if (isClearingCache) return;
-    setIsClearingCache(true);
-    setCacheClearError('');
 
-    try {
-      const response = await fetch('/api/mean-reversion-opportunities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'clearCache' }),
-      });
-
-      const data = await response.json();
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.error || 'Failed to clear cache');
-      }
-
-      setCacheClearedAt(new Date());
-    } catch (err: any) {
-      setCacheClearError(err.message || 'Failed to clear cache');
-    } finally {
-      setIsClearingCache(false);
-    }
-  };
 
   useEffect(() => {
     analyzeRef.current = analyzeWithAI;
@@ -477,17 +459,6 @@ export default function Dashboard() {
                 >
                   ⚙️ Pool Manager
                 </button>
-                <button
-                  onClick={() => {
-                    setActiveMenuTab('ai-cache');
-                    setShowMenu(false);
-                  }}
-                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${
-                    activeMenuTab === 'ai-cache' ? 'text-osrs-accent' : 'text-slate-300'
-                  }`}
-                >
-                  🧠 AI Cache
-                </button>
               </div>
             )}
           </div>
@@ -501,6 +472,13 @@ export default function Dashboard() {
           <>
             {/* AI Analysis Status & Refresh Button */}
             <div className="bg-gradient-to-r from-blue-900 to-blue-800 border border-blue-700 rounded-lg p-4 mb-6">
+              {/* Cooldown Warning */}
+              {showRefreshWarning && (
+                <div className="mb-3 bg-yellow-900/50 border border-yellow-700 rounded-lg p-3 text-yellow-200 text-sm">
+                  ⚠️ Refreshed {Math.floor((Date.now() - (lastRefresh?.getTime() || 0)) / 1000)}s ago. Wait 30s between refreshes to avoid unnecessary costs.
+                </div>
+              )}
+              
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="text-sm text-blue-200 mb-2">
@@ -510,9 +488,9 @@ export default function Dashboard() {
                     )}
                     {!loading && !lastRefresh && <span>Ready to analyze</span>}
                   </div>
-                    {!loading && cacheStats && (
+                    {!loading && analysisStats && (
                       <div className="text-xs text-blue-200/80">
-                        Cache: {cacheStats.cachedCount} items reused • {cacheStats.aiAnalyzedCount} re‑analyzed • TTL {cacheStats.cacheHours}h
+                        Analysis: {analysisStats.preFilteredCount} pre-filtered → {analysisStats.aiAnalyzedCount} AI evaluated → {analysisStats.aiApprovedCount} approved
                       </div>
                     )}
                   {loading && (
@@ -532,7 +510,7 @@ export default function Dashboard() {
                     disabled={loading}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white rounded font-medium text-sm transition-colors"
                   >
-                    {loading ? 'Analyzing...' : 'Refresh Analysis'}
+                    {loading ? 'Analyzing...' : '🔄 Refresh Analysis'}
                   </button>
                 </div>
               </div>
@@ -667,31 +645,6 @@ export default function Dashboard() {
 
         {/* Menu Tab: Pool Manager */}
         {activeMenuTab === 'admin' && <PoolManager />}
-
-        {/* Menu Tab: AI Cache */}
-        {activeMenuTab === 'ai-cache' && (
-          <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
-            <h2 className="text-lg font-semibold text-slate-100 mb-2">AI Cache Controls</h2>
-            <p className="text-sm text-slate-400 mb-4">
-              Clears the 24h AI cache so the next refresh re-analyzes everything.
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleClearCache}
-                disabled={isClearingCache}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white rounded text-sm font-medium"
-              >
-                {isClearingCache ? 'Clearing...' : 'Clear AI Cache'}
-              </button>
-              {cacheClearedAt && (
-                <span className="text-xs text-slate-400">Cleared at {cacheClearedAt.toLocaleTimeString()}</span>
-              )}
-            </div>
-            {cacheClearError && (
-              <div className="mt-2 text-xs text-red-300">⚠️ {cacheClearError}</div>
-            )}
-          </div>
-        )}
       </main>
 
       {/* Floating AI Chat Widget */}
