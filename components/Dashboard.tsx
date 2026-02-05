@@ -104,6 +104,7 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [scanProgress, setScanProgress] = useState(0);
   const [scanMessage, setScanMessage] = useState('Awaiting command');
+  const [cacheStats, setCacheStats] = useState<{ aiAnalyzedCount: number; cachedCount: number; cacheHours: number } | null>(null);
   const [minConfidenceThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-min-confidence');
@@ -160,6 +161,14 @@ export default function Dashboard() {
       if (!data.success || !data.opportunities) {
         console.error('API Response:', data);
         throw new Error('Invalid response from analysis API');
+      }
+
+      if (data.summary?.aiAnalyzedCount !== undefined) {
+        setCacheStats({
+          aiAnalyzedCount: data.summary.aiAnalyzedCount || 0,
+          cachedCount: data.summary.cachedCount || 0,
+          cacheHours: data.summary.cacheHours || 24,
+        });
       }
 
       // Convert MeanReversionSignals to FlipOpportunities for UI
@@ -453,10 +462,15 @@ export default function Dashboard() {
                   <div className="text-sm text-blue-200 mb-2">
                     {loading && <span>🤖 {scanMessage}</span>}
                     {!loading && lastRefresh && (
-                      <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
+                        <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
                     )}
                     {!loading && !lastRefresh && <span>Ready to analyze</span>}
                   </div>
+                    {!loading && cacheStats && (
+                      <div className="text-xs text-blue-200/80">
+                        Cache: {cacheStats.cachedCount} items reused • {cacheStats.aiAnalyzedCount} re‑analyzed • TTL {cacheStats.cacheHours}h
+                      </div>
+                    )}
                   {loading && (
                     <div className="w-full bg-blue-900 rounded-full h-2 overflow-hidden">
                       <div
