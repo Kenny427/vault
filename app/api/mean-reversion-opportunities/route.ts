@@ -14,7 +14,6 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const AI_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const aiOpportunityCache = new Map<number, { timestamp: number; signal: MeanReversionSignal }>();
 
 function isCacheValid(entry: { timestamp: number }, ttlMs: number) {
