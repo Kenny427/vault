@@ -108,6 +108,7 @@ export default function Dashboard() {
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [cacheClearError, setCacheClearError] = useState('');
   const [cacheClearedAt, setCacheClearedAt] = useState<Date | null>(null);
+  const [totalAnalyzed, setTotalAnalyzed] = useState<number | null>(null);
   const [minConfidenceThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-min-confidence');
@@ -172,6 +173,10 @@ export default function Dashboard() {
           cachedCount: data.summary.cachedCount || 0,
           cacheHours: data.summary.cacheHours || 24,
         });
+      }
+
+      if (data.summary?.totalAnalyzed !== undefined) {
+        setTotalAnalyzed(data.summary.totalAnalyzed);
       }
 
       // Convert MeanReversionSignals to FlipOpportunities for UI
@@ -580,7 +585,9 @@ export default function Dashboard() {
               <div className="w-full bg-slate-800 border border-slate-700 rounded p-3 text-center">
                 <p className="text-xs text-slate-400 mb-1">Opportunities Found</p>
                 <p className="text-2xl font-bold text-osrs-accent">{filteredOpportunities.length}</p>
-                <p className="text-xs text-slate-400">of {opportunities.length} analyzed</p>
+                <p className="text-xs text-slate-400">
+                  of {totalAnalyzed ?? opportunities.length} analyzed
+                </p>
               </div>
             </div>
           </div>
