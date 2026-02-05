@@ -11,6 +11,7 @@ import PoolManager from './PoolManager';
 import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
+import FilteredItemsModal from './FilteredItemsModal';
 import KeyboardShortcuts from './KeyboardShortcuts';
 import { FlipOpportunity, FlipType } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
@@ -110,6 +111,8 @@ export default function Dashboard() {
   const [showRefreshWarning, setShowRefreshWarning] = useState(false);
   const [detailedAnalyses, setDetailedAnalyses] = useState<{ itemId: number; itemName: string; detailedAnalysis: string }[]>([]);
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
+  const [filteredItems, setFilteredItems] = useState<{ itemId: number; itemName: string; reason: string }[]>([]);
+  const [showFilteredItems, setShowFilteredItems] = useState(false);
   const [minConfidenceThreshold] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-min-confidence');
@@ -190,6 +193,11 @@ export default function Dashboard() {
       // Store detailed analyses
       if (data.detailedReasonings && Array.isArray(data.detailedReasonings)) {
         setDetailedAnalyses(data.detailedReasonings);
+      }
+
+      // Store filtered items
+      if (data.filteredItems && Array.isArray(data.filteredItems)) {
+        setFilteredItems(data.filteredItems);
       }
 
       // Convert MeanReversionSignals to FlipOpportunities for UI
@@ -528,6 +536,14 @@ export default function Dashboard() {
                       📊 View Analysis
                     </button>
                   )}
+                  {!loading && filteredItems.length > 0 && (
+                    <button
+                      onClick={() => setShowFilteredItems(true)}
+                      className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium text-sm transition-colors"
+                    >
+                      🔍 {filteredItems.length} Filtered
+                    </button>
+                  )}
                 </div>
               </div>
               {error && (
@@ -668,6 +684,13 @@ export default function Dashboard() {
         isOpen={showDetailedAnalysis}
         onClose={() => setShowDetailedAnalysis(false)}
         analyses={detailedAnalyses}
+      />
+
+      {/* Filtered Items Modal */}
+      <FilteredItemsModal
+        isOpen={showFilteredItems}
+        onClose={() => setShowFilteredItems(false)}
+        filteredItems={filteredItems}
       />
 
       {/* Floating AI Chat Widget */}

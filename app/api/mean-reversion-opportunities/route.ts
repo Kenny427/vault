@@ -117,16 +117,40 @@ export async function GET(request: Request) {
     const allSignals = await Promise.all(analysisPromises);
     let completedSignals = allSignals.filter((s): s is MeanReversionSignal => s !== null);
 
+    // Track which items get filtered out and why
+    const filteredItems: { itemId: number; itemName: string; reason: string }[] = [];
+
     // Apply reasonable filters before sending to AI (avoid obvious rejections but let AI decide edge cases)
     completedSignals = completedSignals.filter((s) => {
       // Hard guardrail: only items truly below medium & long-term averages
-      if (s.currentPrice >= s.mediumTerm.avgPrice || s.currentPrice >= s.longTerm.avgPrice) return false;
+      if (s.currentPrice >= s.mediumTerm.avgPrice || s.currentPrice >= s.longTerm.avgPrice) {
+        filteredItems.push({
+          itemId: s.itemId,
+          itemName: s.itemName,
+          reason: 'Above historical averages'
+        });
+        return false;
+      }
       
       // Must have minimum signal strength (AI can override if sees something we miss)
-      if (s.confidenceScore < 20 || s.reversionPotential < 5) return false;
+      if (s.confidenceScore < 20 || s.reversionPotential < 5) {
+        filteredItems.push({
+          itemId: s.itemId,
+          itemName: s.itemName,
+          reason: `Weak signal (confidence ${s.confidenceScore}%, potential ${s.reversionPotential.toFixed(1)}%)`
+        });
+        return false;
+      }
       
       // Must have some liquidity (can't flip illiquid items)
-      if (s.liquidityScore < 3) return false;
+      if (s.liquidityScore < 3) {
+        filteredItems.push({
+          itemId: s.itemId,
+          itemName: s.itemName,
+          reason: `Low liquidity (score ${s.liquidityScore}/10)`
+        });
+        return false;
+      }
       
       return true;
     });
@@ -349,6 +373,7 @@ Format as JSON:
       opportunities: topOpportunities,
       detailedReasonings,
       summary,
+      filteredItems,
       filters: {
         minConfidence,
         minPotential,
