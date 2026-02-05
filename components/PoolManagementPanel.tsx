@@ -187,7 +187,7 @@ export default function PoolManagementPanel() {
         <div className="space-y-3 text-sm text-slate-400">
           <div>
             <p className="font-medium text-slate-300 mb-1">✂️ Remove Items:</p>
-            <p>Click "Remove" button above to exclude items from analysis. Marked items won't appear in future refreshes.</p>
+            <p>Click &quot;Remove&quot; button above to exclude items from analysis. Marked items won&apos;t appear in future refreshes.</p>
           </div>
           <div>
             <p className="font-medium text-slate-300 mb-1">➕ Add Items:</p>
@@ -200,7 +200,7 @@ export default function PoolManagementPanel() {
             <p className="font-medium text-slate-300 mb-1">💡 Tips:</p>
             <ul className="list-disc list-inside space-y-1 ml-2">
               <li>Items filtered 5+ times are candidates for removal</li>
-              <li>Watch for patterns: "Always above averages" = bad for mean-reversion</li>
+              <li>Watch for patterns: &quot;Always above averages&quot; = bad for mean-reversion</li>
               <li>Low liquidity items waste analysis time</li>
               <li>Optimize quarterly based on filter stats</li>
             </ul>

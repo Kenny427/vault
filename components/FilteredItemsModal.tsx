@@ -82,7 +82,7 @@ export default function FilteredItemsModal({
           <div>
             <h2 className="text-2xl font-bold text-slate-100">🔍 Filtered Items</h2>
             <p className="text-sm text-slate-400 mt-1">
-              {filteredItems.length} items didn't pass analysis thresholds
+              {filteredItems.length} items didn&apos;t pass analysis thresholds
             </p>
           </div>
           <button
