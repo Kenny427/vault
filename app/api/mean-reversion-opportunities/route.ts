@@ -17,9 +17,6 @@ const client = new OpenAI({
 
 const aiOpportunityCache = new Map<number, { timestamp: number; signal: MeanReversionSignal }>();
 
-export function clearOpportunitiesCache() {
-  aiOpportunityCache.clear();
-}
 
 function isCacheValid(entry: { timestamp: number }, ttlMs: number) {
   return Date.now() - entry.timestamp < ttlMs;
