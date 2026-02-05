@@ -94,23 +94,16 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
     setIsOpen(false);
   };
 
-  const handleFocus = async () => {
-    if (query.length === 0) {
-      await handleSearch('');
-    }
-    setIsOpen(true);
+  const handleBlur = () => {
+    // Small delay to allow onClick to fire first
+    setTimeout(() => {
+      setIsOpen(false);
+    }, 150);
   };
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
+    // Cleanup timer on unmount
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
       }
@@ -126,6 +119,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
+          onBlur={handleBlur}
           placeholder="Search items or click to see popular items..."
           className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-osrs-accent transition-colors"
         />
