@@ -205,7 +205,10 @@ export default function Dashboard() {
 
   // Load and analyze watchlist items and popular items
   useEffect(() => {
-    // Manual refresh only
+    // Fetch fresh data when entering opportunities tab
+    if (activeTab === 'opportunities' && analyzeRef.current && !loadingRef.current) {
+      analyzeRef.current();
+    }
   }, [activeTab]);
 
   useEffect(() => {
@@ -243,8 +246,8 @@ export default function Dashboard() {
       }
     };
 
-    // Auto-refresh every 15 minutes in background, regardless of active tab
-    const intervalId = setInterval(runRefresh, 15 * 60 * 1000);
+    // Auto-refresh every 5 minutes in background, regardless of active tab
+    const intervalId = setInterval(runRefresh, 5 * 60 * 1000);
     return () => clearInterval(intervalId);
   }, []);
 
