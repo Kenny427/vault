@@ -8,12 +8,10 @@ export interface PricePoint {
 }
 
 export type FlipType = 
-  | 'quick-flip'      // 1-3 days, quick turnaround
-  | 'bot-dump'        // Bot-driven price drops, rebounds expected
-  | 'short-term'      // 1-2 weeks, normal mean reversion  
-  | 'long-term'       // 2-8 weeks, deep value plays
-  | 'volatile-play'   // High risk/reward, major swings
-  | 'safe-hold';      // Low risk, stable recovery
+  | 'mean-reversion'  // Price below historical average, expects reversion
+  | 'deep-value'      // >20% undervalued, long hold (weeks/months)
+  | 'high-confidence' // Stable supply, low volatility, reliable reversion
+  | 'risky-upside'    // High potential but volatile, use caution
 
 export interface FlipOpportunity {
   itemId: number;
@@ -56,6 +54,9 @@ export interface FlipOpportunity {
   consistency: number; // How consistent the price movement is (0-100)
   spreadQuality: number; // Quality of buy/sell spread (0-100)
 
+  // Volume data
+  dailyVolume?: number; // Average daily volume
+  
   // Optional diagnostics
   volume1h?: number; // Real 1h volume from API when available
   spreadStability?: number; // 0-100, stability of spread over 7-30d

@@ -283,55 +283,97 @@ export async function getItemHistory(
     // API returns { data: [...], itemId: number }
     const data = response.data?.data;
     
-    if (Array.isArray(data) && data.length > 10) { // Need at least 10 points for meaningful data
-      // Filter data to the requested time range and convert to the expected format
-      const endTime = Math.floor(Date.now() / 1000);
-      const startTime = endTime - timestampRange;
-      
-      const processedData = data
-        .filter((point: any) => point.timestamp >= startTime && point.timestamp <= endTime)
-        .map((point: any) => {
-          const avgHigh = point.avgHighPrice || point.high || 0;
-          const avgLow = point.avgLowPrice || point.low || 0;
-          
-          // Validate historical data points same as current price
-          // If high is more than 3x the low, use only the low
-          if (avgLow > 0 && avgHigh > 0) {
-            const ratio = avgHigh / avgLow;
-            if (ratio > 3 || avgHigh < avgLow) {
-              // Use only low price for anomalous data points
-              return {
-                timestamp: point.timestamp,
-                price: avgLow,
-              };
-            }
-          }
-          
-          // Normal case: average high and low, or use whichever is available
-          const finalPrice = avgLow > 0 && avgHigh > 0 
-            ? (avgHigh + avgLow) / 2 
-            : (avgLow || avgHigh || currentPrice || 100);
-          
-          return {
-            timestamp: point.timestamp,
-            price: Math.round(finalPrice),
-          };
-        });
-      
-      // If we got meaningful real data, use it
-      if (processedData.length > 10) {
-        return processedData;
-      }
+    if (!Array.isArray(data)) {
+      console.log(`❌ Item ${itemId}: API returned non-array data or empty response`);
+      return null;
     }
     
-    // If no real data or insufficient data, generate realistic simulated data based on current price
-    // This is better than showing no chart at all
-    console.log(`No sufficient historical data for item ${itemId}, using price-based simulation`);
-    return generateRealisticHistory(itemId, timestampRange, currentPrice || 100);
+    console.log(`✓ Item ${itemId}: API returned ${data.length} total data points (timestep: ${timestep})`);
+    
+    if (data.length < 10) {
+      console.log(`   ⚠️ Only ${data.length} points from API, need >= 10`);
+      return null;
+    }
+    
+    // Use all data points returned - don't filter by timestamp range
+    // The API already returns the correct timeframe based on timestep parameter
+    const processedData = data
+      .map((point: any) => {
+        const avgHigh = point.avgHighPrice || point.high || 0;
+        const avgLow = point.avgLowPrice || point.low || 0;
+        
+        // Validate historical data points same as current price
+        // If high is more than 3x the low, use only the low
+        if (avgLow > 0 && avgHigh > 0) {
+          const ratio = avgHigh / avgLow;
+          if (ratio > 3 || avgHigh < avgLow) {
+            // Use only low price for anomalous data points
+            return {
+              timestamp: point.timestamp,
+              price: avgLow,
+            };
+          }
+        }
+        
+        // Normal case: average high and low, or use whichever is available
+        const finalPrice = avgLow > 0 && avgHigh > 0 
+          ? (avgHigh + avgLow) / 2 
+          : (avgLow || avgHigh || currentPrice || 100);
+        
+        return {
+          timestamp: point.timestamp,
+          price: Math.round(finalPrice),
+        };
+      });
+    
+    console.log(`   ✓ Processed ${processedData.length} data points`);
+    return processedData.length > 0 ? processedData : null;
   } catch (error) {
     console.error(`Failed to fetch history for item ${itemId}:`, error);
-    // Fall back to simulated data on error
-    return generateRealisticHistory(itemId, timestampRange, currentPrice || 100);
+    return null;
+  }
+}
+
+/**
+ * Fetch price history with volume data included
+ */
+export async function getItemHistoryWithVolumes(
+  itemId: number,
+  timestampRange: number = 365 * 24 * 60 * 60 // 365 days in seconds
+): Promise<{ timestamp: number; avgHighPrice: number; avgLowPrice: number; highPriceVolume: number; lowPriceVolume: number }[] | null> {
+  try {
+    const daysRequested = timestampRange / (24 * 60 * 60);
+    const timestep = daysRequested <= 2
+      ? '5m'
+      : daysRequested <= 30
+        ? '1h'
+        : daysRequested <= 90
+          ? '6h'
+          : '24h';
+
+    const response = await axios.get(
+      `${OSRS_WIKI_API}/timeseries`,
+      {
+        params: {
+          id: itemId,
+          timestep,
+        },
+      }
+    );
+
+    const data = response.data?.data;
+    if (!Array.isArray(data) || data.length === 0) return null;
+
+    return data.map((point: any) => ({
+      timestamp: point.timestamp,
+      avgHighPrice: point.avgHighPrice || point.high || 0,
+      avgLowPrice: point.avgLowPrice || point.low || 0,
+      highPriceVolume: point.highPriceVolume || 0,
+      lowPriceVolume: point.lowPriceVolume || 0,
+    }));
+  } catch (error) {
+    console.error(`Failed to fetch history with volumes for item ${itemId}:`, error);
+    return null;
   }
 }
 

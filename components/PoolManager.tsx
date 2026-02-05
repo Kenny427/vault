@@ -247,11 +247,11 @@ export default function PoolManager() {
                   <div className="text-xs text-slate-400 mt-1 flex gap-2">
                     <span className="px-2 py-0.5 bg-slate-800 rounded">{item.category}</span>
                     <span className={`px-2 py-0.5 rounded ${
-                      item.tier === 'high' ? 'bg-purple-900/50 text-purple-300' :
-                      item.tier === 'medium' ? 'bg-blue-900/50 text-blue-300' :
+                      item.volumeTier === 'massive' ? 'bg-purple-900/50 text-purple-300' :
+                      item.volumeTier === 'high' ? 'bg-blue-900/50 text-blue-300' :
                       'bg-slate-800 text-slate-400'
                     }`}>
-                      {item.tier}
+                      {item.volumeTier}
                     </span>
                   </div>
                 </div>

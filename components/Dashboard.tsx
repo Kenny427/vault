@@ -21,8 +21,54 @@ import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
 type MenuTab = 'admin';
 
-const AI_TOP_N = 12;
-const AI_MIN_SCORE = 45;
+/**
+ * Convert MeanReversionSignal to FlipOpportunity for UI display
+ */
+function convertMeanReversionToFlipOpportunity(signal: any): FlipOpportunity {
+  return {
+    itemId: signal.itemId,
+    itemName: signal.itemName,
+    currentPrice: signal.currentPrice,
+    averagePrice: signal.mediumTerm.avgPrice,
+    averagePrice30: signal.mediumTerm.avgPrice,
+    averagePrice90: signal.mediumTerm.avgPrice,
+    averagePrice180: signal.longTerm.avgPrice,
+    averagePrice365: signal.longTerm.avgPrice,
+    deviation: Math.abs(signal.maxDeviation),
+    deviationScore: -Math.abs(signal.maxDeviation),
+    trend: signal.maxDeviation > 10 ? 'bearish' : 'bullish',
+    recommendation: 'buy',
+    opportunityScore: signal.confidenceScore,
+    historicalLow: signal.currentPrice,
+    historicalHigh: signal.targetSellPrice,
+    flipType: signal.confidenceScore >= 85 ? 'high-confidence' : 
+             signal.confidenceScore >= 65 ? 'deep-value' : 
+             signal.confidenceScore >= 40 ? 'mean-reversion' : 
+             'risky-upside',
+    flipTypeConfidence: signal.confidenceScore,
+    buyPrice: signal.currentPrice,
+    sellPrice: signal.targetSellPrice,
+    profitPerUnit: signal.targetSellPrice - signal.currentPrice,
+    profitMargin: ((signal.targetSellPrice - signal.currentPrice) / signal.currentPrice) * 100,
+    roi: signal.reversionPotential,
+    riskLevel: signal.volatilityRisk,
+    confidence: signal.confidenceScore,
+    estimatedHoldTime: signal.estimatedHoldingPeriod,
+    volatility: signal.maxDeviation,
+    volumeScore: signal.liquidityScore,
+    dailyVolume: signal.mediumTerm.volumeAvg,
+    buyWhen: `Below ${signal.mediumTerm.avgPrice}gp (currently ${signal.currentPrice}gp)`,
+    sellWhen: `At or above ${signal.targetSellPrice}gp target`,
+    momentum: signal.reversionPotential * 0.5,
+    acceleration: 0,
+    tradingRange: signal.maxDeviation,
+    consistency: signal.supplyStability,
+    spreadQuality: Math.min(100, signal.liquidityScore + signal.confidenceScore / 2),
+    recommendedQuantity: Math.floor(signal.suggestedInvestment / signal.currentPrice),
+    totalInvestment: signal.suggestedInvestment,
+    totalProfit: (signal.targetSellPrice - signal.currentPrice) * Math.floor(signal.suggestedInvestment / signal.currentPrice)
+  };
+}
 
 export default function Dashboard() {
   const router = useRouter();
@@ -89,150 +135,46 @@ export default function Dashboard() {
     setError('');
 
     try {
-      // Analyze with AI via API route (server handles data fetching)
-      if (itemsToAnalyze.length > 0) {
-        const payloadItems = [...itemsToAnalyze]
-          .map(item => ({ id: item.id, name: item.name }));
-        const batchSize = 15;
-        const allOpportunities: FlipOpportunity[] = [];
-        let batchCount = 0;
-        const numBatches = Math.ceil(payloadItems.length / batchSize);
-        setTotalBatches(numBatches);
-        setBatchProgress(0);
+      // Call mean-reversion opportunities endpoint (analyze all items in pool)
+      const response = await fetch('/api/mean-reversion-opportunities');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze mean-reversion opportunities');
+      }
 
-        for (let i = 0; i < payloadItems.length; i += batchSize) {
-          batchCount++;
-          setBatchProgress(batchCount);
-          const batch = payloadItems.slice(i, i + batchSize);
-          const response = await fetch('/api/analyze-flips', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              items: batch,
-              enableAi: false,
-              aiTopN: AI_TOP_N,
-              aiMinScore: AI_MIN_SCORE,
-            }),
-          });
+      const data = await response.json();
+      
+      if (!data.success || !data.opportunities) {
+        console.error('API Response:', data);
+        throw new Error('Invalid response from analysis API');
+      }
 
-          const contentType = response.headers.get('content-type') || '';
-
-          if (!response.ok) {
-            let errorMessage = 'Failed to analyze opportunities';
-            if (contentType.includes('application/json')) {
-              const errorData = await response.json();
-              errorMessage = errorData.error || errorMessage;
-            } else {
-              const errorText = await response.text();
-              if (errorText) errorMessage = errorText;
-            }
-            throw new Error(errorMessage);
-          }
-
-          if (!contentType.includes('application/json')) {
-            const errorText = await response.text();
-            throw new Error(errorText || 'Unexpected response from analysis API');
-          }
-
-          const data = await response.json();
-          
-          // Handle both old format (array) and new format (object with opportunities + diagnostic)
-          const batchOpps = Array.isArray(data) ? data : data.opportunities || [];
-          allOpportunities.push(...batchOpps);
-          
-          // Show results incrementally as batches complete
-          const sortedOpps = allOpportunities.sort(
-            (a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore
-          );
-          setOpportunities(sortedOpps);
-          
-          // Log diagnostic info if available
-          if (data.diagnostic) {
-            console.log(`📊 POOL ANALYSIS - Batch ${batchCount}/${totalBatches}:`);
-            console.log(`   Requested: ${data.diagnostic.requested} items`);
-            console.log(`   Passed spread filter (>15%): ${data.diagnostic.passedFilter} items`);
-            console.log(`   Found ${batchOpps.length} opportunities in this batch`);
-            if (data.diagnostic.itemsPassedFilter.length > 0) {
-              data.diagnostic.itemsPassedFilter.forEach((item: any) => {
-                console.log(`   ✓ ${item.name}: spread=${item.spread}%, range ${item.min}-${item.max}`);
-              });
-            }
-          }
-        }
-
-        const sortedOpps = allOpportunities.sort(
-          (a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore
-        );
-
-        // AI shortlist pass (single call) to keep costs low
-        const shortlist = sortedOpps
-          .slice(0, AI_TOP_N)
-          .map(op => ({ id: op.itemId, name: op.itemName }));
-
-        if (shortlist.length > 0) {
-          try {
-            const aiResponse = await fetch('/api/ai-shortlist', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ items: shortlist, maxItems: AI_TOP_N }),
-            });
-
-            if (aiResponse.ok) {
-              const aiData = await aiResponse.json();
-              type AIShortlistOpportunity = Partial<FlipOpportunity> & { itemId: number };
-              const aiOpps: AIShortlistOpportunity[] = Array.isArray(aiData?.opportunities)
-                ? aiData.opportunities.filter((op: any) => typeof op?.itemId === 'number')
-                : [];
-              const aiMap = new Map(aiOpps.map(op => [op.itemId, op]));
-
-              const merged = sortedOpps.map(op => {
-                const ai = aiMap.get(op.itemId);
-                if (!ai) return op;
-                return {
-                  ...op,
-                  recommendation: ai.recommendation ?? op.recommendation,
-                  confidence: ai.confidence ?? op.confidence,
-                  opportunityScore: Math.max(op.opportunityScore, ai.opportunityScore ?? 0),
-                  buyWhen: ai.buyWhen || op.buyWhen,
-                  sellWhen: ai.sellWhen || op.sellWhen,
-                  estimatedHoldTime: ai.estimatedHoldTime || op.estimatedHoldTime,
-                  profitPerUnit: ai.profitPerUnit ?? op.profitPerUnit,
-                  roi: ai.roi ?? op.roi,
-                  riskLevel: ai.riskLevel || op.riskLevel,
-                };
-              });
-
-              setOpportunities(merged);
-            } else {
-              setOpportunities(sortedOpps);
-            }
-          } catch (error) {
-            console.error('AI shortlist failed:', error);
-            setOpportunities(sortedOpps);
-          }
-        } else {
-          setOpportunities(sortedOpps);
-        }
-        console.log(`📊 Analysis complete: ${allOpportunities.length} total opportunities found`);
-        console.log(`Min Score filter: ${minOpportunityScore}, Confidence filter: ${minConfidenceThreshold}%`);
-        setBatchProgress(0);
-        setTotalBatches(0);
-        const now = new Date();
-        setLastRefresh(now);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('osrs-last-refresh', now.toISOString());
-          localStorage.setItem('osrs-cached-opps', JSON.stringify(allOpportunities));
-        }
-      } else {
-        setOpportunities([]);
+      // Convert MeanReversionSignals to FlipOpportunities for UI
+      const opportunities = data.opportunities.map(convertMeanReversionToFlipOpportunity);
+      
+      // Sort by opportunity score (confidence)
+      const sorted = opportunities.sort(
+        (a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore
+      );
+      
+      setOpportunities(sorted);
+      setLastRefresh(new Date());
+      
+      console.log(`✅ Found ${sorted.length} mean-reversion opportunities`);
+      console.log(`📊 Mean-reversion analysis complete`);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('osrs-last-refresh', new Date().toISOString());
+        localStorage.setItem('osrs-cached-opps', JSON.stringify(sorted));
       }
     } catch (err: any) {
       setError(err.message || 'Failed to analyze opportunities');
-      console.error('AI analysis error:', err);
-      setBatchProgress(0);
-      setTotalBatches(0);
+      console.error('Mean-reversion analysis error:', err);
     } finally {
       setLoading(false);
+      setTotalBatches(0);
+      setBatchProgress(0);
     }
   };
 
@@ -527,79 +469,12 @@ export default function Dashboard() {
 
         {/* Settings & Filters */}
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-slate-100 mb-4">🎛️ Analysis Settings & Filters</h2>
+          <h2 className="text-xl font-bold text-slate-100 mb-4">📊 Filter</h2>
           
-          {/* Flip Type Filter */}
-          <div className="mb-6">
-            <label className="text-sm font-medium text-slate-300 block mb-3">Flip Type:</label>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => setFlipTypeFilter('all')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  flipTypeFilter === 'all'
-                    ? 'bg-osrs-accent text-slate-900'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
-                }`}
-              >
-                All ({filteredOpportunities.length})
-              </button>
-              <button
-                onClick={() => setFlipTypeFilter('quick-flip')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  flipTypeFilter === 'quick-flip'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
-                }`}
-              >
-                ⚡ Quick Flips ({opportunities.filter(o => o.flipType === 'quick-flip').length})
-              </button>
-              <button
-                onClick={() => setFlipTypeFilter('bot-dump')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  flipTypeFilter === 'bot-dump'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
-                }`}
-              >
-                🤖 Bot Dumps ({opportunities.filter(o => o.flipType === 'bot-dump').length})
-              </button>
-              <button
-                onClick={() => setFlipTypeFilter('long-term')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  flipTypeFilter === 'long-term'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
-                }`}
-              >
-                📈 Long-Term ({opportunities.filter(o => o.flipType === 'long-term').length})
-              </button>
-              <button
-                onClick={() => setFlipTypeFilter('safe-hold')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  flipTypeFilter === 'safe-hold'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
-                }`}
-              >
-                🛡️ Safe Holds ({opportunities.filter(o => o.flipType === 'safe-hold').length})
-              </button>
-              <button
-                onClick={() => setFlipTypeFilter('volatile-play')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                  flipTypeFilter === 'volatile-play'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-600'
-                }`}
-              >
-                💥 Volatile ({opportunities.filter(o => o.flipType === 'volatile-play').length})
-              </button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-3">
               <label className="text-sm font-medium text-slate-300 block mb-2">
-                Min Score: {minOpportunityScore}
+                Minimum Score: {minOpportunityScore}%
               </label>
               <input
                 type="range"
@@ -609,28 +484,8 @@ export default function Dashboard() {
                 onChange={(e) => setMinOpportunityScore(Number(e.target.value))}
                 className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-osrs-accent"
               />
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-slate-300 block mb-2">
-                Confidence: {minConfidenceThreshold}%
-              </label>
-              <input
-                type="range"
-                min="30"
-                max="95"
-                value={minConfidenceThreshold}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-                  setMinConfidenceThreshold(val);
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('osrs-min-confidence', val.toString());
-                  }
-                }}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-osrs-accent"
-              />
               <p className="text-xs text-slate-400 mt-1">
-                {minConfidenceThreshold >= 70 ? '🟢 Conservative' : minConfidenceThreshold >= 50 ? '🟡 Balanced' : '🔴 Aggressive'}
+                {minOpportunityScore >= 80 ? '🟢 Only top-tier opportunities' : minOpportunityScore >= 50 ? '🟡 Balanced selection' : '🔴 Include riskier items'}
               </p>
             </div>
 
@@ -643,18 +498,18 @@ export default function Dashboard() {
                 onChange={(e) => setSortBy(e.target.value as any)}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:border-osrs-accent"
               >
+                <option value="confidence">Score (High to Low)</option>
+                <option value="roi">Potential Gain %</option>
+                <option value="profit">Profit Per Unit</option>
                 <option value="score">Opportunity Score</option>
-                <option value="roi">ROI %</option>
-                <option value="profit">Profit/Unit</option>
-                <option value="confidence">Confidence</option>
               </select>
             </div>
 
             <div className="flex items-end">
               <div className="w-full bg-slate-800 border border-slate-700 rounded p-3 text-center">
-                <p className="text-xs text-slate-400 mb-1">Found</p>
+                <p className="text-xs text-slate-400 mb-1">Opportunities Found</p>
                 <p className="text-2xl font-bold text-osrs-accent">{filteredOpportunities.length}</p>
-                <p className="text-xs text-slate-400">showing {filteredOpportunities.length} of {opportunities.length}</p>
+                <p className="text-xs text-slate-400">of {opportunities.length} analyzed</p>
               </div>
             </div>
           </div>
@@ -664,12 +519,13 @@ export default function Dashboard() {
         <div className="space-y-8">
           {displayOpportunities.length > 0 && (
             <div>
-              <h2 className="text-2xl font-bold text-slate-100 mb-4 flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-slate-100 mb-1 flex items-center gap-2">
                 <span className="w-8 h-8 bg-orange-900 text-orange-400 rounded flex items-center justify-center text-lg">
-                  💰
+                  📊
                 </span>
-                {`AI-Detected Flip Opportunities (${displayOpportunities.length})`}
+                {`Flip Opportunities (${displayOpportunities.length})`}
               </h2>
+              <p className="text-slate-400 text-sm mb-4">Items trading below historical averages</p>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {displayOpportunities.map((opp: FlipOpportunity) => (
                   <FlipCard
