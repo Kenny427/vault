@@ -412,69 +412,6 @@ export async function getItemDailyVolume(itemId: number): Promise<number | null>
 }
 
 /**
- * Generate realistic price history based on current price
- * Uses OSRS-like price movement patterns
- */
-function generateRealisticHistory(
-  itemId: number,
-  timestampRange: number,
-  currentPrice: number
-): { timestamp: number; price: number }[] {
-  // Use itemId as seed for consistent "random" data
-  const seed = itemId * 12345;
-  let random = seed;
-  
-  const seededRandom = () => {
-    random = (random * 9301 + 49297) % 233280;
-    return random / 233280;
-  };
-  
-  const data: { timestamp: number; price: number }[] = [];
-  const endTime = Math.floor(Date.now() / 1000);
-  const startTime = endTime - timestampRange;
-  
-  // Generate hourly data points for smoother charts
-  const timeStep = 60 * 60; // 1 hour
-  
-  // Start with price very close to current (90-105% variance) to be more realistic
-  const startingVariance = 0.90 + seededRandom() * 0.15;
-  let price = currentPrice * startingVariance;
-  
-  // Calculate how many steps we'll have
-  const totalSteps = Math.floor((endTime - startTime) / timeStep);
-  
-  // Determine if this should trend up or down toward current price
-  const trendTowardCurrent = (currentPrice - price) / totalSteps;
-  
-  for (let time = startTime; time <= endTime; time += timeStep) {
-    // Much more conservative price variation: ±1-2% per hour
-    const volatility = currentPrice > 1000 ? 0.02 : 0.015; // Reduced volatility
-    const change = (seededRandom() - 0.5) * volatility * price;
-    
-    // Apply change
-    price = price + change;
-    
-    // Gradually trend toward current price (stronger pull)
-    price = price + trendTowardCurrent * 0.5;
-    
-    // Keep price very close to current (85% to 110% max)
-    price = Math.max(currentPrice * 0.85, Math.min(currentPrice * 1.10, price));
-    
-    // Ensure price is at least 1gp
-    price = Math.max(1, price);
-    
-    data.push({ timestamp: time, price: Math.round(price) });
-  }
-  
-  // Make sure the last price is very close to current (within 3%)
-  if (data.length > 0) {
-    data[data.length - 1].price = Math.round(currentPrice * (0.97 + seededRandom() * 0.06));
-  }
-  
-  return data;
-}
-
-/**
  * Search for items by name using API mapping
  */
 export async function searchItems(query: string): Promise<ItemData[]> {
