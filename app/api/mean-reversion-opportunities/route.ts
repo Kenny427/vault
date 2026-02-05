@@ -149,7 +149,7 @@ export async function GET(request: Request) {
     const categoryFilter = searchParams.get('category');
     const botFilter = searchParams.get('botLikelihood');
     const batchSize = parseInt(searchParams.get('batchSize') || '40');
-    const cacheHours = parseInt(searchParams.get('cacheHours') || '24');
+    const cacheHours = parseInt(searchParams.get('cacheHours') || '6');
     
     console.log(`🔍 Analyzing AI-first opportunities (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
     
