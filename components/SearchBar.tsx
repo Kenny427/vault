@@ -89,13 +89,12 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
   };
 
   const handleSelect = (item: ItemData) => {
+    const selectedItem = item;
     setQuery('');
     setSuggestions([]);
     setIsOpen(false);
-    // Call the callback after a tiny delay to ensure state updates first
-    setTimeout(() => {
-      onItemSelect(item);
-    }, 0);
+    // Call the callback immediately without setTimeout
+    onItemSelect(selectedItem);
   };
 
   const handleFocus = async () => {
@@ -123,8 +122,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onBlur={() => {
-            // Close dropdown when input loses focus (unless clicking a suggestion)
-            setTimeout(() => setIsOpen(false), 100);
+            setIsOpen(false);
           }}
           placeholder="Search items or click to see popular items..."
           className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-osrs-accent transition-colors"
@@ -152,6 +150,8 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
               type="button"
               onMouseDown={(e) => {
                 e.preventDefault();
+                e.stopPropagation();
+                // Keep the dropdown open and focused while clicking
               }}
               onClick={() => handleSelect(item)}
               className="w-full px-4 py-3 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
