@@ -94,6 +94,13 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
     setIsOpen(false);
   };
 
+  const handleFocus = async () => {
+    if (query.length === 0) {
+      await handleSearch('');
+    }
+    setIsOpen(true);
+  };
+
   const handleBlur = () => {
     // Small delay to allow onClick to fire first
     setTimeout(() => {
