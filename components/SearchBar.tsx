@@ -154,8 +154,7 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                // Don't close dropdown yet - let it close naturally
-                onItemSelect(item);
+                handleSelect(item);
               }}
               onMouseDown={(e) => {
                 e.preventDefault();
