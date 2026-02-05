@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getItemPrice, getItemHistory, getPopularItems } from '@/lib/api/osrs';
+import { getItemPrice, getItemHistory, getPopularItems, getItemDetails, searchItems } from '@/lib/api/osrs';
 import { calculateMean, calculateStdDev } from '@/lib/analysis';
 import { analyzeItemLimiter } from '@/lib/rateLimiter';
 
@@ -157,7 +157,10 @@ export async function POST(request: Request) {
 
     if (idMatch) {
       const id = Number(idMatch[1]);
-      matchedItem = popularItems.find(i => i.id === id) || null;
+      matchedItem = (await getItemDetails(id)) || null;
+      if (!matchedItem) {
+        matchedItem = popularItems.find(i => i.id === id) || null;
+      }
     }
     
     // Try exact match first (most precise)
@@ -194,6 +197,15 @@ export async function POST(request: Request) {
         const itemWords = i.name.toLowerCase().split(/\s+/).filter(w => !w.match(/^\(\d\)$/));
         return itemWords.every(word => queryWords.some(qw => qw.includes(word) || word.includes(qw)));
       });
+    }
+
+    // If still no match, search full item mapping
+    if (!matchedItem) {
+      const searchResults = await searchItems(normalizedName);
+      if (searchResults.length > 0) {
+        const exact = searchResults.find(i => i.name.toLowerCase() === lowerQuery);
+        matchedItem = exact || searchResults[0];
+      }
     }
 
     if (!matchedItem) {
