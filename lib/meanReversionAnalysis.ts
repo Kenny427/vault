@@ -396,7 +396,7 @@ function assessDowntrendPenalty(priceData: PriceDataPoint[]): {
   if (declinePercent > 20 && trend.strength > 50) {
     console.log(`[DOWNTREND-CHECK] Passed condition check: decline=${declinePercent.toFixed(1)} > 20 AND strength=${trend.strength} > 50`);
     // Check if it's stabilizing (mitigates penalty)
-    const { isReversing, reversingStrength } = detectTrendReversal(priceData);
+    const { isReversing, reversingStrength, foundSupport } = detectTrendReversal(priceData);
     console.log(`[DOWNTREND-CHECK] Reversal check: isReversing=${isReversing}, reversingStrength=${reversingStrength}`);
 
     if (isReversing && reversingStrength > 40) {
