@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface FilteredItemStats {
   itemId: number;
@@ -13,6 +14,7 @@ interface FilteredItemStats {
 export default function PoolManagementPanel() {
   const [stats, setStats] = useState<FilteredItemStats[]>([]);
   const [sortBy, setSortBy] = useState<'count' | 'name' | 'recent'>('count');
+  const router = useRouter();
 
   useEffect(() => {
     loadStats();
@@ -154,7 +156,12 @@ export default function PoolManagementPanel() {
               {sortedStats.map((item) => (
                 <tr key={item.itemId} className="hover:bg-slate-800/50 transition-colors">
                   <td className="px-4 py-3 text-sm text-slate-200 font-medium">
-                    {item.itemName}
+                    <button
+                      onClick={() => router.push(`/item/${item.itemId}`)}
+                      className="text-blue-400 hover:text-blue-300 hover:underline transition-colors"
+                    >
+                      {item.itemName}
+                    </button>
                     <p className="text-xs text-slate-500 mt-1">ID: {item.itemId}</p>
                   </td>
                   <td className="px-4 py-3 text-sm text-right">

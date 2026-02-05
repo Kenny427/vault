@@ -151,9 +151,15 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
           {suggestions.map((item) => (
             <button
               key={`${item.id}-${item.name}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Don't close dropdown yet - let it close naturally
+                onItemSelect(item);
+              }}
               onMouseDown={(e) => {
                 e.preventDefault();
-                handleSelect(item);
+                e.stopPropagation();
               }}
               className="w-full px-4 py-3 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
             >

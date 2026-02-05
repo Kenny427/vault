@@ -19,19 +19,14 @@ export interface ItemPoolEntry {
 
 export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   // === RUNES (Heavily Botted) ===
-  { id: 561, name: "Nature rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "constant" },
   { id: 563, name: "Law rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "constant" },
   { id: 560, name: "Death rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "pvm" },
   { id: 565, name: "Blood rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "pvm" },
   { id: 566, name: "Soul rune", category: "runes", botLikelihood: "very_high", volumeTier: "high", demandType: "pvm" },
-  { id: 564, name: "Cosmic rune", category: "runes", botLikelihood: "very_high", volumeTier: "high", demandType: "constant" },
   { id: 562, name: "Chaos rune", category: "runes", botLikelihood: "very_high", volumeTier: "high", demandType: "pvm" },
   { id: 21880, name: "Wrath rune", category: "runes", botLikelihood: "high", volumeTier: "high", demandType: "pvm" },
   { id: 9075, name: "Astral rune", category: "runes", botLikelihood: "very_high", volumeTier: "high", demandType: "constant" },
-  { id: 554, name: "Fire rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "constant" },
   { id: 555, name: "Water rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "constant" },
-  { id: 556, name: "Air rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "constant" },
-  { id: 557, name: "Earth rune", category: "runes", botLikelihood: "very_high", volumeTier: "massive", demandType: "constant" },
   
   // === AMMUNITION (PvM Essential) ===
   { id: 11875, name: "Broad bolts", category: "ammo", botLikelihood: "very_high", volumeTier: "massive", demandType: "pvm" },
@@ -64,10 +59,7 @@ export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   { id: 2363, name: "Runite bar", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 2361, name: "Adamantite bar", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 2353, name: "Steel bar", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
-  { id: 1779, name: "Flax", category: "resources", botLikelihood: "very_high", volumeTier: "massive", demandType: "skilling" },
   { id: 1777, name: "Bow string", category: "resources", botLikelihood: "very_high", volumeTier: "massive", demandType: "skilling" },
-  { id: 1739, name: "Cowhide", category: "resources", botLikelihood: "very_high", volumeTier: "massive", demandType: "skilling" },
-  { id: 1741, name: "Leather", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 1753, name: "Green dragonhide", category: "resources", botLikelihood: "very_high", volumeTier: "massive", demandType: "skilling" },
   { id: 1751, name: "Blue dragonhide", category: "resources", botLikelihood: "very_high", volumeTier: "massive", demandType: "skilling" },
   { id: 1749, name: "Red dragonhide", category: "resources", botLikelihood: "very_high", volumeTier: "high", demandType: "skilling" },
@@ -79,7 +71,6 @@ export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   
   // === BONES (Heavily Botted) ===
   { id: 536, name: "Dragon bones", category: "bones", botLikelihood: "very_high", volumeTier: "massive", demandType: "skilling" },
-  { id: 532, name: "Big bones", category: "bones", botLikelihood: "very_high", volumeTier: "high", demandType: "skilling" },
   { id: 534, name: "Babydragon bones", category: "bones", botLikelihood: "high", volumeTier: "medium", demandType: "skilling" },
   { id: 6812, name: "Wyvern bones", category: "bones", botLikelihood: "high", volumeTier: "medium", demandType: "skilling" },
   { id: 22124, name: "Superior dragon bones", category: "bones", botLikelihood: "medium", volumeTier: "medium", demandType: "skilling" },
@@ -129,6 +120,7 @@ export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   { id: 259, name: "Irit leaf", category: "herbs", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 2998, name: "Toadflax", category: "herbs", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 255, name: "Harralander", category: "herbs", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 3049, name: "Avantoe", category: "herbs", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   
   // === SECONDARY INGREDIENTS (Bot Gathered) ===
   { id: 231, name: "Snape grass", category: "secondaries", botLikelihood: "very_high", volumeTier: "high", demandType: "skilling" },
@@ -147,7 +139,6 @@ export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   { id: 21622, name: "Volcanic ash", category: "pvm_drops", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 1391, name: "Battlestaff", category: "pvm_drops", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 892, name: "Rune arrow", category: "pvm_drops", botLikelihood: "high", volumeTier: "high", demandType: "pvm" },
-  { id: 314, name: "Feather", category: "pvm_drops", botLikelihood: "very_high", volumeTier: "massive", demandType: "skilling" },
   
   // === NEW ADDITIONS ===
   { id: 807, name: "Yew longbow", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
@@ -159,7 +150,7 @@ export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   { id: 9074, name: "Fire orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 9076, name: "Earth orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 1634, name: "Dynamite", category: "secondaries", botLikelihood: "medium", volumeTier: "medium", demandType: "skilling" },
-  { id: 30072, name: "Aldarium ore", category: "resources", botLikelihood: "medium", volumeTier: "medium", demandType: "skilling" },
+  { id: 30072, name: "Aldarium", category: "potions", botLikelihood: "medium", volumeTier: "medium", demandType: "skilling" },
 ];
 
 
