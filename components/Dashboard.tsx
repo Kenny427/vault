@@ -19,7 +19,7 @@ import { initDinkWebhookListener } from '@/lib/dinkWebhook';
 import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
-type MenuTab = 'admin';
+type MenuTab = 'admin' | 'ai-cache';
 
 const SCAN_MESSAGES = [
   'Consulting the Grand Exchange spirits…',
@@ -472,6 +472,17 @@ export default function Dashboard() {
                 >
                   ⚙️ Pool Manager
                 </button>
+                <button
+                  onClick={() => {
+                    setActiveMenuTab('ai-cache');
+                    setShowMenu(false);
+                  }}
+                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${
+                    activeMenuTab === 'ai-cache' ? 'text-osrs-accent' : 'text-slate-300'
+                  }`}
+                >
+                  🧠 AI Cache
+                </button>
               </div>
             )}
           </div>
@@ -648,30 +659,30 @@ export default function Dashboard() {
         {activeTab === 'alerts' && !activeMenuTab && <PriceAlerts />}
 
         {/* Menu Tab: Pool Manager */}
-        {activeMenuTab === 'admin' && (
-          <div className="space-y-6">
-            <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
-              <h2 className="text-lg font-semibold text-slate-100 mb-2">AI Cache Controls</h2>
-              <p className="text-sm text-slate-400 mb-4">
-                Clears the 24h AI cache so the next refresh re-analyzes everything.
-              </p>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleClearCache}
-                  disabled={isClearingCache}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white rounded text-sm font-medium"
-                >
-                  {isClearingCache ? 'Clearing...' : 'Clear AI Cache'}
-                </button>
-                {cacheClearedAt && (
-                  <span className="text-xs text-slate-400">Cleared at {cacheClearedAt.toLocaleTimeString()}</span>
-                )}
-              </div>
-              {cacheClearError && (
-                <div className="mt-2 text-xs text-red-300">⚠️ {cacheClearError}</div>
+        {activeMenuTab === 'admin' && <PoolManager />}
+
+        {/* Menu Tab: AI Cache */}
+        {activeMenuTab === 'ai-cache' && (
+          <div className="bg-slate-900 border border-slate-700 rounded-lg p-4">
+            <h2 className="text-lg font-semibold text-slate-100 mb-2">AI Cache Controls</h2>
+            <p className="text-sm text-slate-400 mb-4">
+              Clears the 24h AI cache so the next refresh re-analyzes everything.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleClearCache}
+                disabled={isClearingCache}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-900 text-white rounded text-sm font-medium"
+              >
+                {isClearingCache ? 'Clearing...' : 'Clear AI Cache'}
+              </button>
+              {cacheClearedAt && (
+                <span className="text-xs text-slate-400">Cleared at {cacheClearedAt.toLocaleTimeString()}</span>
               )}
             </div>
-            <PoolManager />
+            {cacheClearError && (
+              <div className="mt-2 text-xs text-red-300">⚠️ {cacheClearError}</div>
+            )}
           </div>
         )}
       </main>
