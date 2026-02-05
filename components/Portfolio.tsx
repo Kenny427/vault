@@ -1,10 +1,32 @@
+
 'use client';
+// Format numbers like 15.4m, 154k, 197.5m for compact display (no 'mgp', just 'm')
+export function formatCompactNumber(n: number): string {
+  const abs = Math.abs(n);
+  let suffix = '';
+  let value = abs;
+  if (abs >= 1_000_000_000) {
+    value = abs / 1_000_000_000;
+    suffix = 'b';
+  } else if (abs >= 1_000_000) {
+    value = abs / 1_000_000;
+    suffix = 'm';
+  } else if (abs >= 100_000) {
+    value = abs / 1_000;
+    suffix = 'k';
+  } else {
+    return n.toLocaleString();
+  }
+  const formatted = value.toFixed(value % 1 === 0 ? 0 : 1) + suffix;
+  return n < 0 ? '-' + formatted : formatted;
+}
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePortfolioStore } from '@/lib/portfolioStore';
 import PortfolioSummary from './PortfolioSummary';
+import PortfolioReviewModal from './PortfolioReviewModal';
 import AddPortfolioItemModal from './AddPortfolioItemModal';
 import AddPortfolioSaleModal from './AddPortfolioSaleModal';
 import RecordTradeModal from './RecordTradeModal';
@@ -48,7 +70,23 @@ export default function Portfolio() {
   const [showTradeHistory, setShowTradeHistory] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [aiReview, setAIReview] = useState<PortfolioSummaryAI | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showAIMenu, setShowAIMenu] = useState(false);
+  const [targetPrices, setTargetPrices] = useState<Record<number, { target: number; confidence: number; timeframe: string; reasoning: string }>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('portfolioTargetPrices');
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('portfolioTargetPrices', JSON.stringify(targetPrices));
+    }
+  }, [targetPrices]);
+  const [isCalculatingTargets, setIsCalculatingTargets] = useState(false);
   const items = usePortfolioStore((state) => state.items);
   const removeItem = usePortfolioStore((state) => state.removeItem);
   const pendingTransactions = usePendingTransactionsStore((state) => state.transactions);
@@ -123,11 +161,68 @@ export default function Portfolio() {
 
       const review = await response.json();
       setAIReview(review);
+      setShowReviewModal(true);
     } catch (error) {
       console.error('AI portfolio review failed:', error);
       alert('Failed to analyze portfolio. Please try again.');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const handleCalculateTargets = async () => {
+    if (items.length === 0) return;
+    
+    setIsCalculatingTargets(true);
+    try {
+      // Prepare holdings data
+      const holdings = items.map(item => {
+        const priceData = prices[item.itemId];
+        const currentPrice = priceData ? (priceData.high + priceData.low) / 2 : item.buyPrice;
+        const soldQty = item.sales ? item.sales.reduce((sum, sale) => sum + sale.quantity, 0) : 0;
+        const remaining = item.quantity - soldQty;
+        
+        return {
+          itemId: item.itemId,
+          itemName: item.itemName,
+          quantity: remaining,
+          costBasisPerUnit: item.buyPrice,
+          currentPrice: Math.round(currentPrice),
+          datePurchased: item.datePurchased,
+        };
+      }).filter(h => h.quantity > 0);
+
+      const response = await fetch('/api/portfolio-advisor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ holdings }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to calculate target prices');
+      }
+
+      const data = await response.json();
+      
+      // Convert actions to target prices map
+      const targets: Record<number, any> = {};
+      data.actions.forEach((action: any) => {
+        targets[action.itemId] = {
+          target: action.expectedPrice,
+          confidence: action.confidence,
+          timeframe: action.timeframe,
+          reasoning: action.reasoning,
+        };
+      });
+      
+      setTargetPrices(targets);
+      console.log(`✅ Set target prices for ${Object.keys(targets).length} items`);
+      alert(`✅ AI calculated smart target prices for ${Object.keys(targets).length} items! These will persist across refreshes.`);
+    } catch (error) {
+      console.error('Target calculation failed:', error);
+      alert('Failed to calculate targets. Please try again.');
+    } finally {
+      setIsCalculatingTargets(false);
     }
   };
 
@@ -148,12 +243,11 @@ export default function Portfolio() {
           </button>
           {!showTradeHistory && items.length > 0 && (
             <button
-              onClick={handleAIReview}
-              disabled={isAnalyzing}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg transition-colors font-medium"
-              title="AI analyzes all your holdings in one batch"
+              onClick={() => setShowAIMenu(true)}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
+              title="AI tools for portfolio analysis"
             >
-              {isAnalyzing ? '⏳ Analyzing...' : '🤖 AI Review Portfolio'}
+              🤖 AI Menu
             </button>
           )}
           <button
@@ -192,121 +286,10 @@ export default function Portfolio() {
         <TradeHistory />
       ) : (
         <>
-      {/* AI Review Results */}
-      {aiReview && (
-        <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/30 rounded-lg p-6 border border-purple-700/50">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="text-xl font-semibold text-purple-300 mb-1">🤖 AI Portfolio Analysis</h3>
-              <p className="text-sm text-slate-400">Batch analyzed {aiReview.items.length} holdings</p>
-            </div>
-            <button
-              onClick={() => setAIReview(null)}
-              className="text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Overall Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-              <div className="text-sm text-slate-400 mb-1">Overall Risk</div>
-              <div className={`text-2xl font-bold ${
-                aiReview.overallRisk === 'LOW' ? 'text-green-400' :
-                aiReview.overallRisk === 'MEDIUM' ? 'text-yellow-400' :
-                aiReview.overallRisk === 'HIGH' ? 'text-orange-400' :
-                'text-red-400'
-              }`}>
-                {aiReview.overallRisk}
-              </div>
-            </div>
-            <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-              <div className="text-sm text-slate-400 mb-1">Diversification</div>
-              <div className="text-2xl font-bold text-blue-400">{aiReview.diversificationScore}/100</div>
-            </div>
-          </div>
-
-          {/* Recommendations */}
-          {aiReview.recommendations.length > 0 && (
-            <div className="mb-6">
-              <h4 className="text-sm font-semibold text-slate-300 mb-2">📋 Top Recommendations</h4>
-              <ul className="space-y-2">
-                {aiReview.recommendations.map((rec, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
-                    <span className="text-purple-400 mt-0.5">•</span>
-                    <span>{rec}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Warnings */}
-          {aiReview.warnings.length > 0 && (
-            <div className="mb-6">
-              <h4 className="text-sm font-semibold text-red-400 mb-2">⚠️ Warnings</h4>
-              <ul className="space-y-2">
-                {aiReview.warnings.map((warning, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-red-300 bg-red-900/20 p-3 rounded-lg">
-                    <span className="mt-0.5">⚠️</span>
-                    <span>{warning}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Item-by-Item Analysis */}
-          <div>
-            <h4 className="text-sm font-semibold text-slate-300 mb-3">Item Analysis</h4>
-            <div className="space-y-3">
-              {aiReview.items.map((item) => {
-                const recommendationColors = {
-                  'HOLD': 'text-blue-400 bg-blue-900/20',
-                  'SELL_NOW': 'text-red-400 bg-red-900/20',
-                  'SELL_SOON': 'text-orange-400 bg-orange-900/20',
-                  'WATCH_CLOSELY': 'text-yellow-400 bg-yellow-900/20',
-                  'GOOD_POSITION': 'text-green-400 bg-green-900/20',
-                };
-                
-                const riskColors = {
-                  'LOW': 'text-green-400',
-                  'MEDIUM': 'text-yellow-400',
-                  'HIGH': 'text-orange-400',
-                  'CRITICAL': 'text-red-400',
-                };
-
-                return (
-                  <div key={item.itemId} className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <div className="font-semibold text-slate-200">{item.itemName}</div>
-                        <div className="text-xs text-slate-500">
-                          {item.quantity.toLocaleString()} @ {item.buyPrice.toLocaleString()}gp → {item.currentPrice.toLocaleString()}gp
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className={`text-xs font-bold px-2 py-1 rounded ${recommendationColors[item.recommendation]}`}>
-                          {item.recommendation.replace(/_/g, ' ')}
-                        </div>
-                        <div className={`text-xs mt-1 ${riskColors[item.riskLevel]}`}>
-                          {item.riskLevel} RISK
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-slate-300 mb-2">{item.reasoning}</p>
-                    <div className="text-sm text-purple-300 bg-purple-900/20 p-2 rounded">
-                      💡 {item.suggestedAction}
-                      {item.exitPrice && ` (Target: ${item.exitPrice.toLocaleString()}gp)`}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Portfolio Review Modal */}
+        {showReviewModal && aiReview && (
+          <PortfolioReviewModal review={aiReview} onClose={() => setShowReviewModal(false)} />
+        )}
 
       {/* Summary */}
       <PortfolioSummary key={refreshKey} />
@@ -335,8 +318,16 @@ export default function Portfolio() {
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Remaining</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Buy</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Current</th>
+                  <th className="text-right px-6 py-4 text-slate-300 font-semibold">
+                    <div>Target Sale Price</div>
+                    <div className="text-xs text-slate-500 font-normal">(AI calculated)</div>
+                  </th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Value</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">P/L</th>
+                  <th className="text-right px-6 py-4 text-slate-300 font-semibold">
+                    <div>Est. Profit</div>
+                    <div className="text-xs text-slate-500 font-normal">(if target reached)</div>
+                  </th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold"></th>
                 </tr>
               </thead>
@@ -362,21 +353,36 @@ export default function Portfolio() {
                         </div>
                         <div className="text-xs text-slate-500 mt-1">Bought {date.toLocaleDateString()}</div>
                       </td>
-                      <td className="text-right px-6 py-4 text-slate-200">{item.quantity.toLocaleString()}</td>
-                      <td className="text-right px-6 py-4 text-slate-200">{remainingQty.toLocaleString()}</td>
+                      <td className="text-right px-6 py-4 text-slate-200">{formatCompactNumber(item.quantity)}</td>
+                      <td className="text-right px-6 py-4 text-slate-200">{formatCompactNumber(remainingQty)}</td>
                       <td className="text-right px-6 py-4 text-slate-200">
-                        {item.buyPrice.toLocaleString()}gp
+                        {formatCompactNumber(item.buyPrice)}
                       </td>
                       <td className="text-right px-6 py-4">
                         {hasPriceData ? (
-                          <span className="text-slate-200">{Math.round(current!).toLocaleString()}gp</span>
+                          <span className="text-slate-200">{formatCompactNumber(Math.round(current!))}</span>
                         ) : (
                           <span className="text-slate-500 text-sm">No data</span>
                         )}
                       </td>
+                      <td className="text-right px-6 py-4">
+                        {hasPriceData && targetPrices[item.itemId] ? (
+                          <div>
+                            <div className="text-green-400 font-semibold flex items-center justify-end gap-1">
+                              <span className="text-xs">🤖</span>
+                              {formatCompactNumber(Math.round(targetPrices[item.itemId].target))}
+                            </div>
+                            <div className="text-xs text-slate-400 mt-1">
+                              {targetPrices[item.itemId].confidence}% confident • {targetPrices[item.itemId].timeframe}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 text-sm">—</span>
+                        )}
+                      </td>
                       <td className="text-right px-6 py-4 font-semibold">
                         {value !== null ? (
-                          <span className="text-slate-200">{value.toLocaleString()}gp</span>
+                          <span className="text-slate-200">{formatCompactNumber(value)}</span>
                         ) : (
                           <span className="text-slate-500 text-sm">—</span>
                         )}
@@ -384,21 +390,30 @@ export default function Portfolio() {
                       <td className={`text-right px-6 py-4 font-semibold`}>
                         {unrealized !== null ? (
                           <span className={unrealized >= 0 ? 'text-green-400' : 'text-red-400'}>
-                            {unrealized >= 0 ? '+' : ''}{Math.round(unrealized).toLocaleString()}gp
+                            {unrealized >= 0 ? '+' : ''}{formatCompactNumber(Math.round(unrealized))}
                           </span>
                         ) : (
                           <span className="text-slate-500 text-sm">—</span>
                         )}
                       </td>
-                      <td className="text-right px-6 py-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => openChat(`I'm holding ${remainingQty} ${item.itemName} that I bought at ${item.buyPrice}gp. Current price is ${current ? Math.round(current) : 'unknown'}gp. What should my exit strategy be? When should I sell for optimal profit?`)}
-                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 transition-colors p-2 rounded"
-                            title="Ask AI"
-                          >
-                            💬
-                          </button>
+                      <td className="text-right px-6 py-4 font-semibold">
+                        {targetPrices[item.itemId] && remainingQty > 0 ? (
+                          <div>
+                            <span className={((targetPrices[item.itemId].target * 0.98 - item.buyPrice) * remainingQty) >= 0 ? 'text-green-400' : 'text-red-400'}>
+                              {((targetPrices[item.itemId].target * 0.98 - item.buyPrice) * remainingQty) >= 0 ? '+' : ''}
+                              {formatCompactNumber(Math.round((targetPrices[item.itemId].target * 0.98 - item.buyPrice) * remainingQty))}
+                            </span>
+                            <div className="text-xs text-slate-500 mt-1">
+                              {Math.round(((targetPrices[item.itemId].target * 0.98 - item.buyPrice) / item.buyPrice) * 100)}% ROI
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-500 text-sm">—</span>
+                        )}
+                      </td>
+                      <td className="text-right px-2 py-2" style={{ minWidth: 90 }}>
+                        <div className="flex items-center justify-end gap-0.5">
+                          {/* Ask AI button removed for portfolio table, use Portfolio Review instead */}
                           {current && (
                             <>
                               <button
@@ -414,14 +429,14 @@ export default function Portfolio() {
                                   }, 
                                   currentPrice: Math.round(current) 
                                 })}
-                                className="text-green-400 hover:text-green-300 hover:bg-green-900/20 transition-colors p-2 rounded"
+                                className="text-green-400 hover:text-green-300 hover:bg-green-900/20 transition-colors p-1.5 rounded text-base"
                                 title="Record Flip"
                               >
                                 💰
                               </button>
                               <button
                                 onClick={() => setShowSetAlertModal({ itemId: item.itemId, itemName: item.itemName, currentPrice: Math.round(current) })}
-                                className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-900/20 transition-colors p-2 rounded"
+                                className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-900/20 transition-colors p-1.5 rounded text-base"
                                 title="Set Alert"
                               >
                                 🔔
@@ -430,7 +445,7 @@ export default function Portfolio() {
                           )}
                           <button
                             onClick={() => handleRemove(item.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-900/20 transition-colors p-2 rounded"
+                            className="text-red-400 hover:text-red-300 hover:bg-red-900/20 transition-colors p-1.5 rounded text-base"
                             title="Remove"
                           >
                             🗑️
@@ -446,6 +461,88 @@ export default function Portfolio() {
         </div>
       )}
         </>
+      )}
+
+      {/* AI Menu Modal */}
+      {showAIMenu && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={() => setShowAIMenu(false)}>
+          <div className="bg-slate-900 rounded-xl border border-purple-700/50 max-w-2xl w-full max-h-[90vh] overflow-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-gradient-to-r from-purple-900/90 to-blue-900/90 backdrop-blur-sm px-6 py-4 border-b border-purple-700/50 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">🤖 AI Portfolio Tools</h2>
+                <p className="text-sm text-purple-200 mt-1">Powered by GPT-4o-mini • ~$0.003 per analysis</p>
+              </div>
+              <button
+                onClick={() => setShowAIMenu(false)}
+                className="text-slate-400 hover:text-white transition-colors text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Portfolio Review */}
+              <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700 hover:border-purple-600/50 transition-colors">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-purple-300 mb-2">📊 Portfolio Review</h3>
+                    <p className="text-sm text-slate-400">
+                      AI analyzes all holdings to assess risk, diversification, and provides recommendations
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAIMenu(false);
+                    handleAIReview();
+                  }}
+                  disabled={isAnalyzing}
+                  className="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
+                >
+                  {isAnalyzing ? '⏳ Analyzing Portfolio...' : '🚀 Run Portfolio Review'}
+                </button>
+              </div>
+
+              {/* Portfolio Review Modal */}
+              {showReviewModal && aiReview && (
+                <PortfolioReviewModal review={aiReview} onClose={() => setShowReviewModal(false)} />
+              )}
+
+              {/* Target Price Calculator */}
+              <div className="bg-slate-800/50 rounded-lg p-6 border border-slate-700 hover:border-blue-600/50 transition-colors">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-blue-300 mb-2">🎯 Calculate Target Sell Prices</h3>
+                    <p className="text-sm text-slate-400">
+                      AI determines optimal exit prices for each holding based on market conditions, trends, and mean-reversion signals
+                    </p>
+                    {Object.keys(targetPrices).length > 0 && (
+                      <p className="text-xs text-green-400 mt-2">
+                        ✓ Calculated targets for {Object.keys(targetPrices).length} items
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAIMenu(false);
+                    handleCalculateTargets();
+                  }}
+                  disabled={isCalculatingTargets}
+                  className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
+                >
+                  {isCalculatingTargets ? '⏳ Calculating Targets...' : '🎯 Calculate Smart Targets'}
+                </button>
+              </div>
+
+              <div className="bg-slate-800/30 rounded-lg p-4 border border-slate-700">
+                <p className="text-xs text-slate-400 text-center">
+                  💡 <span className="font-semibold">Tip:</span> Target prices will replace the default +10% calculation in your portfolio table
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Add Modal */}

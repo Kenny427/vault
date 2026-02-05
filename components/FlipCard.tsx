@@ -137,6 +137,51 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
         </div>
       </div>
 
+      {/* AI Reasoning */}
+      {opportunity.aiReasoning && (
+        <div className="px-4 py-3 bg-slate-900/50 border-t border-slate-700">
+          <div className="flex items-start gap-2">
+            <svg className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-xs text-slate-300 leading-relaxed">{opportunity.aiReasoning}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Price Guidance */}
+      {(opportunity.buyIfDropsTo || opportunity.sellAtMin || opportunity.sellAtMax || opportunity.abortIfRisesAbove) && (
+        <div className="px-4 py-3 bg-slate-900/30 border-t border-slate-700">
+          <p className="text-xs font-bold text-slate-400 mb-2">PRICE GUIDANCE</p>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {opportunity.buyIfDropsTo && (
+              <div>
+                <p className="text-slate-500">Buy if drops to</p>
+                <p className="text-green-400 font-bold">{opportunity.buyIfDropsTo.toLocaleString()}gp</p>
+              </div>
+            )}
+            {opportunity.abortIfRisesAbove && (
+              <div>
+                <p className="text-slate-500">Stop-loss at</p>
+                <p className="text-red-400 font-bold">{opportunity.abortIfRisesAbove.toLocaleString()}gp</p>
+              </div>
+            )}
+            {opportunity.sellAtMin && (
+              <div>
+                <p className="text-slate-500">Sell min (safe)</p>
+                <p className="text-blue-400 font-bold">{opportunity.sellAtMin.toLocaleString()}gp</p>
+              </div>
+            )}
+            {opportunity.sellAtMax && (
+              <div>
+                <p className="text-slate-500">Sell max (greed)</p>
+                <p className="text-yellow-400 font-bold">{opportunity.sellAtMax.toLocaleString()}gp</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions */}
       <div className="p-3 border-t border-slate-700 bg-slate-900/30 grid grid-cols-3 gap-2">
         <button

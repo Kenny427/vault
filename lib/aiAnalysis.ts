@@ -171,96 +171,30 @@ export async function analyzeFlipsWithAI(
     };
   });
 
-  const prompt = `You are an ELITE OSRS Grand Exchange trading analyst with DEEP market knowledge. Your expertise: identifying hidden value, market manipulation, seasonal patterns, and asymmetric risk/reward opportunities.
+  const prompt = `OSRS mean-reversion analyzer. Find items 10-30% below 90d/365d avg with recovery potential.
 
-MISSION: Find SOLID flip opportunities (short & long-term) that will ACTUALLY make profit. Be ruthless - only recommend trades with strong fundamental backing.
+INCLUDE if ANY apply:
+- 10%+ below 90d avg (bounce likely)
+- 15%+ below 365d avg (not in downtrend)
+- Bottom 30% of range + consistency >70%
 
-=== ANALYSIS FRAMEWORK ===
+SKIP only if:
+- Declining across all timeframes (structural decline)
+- Bottom 5% + no recovery history
+- Erratic data (anomaly)
 
-ITEMS DATA:
-${itemsData.map(item => `
-━━━ [${item.name}] (ID: ${item.id}) ━━━
-💰 CURRENT: ${item.currentPrice}gp
+Format: ID|Name|Cur|Avg[30/90/365]|Dev[30/365]%|Vol|Pctl[30/365]|Sup|Res|RecPot%|Trend|Risk
 
-📊 MULTI-TIMEFRAME ANALYSIS:
-30d:  Avg=${item.timeframes['30d'].avg}gp | Range=${item.timeframes['30d'].min}-${item.timeframes['30d'].max} | Vol=${item.timeframes['30d'].volatility}% | Momentum=${item.timeframes['30d'].momentum}% | StdDev=${item.timeframes['30d'].stdDev} | Consistency=${item.timeframes['30d'].consistency}%
-90d:  Avg=${item.timeframes['90d'].avg}gp | Range=${item.timeframes['90d'].min}-${item.timeframes['90d'].max} | Vol=${item.timeframes['90d'].volatility}% | Momentum=${item.timeframes['90d'].momentum}% | StdDev=${item.timeframes['90d'].stdDev}
-180d: Avg=${item.timeframes['180d'].avg}gp | Range=${item.timeframes['180d'].min}-${item.timeframes['180d'].max} | Vol=${item.timeframes['180d'].volatility}% | Momentum=${item.timeframes['180d'].momentum}% | StdDev=${item.timeframes['180d'].stdDev}
-365d: Avg=${item.timeframes['365d'].avg}gp | Range=${item.timeframes['365d'].min}-${item.timeframes['365d'].max} | Vol=${item.timeframes['365d'].volatility}% | Momentum=${item.timeframes['365d'].momentum}% | StdDev=${item.timeframes['365d'].stdDev} | Consistency=${item.timeframes['365d'].consistency}%
+${itemsData.map(item => `${item.id}|${item.name}|${item.currentPrice}|${item.timeframes['30d'].avg}/${item.timeframes['90d'].avg}/${item.timeframes['365d'].avg}|${item.timeframes['30d'].deviation}/${item.timeframes['365d'].deviation}|${item.timeframes['365d'].volatility}%|${item.trendAnalysis.pricePercentile30}/${item.trendAnalysis.pricePercentile365}|${item.technicalIndicators.supportLevel}|${item.technicalIndicators.resistanceLevel}|${item.technicalIndicators.recoveryPotential}|${item.trendAnalysis.direction}|${item.technicalIndicators.extremeVolatility ? 'high' : item.technicalIndicators.priceCollapse ? 'crash' : item.technicalIndicators.priceSurge ? 'surge' : 'normal'}`).join('\n')}
 
-📈 TREND ANALYSIS:
-Direction: ${item.trendAnalysis.direction} | Strength: ${item.trendAnalysis.strength}%
-Price Position: ${item.trendAnalysis.pricePercentile30}th percentile (30d) | ${item.trendAnalysis.pricePercentile365}th percentile (365d)
-
-🎯 TECHNICAL INDICATORS:
-Support Level: ${item.technicalIndicators.supportLevel}gp | Resistance: ${item.technicalIndicators.resistanceLevel}gp
-Near Support: ${item.technicalIndicators.nearSupport ? 'YES ✓' : 'NO'} | Near Resistance: ${item.technicalIndicators.nearResistance ? 'YES ✓' : 'NO'}
-Recovery Potential: ${item.technicalIndicators.recoveryPotential}%
-Extreme Volatility: ${item.technicalIndicators.extremeVolatility ? 'WARNING ⚠' : 'Normal'}
-Price Collapse: ${item.technicalIndicators.priceCollapse ? 'CRASHED 📉' : 'Normal'} | Price Surge: ${item.technicalIndicators.priceSurge ? 'SURGING 📈' : 'Normal'}
-`).join('\n')}
-
-=== YOUR EXPERT ANALYSIS CRITERIA (MEAN-REVERSION STRATEGY) ===
-
-IMPORTANT: You are analyzing for LONG-TERM MEAN-REVERSION, not momentum trading. Be more LENIENT with opportunities.
-The user holds items for WEEKS. Price accuracy matters more than momentum.
-
-You hold items for WEEKS if needed. You profit from buying UNDERVALUED items that will bounce back to their historical averages.
-
-PRIMARY SIGNALS (include items showing ANY of these):
-- 10%+ below 90d avg (good discount for bounce back)
-- 15%+ below 365d avg (deep value, likely recovery)
-- Price in bottom 30% of 365d range with decent consistency
-- Price bounced 15%+ before and likely to repeat
-
-❌ HARD SKIPS (reject these):
-- Consistently declining 30d/90d/365d averages (item losing fundamental value)
-- Bottom 5th percentile with no prior recovery history (possibly dead/delisted)
-- Price in bottom 15th percentile AND currently in downtrend (weak bounce confidence)
-- Items with erratic % spreads 3x other timeframes (data anomaly)
-
-=== TIMEFRAME ASSIGNMENTS ===
-
-MEDIUM-TERM (1-4 weeks) - Target: 15-40% profit:
-- 15-25% below 90d avg + good consistency (will bounce back within weeks)
-- Example: Yew longbow (u) at 273gp with 90d avg 350+ = ~22% discount + proven recovery = MEDIUM
-
-LONG-TERM (4 weeks - 3 months) - Target: 20-60% profit:
-- 20-40% below 365d avg + item has recovered from similar dips before
-- Example: Runite bolts at 150gp with 90d range 200-300gp = 25-50% discount + recovery history = LONG
-
-=== OUTPUT FORMAT ===
-
-Return ONLY BUY opportunities (no sells). Analyze EVERY item and include it if ANY of these apply:
-- 10%+ below 90d average (and has had higher prices historically)
-- 15%+ below 365d average (and is not in a downtrend)
-- Price in bottom 30% of 365d range with consistency > 70%
-- Item has bounced 15%+ multiple times in the past
-
-Provide as many candidates as meet the criteria (expect 8-20+ from a 30-item batch).
-Minimum confidence: 25% is OK if the discount is real and recovery is plausible.
-
-You are being too selective. Include borderline candidates for manual review - the user will decide which to trade.
-
-RESPOND ONLY WITH VALID JSON ARRAY. Include item even if confidence is 40-50% as long as discount is real:
-[
-  {
-    "itemId": 123,
-    "recommendation": "buy",
-    "confidence": 72,
-    "timeframe": "medium-term",
-    "reasoning": "273gp vs 90d avg ~350gp (22% discount). Bounces reliably to 350-400gp historically. High consistency (85%). Price at 12-month low but with proven recovery pattern - strong mean-reversion setup."
-  }
-]
-
-Return at least 5-8 items from any batch. If you're only finding 1-2, expand your criteria. Items don't need perfect signals - real mean-reversion plays often look mediocre at first glance.
-If items are scarce even at 25% confidence, return them anyway. Prefer showing undervalued candidates for manual review rather than returning an empty list.`;
+Return JSON (include borderline cases, min conf 25%):
+[{"itemId":123,"recommendation":"buy","confidence":72,"timeframe":"medium-term","reasoning":"brief reason"}]`;
 
   try {
     const message = await aiClient.chat.completions.create({
       model: 'gpt-4o',
       temperature: 0,
-      max_tokens: 2000,
+      max_tokens: 1200, // Reduced from 2000 - compressed format
       messages: [
         {
           role: 'user',
@@ -307,15 +241,30 @@ If items are scarce even at 25% confidence, return them anyway. Prefer showing u
         let buyPrice = item.currentPrice;
         let sellPrice = item.currentPrice;
 
+        let aiReasoning = analysis.reasoning;
         if (analysis.recommendation === 'buy') {
           // Buy low, estimate selling at average or higher
           buyPrice = Math.round(item.currentPrice * 0.99);
           const targetAvg = analysis.timeframe === 'long-term' ? avg365 : avg30;
-          sellPrice = Math.round(targetAvg * 1.02);
+          let calcTarget = Math.round(targetAvg * 1.02);
+          // If current price is at or above the target, recommend selling now
+          if (item.currentPrice >= calcTarget) {
+            sellPrice = item.currentPrice;
+            aiReasoning = `Current price (${item.currentPrice}) is at or above the calculated target (${calcTarget}). Recommend selling now.`;
+          } else {
+            sellPrice = calcTarget;
+          }
         } else if (analysis.recommendation === 'sell') {
           // Sell high, estimate bought lower
           buyPrice = Math.round(item.currentPrice * 0.98);
-          sellPrice = Math.round(item.currentPrice * 0.99);
+          let calcTarget = Math.round(item.currentPrice * 0.99);
+          // If current price is at or above the target, recommend selling now
+          if (item.currentPrice >= calcTarget) {
+            sellPrice = item.currentPrice;
+            aiReasoning = `Current price (${item.currentPrice}) is at or above the calculated target (${calcTarget}). Recommend selling now.`;
+          } else {
+            sellPrice = calcTarget;
+          }
         }
 
         const profitPerUnit = Math.max(0, Math.round(sellPrice - buyPrice - sellPrice * GE_TAX));
@@ -347,7 +296,7 @@ If items are scarce even at 25% confidence, return them anyway. Prefer showing u
           estimatedHoldTime: analysis.timeframe === 'long-term' ? '2-8 weeks' : analysis.timeframe === 'medium-term' ? '5-15 days' : '2-5 days',
           volatility,
           volumeScore: Math.min(100, volatility * 1.5),
-          buyWhen: `AI: ${analysis.reasoning}`,
+          buyWhen: `AI: ${aiReasoning}`,
           sellWhen: `Target reached or trend reversal`,
           momentum: 0,
           acceleration: 0,
@@ -546,36 +495,104 @@ export async function analyzePortfolioWithAI(
     };
   }
 
-  // Calculate unrealized P/L for each item
-  const itemsWithPL = portfolioItems.map(item => ({
-    ...item,
-    unrealizedPL: (item.currentPrice * 0.98 - item.buyPrice) * item.quantity,
-    percentChange: ((item.currentPrice - item.buyPrice) / item.buyPrice) * 100,
-  }));
+  // Fetch 365 days of real market data for each item
+  console.log(`📊 Fetching market data for ${portfolioItems.length} portfolio items...`);
+  const { getItemHistoryWithVolumes } = await import('@/lib/api/osrs');
+  const { analyzeMeanReversionOpportunity } = await import('@/lib/meanReversionAnalysis');
 
-  const prompt = `You are an expert OSRS Grand Exchange trader analyzing a player's portfolio. Review ALL holdings and provide actionable insights.
+  const enrichedItems = await Promise.all(
+    portfolioItems.map(async (item) => {
+      const unrealizedPL = (item.currentPrice * 0.98 - item.buyPrice) * item.quantity;
+      const percentChange = ((item.currentPrice - item.buyPrice) / item.buyPrice) * 100;
+      
+      try {
+        // Fetch 365 days of price history
+        const priceData = await getItemHistoryWithVolumes(item.itemId, 365 * 24 * 60 * 60);
+        
+        if (!priceData || priceData.length < 30) {
+          return {
+            ...item,
+            unrealizedPL,
+            percentChange,
+            hasData: false,
+          };
+        }
+
+
+        // Analyze mean-reversion signals (always use latest price from priceData)
+        const signal = await analyzeMeanReversionOpportunity(
+          item.itemId,
+          item.itemName,
+          priceData
+        );
+
+        return {
+          ...item,
+          unrealizedPL,
+          percentChange,
+          hasData: true,
+          signal,
+        };
+      } catch (error) {
+        console.error(`Failed to fetch data for ${item.itemName}:`, error);
+        return {
+          ...item,
+          unrealizedPL,
+          percentChange,
+          hasData: false,
+        };
+      }
+    })
+  );
+
+  const itemsWithData = enrichedItems.filter(item => item.hasData);
+  console.log(`✅ Enriched ${itemsWithData.length}/${portfolioItems.length} items with market data`);
+
+  const prompt = `You are an elite OSRS portfolio analyst with access to 365 days of REAL market data, mean-reversion analysis, and advanced trading signals for each holding.
 
 PORTFOLIO (${portfolioItems.length} items):
-${itemsWithPL.map((item, i) => `
-${i + 1}. ${item.itemName}
-   - Quantity: ${item.quantity.toLocaleString()}
-   - Buy Price: ${item.buyPrice.toLocaleString()}gp
-   - Current Price: ${item.currentPrice.toLocaleString()}gp
+${enrichedItems.map((item, i) => {
+  const baseInfo = `${i + 1}. ${item.itemName}
+   - Position: Qty=${item.quantity.toLocaleString()}, Buy=${item.buyPrice.toLocaleString()}gp, Current=${item.currentPrice.toLocaleString()}gp
    - Unrealized P/L: ${item.unrealizedPL >= 0 ? '+' : ''}${Math.round(item.unrealizedPL).toLocaleString()}gp (${item.percentChange.toFixed(1)}%)
-   - Held Since: ${new Date(item.datePurchased).toLocaleDateString()}
-`).join('')}
+   - Held Since: ${new Date(item.datePurchased).toLocaleDateString()}`;
+  if (item.hasData && item.signal) {
+    const s = item.signal;
+    return `${baseInfo}
+   - Market Data:
+      7d_avg=${Math.round(s.shortTerm.avgPrice)}gp, 30d_avg=${Math.round(s.shortTerm.avgPrice)}gp, 90d_avg=${Math.round(s.mediumTerm.avgPrice)}gp, 180d_avg=?, 365d_avg=${Math.round(s.longTerm.avgPrice)}gp
+      7d_vol=${s.shortTerm.volatility.toFixed(1)}, 30d_vol=?, 90d_vol=${s.mediumTerm.volatility.toFixed(1)}, 365d_vol=${s.longTerm.volatility.toFixed(1)}
+      7d_volAvg=${s.shortTerm.volumeAvg.toFixed(1)}, 90d_volAvg=${s.mediumTerm.volumeAvg.toFixed(1)}, 365d_volAvg=${s.longTerm.volumeAvg.toFixed(1)}
+   - Deviation: 7d=${s.shortTerm.currentDeviation.toFixed(1)}%, 90d=${s.mediumTerm.currentDeviation.toFixed(1)}%, 365d=${s.longTerm.currentDeviation.toFixed(1)}%, max=${s.maxDeviation.toFixed(1)}%
+   - Reversion Potential: ${s.reversionPotential.toFixed(1)}%
+   - Confidence: ${s.confidenceScore}%
+   - Investment Grade: ${s.investmentGrade}
+   - Risk: volatility=${s.volatilityRisk}, liquidity=${s.liquidityScore}, bot=${s.botLikelihood}, supplyStability=${s.supplyStability}
+   - Estimated Holding Period: ${s.estimatedHoldingPeriod}
+   - Suggested Investment: ${s.suggestedInvestment}gp
+   - Target Sell Price: ${s.targetSellPrice}gp
+   - Stop Loss: ${s.stopLoss}gp
+   - Reasoning: ${s.reasoning}`;
+  }
+  return `${baseInfo}
+   - Market Data: LIMITED (no historical data available)`;
+}).join('\n\n')}
 
-Analyze each item and the portfolio as a whole. For EACH item, provide:
+Analyze each item using ALL the data above (price/volume/volatility stats, deviations, risk, liquidity, bot, trend signals, historical min/max, recent trend, holding period, realized P/L, etc). Predict future price action and give the most actionable, data-driven advice possible.
+
+For EACH item, provide:
 1. Recommendation: HOLD, SELL_NOW, SELL_SOON, WATCH_CLOSELY, or GOOD_POSITION
 2. Risk Level: LOW, MEDIUM, HIGH, or CRITICAL
-3. Reasoning (1-2 sentences)
-4. Suggested Action (specific exit price or condition)
+3. Reasoning: Use the market data - current vs averages, deviation signals, confidence, trends, and any other relevant signals
+4. Suggested Action: Exit price based on mean-reversion target or specific conditions
+
+For items with LIMITED data, make conservative recommendations.
 
 For the overall portfolio:
-- Overall Risk Level
+- Overall Risk Level (based on aggregate signals)
 - Diversification Score (0-100)
-- Top 3 Recommendations
-- Critical Warnings (if any)
+- Top 3 Recommendations (data-driven)
+- Critical Warnings (based on negative trends, high risk signals)
 
 Return valid JSON only:
 {
@@ -590,7 +607,7 @@ Return valid JSON only:
       "quantity": ${portfolioItems[0].quantity},
       "buyPrice": ${portfolioItems[0].buyPrice},
       "currentPrice": ${portfolioItems[0].currentPrice},
-      "unrealizedPL": ${itemsWithPL[0].unrealizedPL},
+      "unrealizedPL": ${enrichedItems[0].unrealizedPL},
       "recommendation": "HOLD|SELL_NOW|SELL_SOON|WATCH_CLOSELY|GOOD_POSITION",
       "reasoning": "Brief explanation",
       "riskLevel": "LOW|MEDIUM|HIGH|CRITICAL",

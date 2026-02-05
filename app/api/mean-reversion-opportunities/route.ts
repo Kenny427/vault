@@ -35,6 +35,10 @@ type AiOpportunityDecision = {
   suggestedInvestment: number;
   volatilityRisk: 'low' | 'medium' | 'high';
   reasoning: string;
+  buyIfDropsTo?: number;
+  sellAtMin?: number;
+  sellAtMax?: number;
+  abortIfRisesAbove?: number;
 };
 
 
@@ -55,7 +59,7 @@ export async function GET(request: Request) {
     const minPotential = parseInt(searchParams.get('minPotential') || '10');
     const categoryFilter = searchParams.get('category');
     const botFilter = searchParams.get('botLikelihood');
-    const batchSize = parseInt(searchParams.get('batchSize') || '40');
+    const batchSize = parseInt(searchParams.get('batchSize') || '15'); // Reduced from 40 to 15 for reliable JSON parsing
     
     console.log(`🔍 Fresh analysis - AI-first opportunities (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
     
@@ -120,38 +124,43 @@ export async function GET(request: Request) {
     // Track which items get filtered out and why
     const filteredItems: { itemId: number; itemName: string; reason: string }[] = [];
 
-    // Apply reasonable filters before sending to AI (avoid obvious rejections but let AI decide edge cases)
+    // Apply conservative pre-filtering before sending to AI
+    // Keep filters minimal - let AI be the main decision maker
     completedSignals = completedSignals.filter((s) => {
-      // Hard guardrail: only items truly below medium & long-term averages
-      if (s.currentPrice >= s.mediumTerm.avgPrice || s.currentPrice >= s.longTerm.avgPrice) {
+      // Only filter obvious non-starters to reduce AI cost
+      // AI will make the final smart decisions
+      
+      // 1. Must be below at least ONE historical average (basic requirement for mean-reversion)
+      if (s.currentPrice >= s.mediumTerm.avgPrice && s.currentPrice >= s.longTerm.avgPrice) {
         filteredItems.push({
           itemId: s.itemId,
           itemName: s.itemName,
-          reason: 'Above historical averages'
+          reason: 'Above both 90d and 365d averages (no discount)'
         });
         return false;
       }
       
-      // Must have minimum signal strength (AI can override if sees something we miss)
-      if (s.confidenceScore < 20 || s.reversionPotential < 5) {
+      // 2. Must have minimal signal (but very lenient - AI decides quality)
+      if (s.confidenceScore < 15 || s.reversionPotential < 3) {
         filteredItems.push({
           itemId: s.itemId,
           itemName: s.itemName,
-          reason: `Weak signal (confidence ${s.confidenceScore}%, potential ${s.reversionPotential.toFixed(1)}%)`
+          reason: `Very weak signal (confidence ${s.confidenceScore}%, potential ${s.reversionPotential.toFixed(1)}%)`
         });
         return false;
       }
       
-      // Must have some liquidity (can't flip illiquid items)
-      if (s.liquidityScore < 3) {
+      // 3. Must have minimal liquidity (can't flip items with zero volume)
+      if (s.liquidityScore < 2) {
         filteredItems.push({
           itemId: s.itemId,
           itemName: s.itemName,
-          reason: `Low liquidity (score ${s.liquidityScore}/10)`
+          reason: `Nearly illiquid (score ${s.liquidityScore}/10)`
         });
         return false;
       }
       
+      // All other decisions left to AI - it's smarter than hard rules
       return true;
     });
     
@@ -162,58 +171,61 @@ export async function GET(request: Request) {
     let aiApprovedCount = 0;
 
     if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
+      console.log(`🤖 Starting AI analysis on ${completedSignals.length} items...`);
       const batches = chunkArray(completedSignals, Math.max(10, batchSize));
 
       for (const batch of batches) {
-        const prompt = `You are an elite OSRS Grand Exchange flipping strategist. Apply the user's mean-reversion strategy with strict risk control.
+        // Compressed prompt - let AI be the expert, minimal fluff
+        const prompt = `OSRS mean-reversion analyzer. Evaluate ALL items below.
 
-      STRATEGY RULES (must follow):
-      - Prefer items 10–30% below 90d/365d averages (mean-reversion window).
-      - Reject structural downtrends or value traps (big drawdowns without support).
-      - Require strong liquidity and stable bot-fed supply.
-      - Penalize extreme volatility or thin volume.
-      - Favor multi-timeframe alignment: short-term stabilizing and long-term undervalued.
-      - Only INCLUDE if risk is controlled and upside is meaningful.
+INCLUDE items with:
+- 10-30% below 90d/365d avg (mean-reversion window)
+- Strong liquidity + stable supply
+- No structural downtrends or value traps
+- Multi-timeframe alignment preferred
 
-Return JSON only in this exact format:
-{
-  "items": [
-    {
-      "id": 0,
-      "include": true,
-      "confidenceScore": 0,
-      "investmentGrade": "A+|A|B+|B|C|D",
-      "targetSellPrice": 0,
-      "estimatedHoldingPeriod": "2-4 weeks",
-      "suggestedInvestment": 0,
-      "volatilityRisk": "low|medium|high",
-      "reasoning": "short sentence"
-    }
-  ]
-}
+EXCLUDE items with:
+- Structural downtrends (consistently declining)
+- Very low liquidity (<3)
+- Extreme volatility without support
 
-ITEMS:
+Format: ID|Name|Cur|Avg90|Avg365|Dev7%|Dev90%|Dev365%|Vol7|Vol365|Pot%|Conf|Liq|Sup|Bot|Risk
+
 ${batch
   .map(
     (s) =>
-      `- ID:${s.itemId} Name:${s.itemName} Current:${s.currentPrice} Avg90:${Math.round(
+      `${s.itemId}|${s.itemName}|${s.currentPrice}|${Math.round(
         s.mediumTerm.avgPrice
-      )} Avg365:${Math.round(s.longTerm.avgPrice)} Dev7:${s.shortTerm.currentDeviation.toFixed(
+      )}|${Math.round(s.longTerm.avgPrice)}|${s.shortTerm.currentDeviation.toFixed(
         1
-      )}% Dev90:${s.mediumTerm.currentDeviation.toFixed(1)}% Dev365:${s.longTerm.currentDeviation.toFixed(
+      )}|${s.mediumTerm.currentDeviation.toFixed(1)}|${s.longTerm.currentDeviation.toFixed(
         1
-      )}% Vol7:${s.shortTerm.volatility.toFixed(1)} Vol365:${s.longTerm.volatility.toFixed(
+      )}|${s.shortTerm.volatility.toFixed(1)}|${s.longTerm.volatility.toFixed(
         1
-      )} Potential:${s.reversionPotential.toFixed(1)}% Confidence:${s.confidenceScore} Liquidity:${s.liquidityScore} Supply:${
+      )}|${s.reversionPotential.toFixed(1)}|${s.confidenceScore}|${s.liquidityScore}|${
         s.supplyStability
-      } Bot:${s.botLikelihood} VolRisk:${s.volatilityRisk}`
+      }|${s.botLikelihood}|${s.volatilityRisk}`
   )
   .join('\n')}
-`;
+
+For INCLUDED items, provide detailed reasoning with three parts:
+1) Why buy: Price vs historical, supply/demand signals, liquidity status
+2) When to sell: Price target, alternative exit conditions
+3) Key risks: Market factors, bot activity, volatility concerns
+
+Also provide:
+- buyIfDropsTo: Aggressive entry price (5-10% below current)
+- sellAtMin/sellAtMax: Price range for exit (min after GE tax recovery, max for greed)
+- abortIfRisesAbove: Stop-loss price if reversal fails
+
+Return JSON for ALL ${batch.length} items (set include=false for rejects).
+CRITICAL: Return ONLY raw JSON, no markdown blocks, no code fences, no explanations.
+Use valid JSON: double quotes, proper booleans, no trailing commas.
+Example: {"items":[{"id":563,"include":true,"confidenceScore":72,"investmentGrade":"A","targetSellPrice":250,"estimatedHoldingPeriod":"2-4w","suggestedInvestment":500000,"volatilityRisk":"low","buyIfDropsTo":225,"sellAtMin":250,"sellAtMax":270,"abortIfRisesAbove":200,"reasoning":"15% below 90d avg ($250 vs $265). Stable demand for runes during high-activity seasons. Sell once price recovers to historical range."}]}`;
 
         const aiResponse = await client.chat.completions.create({
-          model: 'gpt-4-turbo',
-          max_tokens: 1400,
+          model: 'gpt-4o-mini',
+          max_tokens: 3000, // Increased for 15 items (~200 tokens each)
           messages: [
             {
               role: 'user',
@@ -222,9 +234,49 @@ ${batch
           ],
         });
 
+        // Log token usage for cost tracking
+        const usage = aiResponse.usage;
+        if (usage) {
+          const inputCost = (usage.prompt_tokens / 1000) * 0.00015; // GPT-4o-mini: $0.00015/1K
+          const outputCost = (usage.completion_tokens / 1000) * 0.0006; // GPT-4o-mini: $0.0006/1K
+          const totalCost = inputCost + outputCost;
+          console.log(`💰 Batch ${batches.indexOf(batch) + 1}/${batches.length}: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${usage.total_tokens} tokens | Cost: $${totalCost.toFixed(4)} ($${inputCost.toFixed(4)} in + $${outputCost.toFixed(4)} out)`);
+        }
+
         const responseText = aiResponse.choices[0]?.message.content || '';
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { items: [] };
+        
+        // Strip markdown code blocks if present
+        let cleanedText = responseText.trim();
+        if (cleanedText.startsWith('```json')) {
+          cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/```\s*$/, '');
+        } else if (cleanedText.startsWith('```')) {
+          cleanedText = cleanedText.replace(/^```\s*/, '').replace(/```\s*$/, '');
+        }
+        
+        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
+        
+        let parsed = { items: [] };
+        if (jsonMatch) {
+          try {
+            parsed = JSON.parse(jsonMatch[0]);
+          } catch (parseError) {
+            console.error(`❌ AI returned invalid JSON for batch. Error: ${parseError}`);
+            console.error(`   Response preview: ${responseText.substring(0, 500)}...`);
+            // Try to fix common JSON issues
+            try {
+              // Replace single quotes with double quotes and fix true/false
+              const fixed = jsonMatch[0]
+                .replace(/'/g, '"')
+                .replace(/include:\s*(true|false)/g, '"include":$1')
+                .replace(/(\w+):/g, '"$1":'); // Quote unquoted keys
+              parsed = JSON.parse(fixed);
+              console.log(`   ✓ Fixed JSON and parsed successfully`);
+            } catch (fixError) {
+              console.error(`   ❌ Could not fix JSON, skipping batch`);
+              parsed = { items: [] };
+            }
+          }
+        }
 
         if (Array.isArray(parsed.items)) {
           parsed.items.forEach((decision: AiOpportunityDecision) => {
@@ -249,6 +301,10 @@ ${batch
               suggestedInvestment: decision.suggestedInvestment > 0 ? decision.suggestedInvestment : base.suggestedInvestment,
               volatilityRisk: decision.volatilityRisk,
               reasoning: decision.reasoning,
+              buyIfDropsTo: decision.buyIfDropsTo,
+              sellAtMin: decision.sellAtMin,
+              sellAtMax: decision.sellAtMax,
+              abortIfRisesAbove: decision.abortIfRisesAbove,
               reversionPotential,
             };
 
@@ -256,18 +312,23 @@ ${batch
           });
         }
       }
+      console.log(`🤖 AI analysis complete: processed ${batches.length} batches`);
+      console.log(`   📊 Sent ${completedSignals.length} items to AI, received decisions for ${aiAnalyzedCount} items`);
+      console.log(`   ✅ AI approved ${aiApprovedCount} items (before threshold filtering)`);
     } else if (completedSignals.length > 0) {
       // Fallback to rule-based if AI not configured
+      console.log(`⚠️ No OpenAI key found - using rule-based analysis only`);
       topOpportunities = [...completedSignals];
     }
 
     // Apply minimum thresholds after AI
+    const beforeThresholdCount = topOpportunities.length;
     topOpportunities = topOpportunities.filter(
       (s) => s.confidenceScore >= minConfidence && s.reversionPotential >= minPotential
     );
 
     console.log(
-      `✅ Found ${topOpportunities.length} AI-approved opportunities (analyzed: ${aiAnalyzedCount}, approved: ${aiApprovedCount})`
+      `✅ Final result: ${topOpportunities.length} opportunities (${beforeThresholdCount - topOpportunities.length} filtered by thresholds: confidence>=${minConfidence}%, potential>=${minPotential}%)`
     );
     
     // Include filter stats in response for frontend tracking
@@ -284,31 +345,21 @@ ${batch
     if (topOpportunities.length > 0 && process.env.OPENAI_API_KEY) {
       const top3 = topOpportunities.slice(0, 3);
       
-      const detailPrompt = `You are analyzing OSRS Grand Exchange flipping opportunities. Provide in-depth analysis for these items:
+      const detailPrompt = `Deep analysis for OSRS flip opportunities. For each:
+1. Why undervalued (timeframes)
+2. Support/resistance + dynamics
+3. Risk factors
+4. Timeline + catalysts
 
 ${top3.map(s => 
-  `- ID:${s.itemId} ${s.itemName}
-    Current: ${s.currentPrice}gp | 90d avg: ${Math.round(s.mediumTerm.avgPrice)}gp | 365d avg: ${Math.round(s.longTerm.avgPrice)}gp
-    Deviation: 7d=${s.shortTerm.currentDeviation.toFixed(1)}% | 90d=${s.mediumTerm.currentDeviation.toFixed(1)}% | 365d=${s.longTerm.currentDeviation.toFixed(1)}%
-    Target: ${s.targetSellPrice}gp | Potential: ${s.reversionPotential.toFixed(1)}% | Grade: ${s.investmentGrade}
-    Volatility: ${s.volatilityRisk} | Liquidity: ${s.liquidityScore}/10 | Supply: ${s.supplyStability}`
-).join('\n\n')}
+  `${s.itemId}|${s.itemName}|Cur:${s.currentPrice}|90d:${Math.round(s.mediumTerm.avgPrice)}|365d:${Math.round(s.longTerm.avgPrice)}|Dev:${s.shortTerm.currentDeviation.toFixed(1)}/${s.mediumTerm.currentDeviation.toFixed(1)}/${s.longTerm.currentDeviation.toFixed(1)}%|Tgt:${s.targetSellPrice}|Pot:${s.reversionPotential.toFixed(1)}%|${s.investmentGrade}|${s.volatilityRisk}|Liq:${s.liquidityScore}|Sup:${s.supplyStability}`
+).join('\n')}
 
-For EACH item, provide a 3-4 sentence detailed analysis covering:
-1. Why the price is undervalued (multi-timeframe context)
-2. Key support/resistance levels and market dynamics
-3. Risk factors to watch
-4. Expected timeline and catalysts for reversal
-
-Format as JSON:
-{
-  "itemId": number,
-  "detailedAnalysis": "3-4 sentences of in-depth analysis"
-}`;
+Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
 
       const detailResponse = await client.chat.completions.create({
         model: 'gpt-4-turbo',
-        max_tokens: 800,
+        max_tokens: 600, // Reduced from 800
         messages: [
           {
             role: 'user',

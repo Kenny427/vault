@@ -81,6 +81,10 @@ function convertMeanReversionToFlipOpportunity(signal: any): FlipOpportunity {
     totalInvestment: signal.suggestedInvestment,
     totalProfit: (signal.targetSellPrice - signal.currentPrice) * Math.floor(signal.suggestedInvestment / signal.currentPrice),
     aiReasoning: signal.reasoning,
+    buyIfDropsTo: signal.buyIfDropsTo,
+    sellAtMin: signal.sellAtMin,
+    sellAtMax: signal.sellAtMax,
+    abortIfRisesAbove: signal.abortIfRisesAbove,
   };
 }
 
@@ -151,7 +155,7 @@ export default function Dashboard() {
     }
 
     // ALWAYS use the curated pool - no custom pools, no DB pools
-    // This ensures only the 355 carefully selected items are analyzed
+    // This ensures only the curated item pool is analyzed
     const itemsToAnalyze: PoolItem[] = getAllAnalysisItems().map(item => ({
       id: item.id,
       name: item.name,

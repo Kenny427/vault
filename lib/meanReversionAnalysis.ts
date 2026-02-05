@@ -46,6 +46,12 @@ export interface MeanReversionSignal {
   targetSellPrice: number;
   stopLoss: number;
   reasoning: string;
+  
+  // AI-provided price guidance
+  buyIfDropsTo?: number; // Aggressive entry point
+  sellAtMin?: number; // Conservative exit (covers GE tax)
+  sellAtMax?: number; // Optimistic exit target
+  abortIfRisesAbove?: number; // Stop-loss trigger
 }
 
 export interface PriceDataPoint {

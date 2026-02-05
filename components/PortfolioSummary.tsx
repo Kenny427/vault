@@ -1,8 +1,10 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
 import { usePortfolioStore } from '@/lib/portfolioStore';
 import { getBatchPrices } from '@/lib/api/osrs';
+import { formatCompactNumber } from './Portfolio';
 
 interface PortfolioStats {
   totalInvested: number;
@@ -123,19 +125,19 @@ export default function PortfolioSummary() {
         <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
           <div className="text-xs text-slate-400 mb-1">Invested</div>
           <div className="text-xl font-semibold text-slate-100">
-            {stats.totalInvested.toLocaleString()}gp
+            {stats.totalInvested.toLocaleString()}
           </div>
         </div>
         <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
           <div className="text-xs text-slate-400 mb-1">Current Value</div>
           <div className="text-xl font-semibold text-slate-100">
-            {Math.round(stats.currentValue).toLocaleString()}gp
+            {Math.round(stats.currentValue).toLocaleString()}
           </div>
         </div>
         <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
           <div className="text-xs text-slate-400 mb-1">Total P/L</div>
           <div className={`text-xl font-semibold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
-            {isProfit ? '+' : ''}{Math.round(stats.totalProfit).toLocaleString()}gp
+            {isProfit ? '+' : ''}{formatCompactNumber(Math.round(stats.totalProfit))}
           </div>
           <div className={`text-xs ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
             {isProfit ? '+' : ''}{stats.profitPercentage.toFixed(1)}%
@@ -145,11 +147,11 @@ export default function PortfolioSummary() {
           <div className="text-xs text-slate-400 mb-1">Realized / Unrealized</div>
           <div className="text-sm text-slate-200">
             <span className={stats.realizedProfit >= 0 ? 'text-green-400' : 'text-red-400'}>
-              {stats.realizedProfit >= 0 ? '+' : ''}{Math.round(stats.realizedProfit).toLocaleString()}gp
+              {stats.realizedProfit >= 0 ? '+' : ''}{formatCompactNumber(Math.round(stats.realizedProfit))}
             </span>
             <span className="text-slate-500"> / </span>
             <span className={stats.unrealizedProfit >= 0 ? 'text-green-400' : 'text-red-400'}>
-              {stats.unrealizedProfit >= 0 ? '+' : ''}{Math.round(stats.unrealizedProfit).toLocaleString()}gp
+              {stats.unrealizedProfit >= 0 ? '+' : ''}{formatCompactNumber(Math.round(stats.unrealizedProfit))}
             </span>
           </div>
         </div>
