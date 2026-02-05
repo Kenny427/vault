@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
-import { getItemPrice, getItemHistory } from '@/lib/api/osrs';
+import { getItemPrice, getItemHistoryWithVolumes } from '@/lib/api/osrs';
 
 // Type for pool scores
 interface PoolItemScore {
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       try {
         const [price, history] = await Promise.all([
           getItemPrice(item.id),
-          getItemHistory(item.id, 365),
+          getItemHistoryWithVolumes(item.id, 365 * 24 * 60 * 60),
         ]);
 
         if (!price || !history || history.length < 30) {
