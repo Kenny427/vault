@@ -151,10 +151,17 @@ export async function POST(request: Request) {
     // Smart item name extraction: find matching item in pool from user's question
     // Examples: "avantoe a good flip" -> "Avantoe", "tell me about runite bolts" -> "Runite bolts"
     let matchedItem = null;
-    const lowerQuery = itemName.toLowerCase();
+    const idMatch = itemName.match(/id\s*:\s*(\d+)/i);
+    const normalizedName = itemName.replace(/\s*\(id\s*:\s*\d+\)\s*/i, ' ').trim();
+    const lowerQuery = normalizedName.toLowerCase();
+
+    if (idMatch) {
+      const id = Number(idMatch[1]);
+      matchedItem = popularItems.find(i => i.id === id) || null;
+    }
     
     // Try exact match first (most precise)
-    matchedItem = popularItems.find(i => i.name.toLowerCase() === lowerQuery);
+    matchedItem = matchedItem || popularItems.find(i => i.name.toLowerCase() === lowerQuery);
     
     // If no exact match, try to match with dose numbers (e.g., "Super attack(1)" should match exactly, not Super attack(4))
     if (!matchedItem) {
