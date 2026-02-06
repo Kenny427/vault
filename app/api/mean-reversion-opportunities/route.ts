@@ -6,7 +6,7 @@ import {
   rankInvestmentOpportunities,
   MeanReversionSignal
 } from '@/lib/meanReversionAnalysis';
-import { getDatabaseItemPool } from '@/lib/expandedItemPool';
+import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
 import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
 
     // Fetch item pool from database
     console.log('📊 Fetching item pool from database...');
-    const EXPANDED_ITEM_POOL = await getDatabaseItemPool();
+
     console.log(`📊 Fetched ${EXPANDED_ITEM_POOL.length} items from database`);
 
     if (EXPANDED_ITEM_POOL.length === 0) {
@@ -859,7 +859,7 @@ export async function POST(request: Request) {
     }
 
     // Fetch item pool from database
-    const EXPANDED_ITEM_POOL = await getDatabaseItemPool();
+
 
     // Find items in pool
 

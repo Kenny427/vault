@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getDatabaseItemPool } from '@/lib/expandedItemPool';
+import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
 import { getItemPrice, getItemHistoryWithVolumes } from '@/lib/api/osrs';
 
 // Type for pool scores
@@ -73,9 +73,6 @@ export async function POST(request: Request) {
     } = await request.json();
 
     const cacheTtlMs = Math.max(1, cacheHours) * 60 * 60 * 1000;
-
-    // Fetch item pool from database
-    const EXPANDED_ITEM_POOL = await getDatabaseItemPool();
 
     // Select items to analyze
     const itemsToAnalyze = fullScan

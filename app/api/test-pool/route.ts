@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDatabaseItemPool } from '@/lib/expandedItemPool';
+import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
 
 /**
  * Test endpoint to verify database pool fetching
@@ -9,7 +9,7 @@ export async function GET() {
     try {
         console.log('🧪 Testing database pool fetch...');
 
-        const pool = await getDatabaseItemPool();
+        const pool = EXPANDED_ITEM_POOL;
 
         console.log(`✅ Successfully fetched ${pool.length} items`);
 
@@ -20,7 +20,7 @@ export async function GET() {
                 id: item.id,
                 name: item.name,
                 category: item.category,
-                priority: item.priority
+                botLikelihood: item.botLikelihood
             }))
         });
     } catch (error) {
