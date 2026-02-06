@@ -617,7 +617,6 @@ export function calculateMaxDeviation(priceData: PriceDataPoint[]): number {
   const dev90d = metrics90d.avg > 0 ? ((metrics90d.avg - currentPrice) / metrics90d.avg) * 100 : 0;
   const dev180d = metrics180d.avg > 0 ? ((metrics180d.avg - currentPrice) / metrics180d.avg) * 100 : 0;
   const dev365d = metrics365d.avg > 0 ? ((metrics365d.avg - currentPrice) / metrics365d.avg) * 100 : 0;
-
   return Math.max(dev7d, dev30d, dev90d, dev180d, dev365d);
 }
 
@@ -631,9 +630,6 @@ export async function analyzeMeanReversionOpportunity(
   priceData: PriceDataPoint[]
 ): Promise<MeanReversionSignal | null> {
   const maxDeviation = calculateMaxDeviation(priceData);
-  if (maxDeviation < 1) {
-    return null;
-  }
 
   const metrics7d = calculateTimeframeMetrics(priceData, 7);
   const metrics30d = calculateTimeframeMetrics(priceData, 30);
