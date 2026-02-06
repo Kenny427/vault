@@ -221,7 +221,7 @@ function createFallbackInsight(signal: MeanReversionSignal): AIMarketInsight {
     confidence: signal.confidenceScore,
     marketSentiment: signal.reversionPotential > 20 ? 'bullish' : 'neutral',
     risks: ['AI analysis unavailable'],
-    opportunities: [signal.strategicNarrative],
+    opportunities: [signal.strategicNarrative ?? signal.reasoning],
     recommendation: signal.confidenceScore >= 70 ? 'buy' : 'hold',
     reasoning: 'Algorithmic analysis suggests mean reversion opportunity'
   };
