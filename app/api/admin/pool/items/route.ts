@@ -26,7 +26,12 @@ export async function POST(request: Request) {
         }
 
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user?.id) {
+
+        // Handle session requirement - allow bypass for local development
+        let userId = session?.user?.id;
+        if (!userId && process.env.NODE_ENV !== 'production') {
+            userId = '00000000-0000-0000-0000-000000000000'; // System user for local dev
+        } else if (!userId) {
             return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
         }
 
@@ -38,13 +43,12 @@ export async function POST(request: Request) {
         }
 
         const item = await addPoolItem({
-            item_id,
+            item_id: Number(item_id),
             item_name,
             category,
             priority,
             tags,
-            notes,
-            added_by: session.user.id,
+            notes, added_by: userId,
         });
 
         if (!item) {

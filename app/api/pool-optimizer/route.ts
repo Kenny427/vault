@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
+import { getCustomPoolItems } from '@/lib/poolManagement';
 import { getItemPrice, getItemHistoryWithVolumes } from '@/lib/api/osrs';
 
 // Type for pool scores
@@ -58,7 +59,7 @@ function chunkArray<T>(items: T[], size: number) {
  * POST /api/pool-optimizer
  * Body: { sampleSize?: number (default 20), fullScan?: boolean (default false) }
  * 
- * fullScan=true runs analysis on all 113 items (slower, more API calls)
+ * fullScan=true runs analysis on all items (slower, more API calls)
  * fullScan=false samples 20-30 items for quick evaluation
  */
 export async function POST(request: Request) {
@@ -74,10 +75,33 @@ export async function POST(request: Request) {
 
     const cacheTtlMs = Math.max(1, cacheHours) * 60 * 60 * 1000;
 
+    // Fetch pool from Supabase database
+    let poolItems;
+    try {
+      const dbPool = await getCustomPoolItems();
+      if (dbPool && dbPool.length > 0) {
+        poolItems = dbPool
+          .filter(item => item.enabled !== false)
+          .map(item => ({
+            id: item.item_id,
+            name: item.item_name,
+            category: (item.category || 'resources') as any,
+            botLikelihood: 'high' as const,
+            volumeTier: 'high' as const,
+            demandType: 'constant' as const
+          }));
+      } else {
+        throw new Error('Empty pool from database');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to fetch pool from Supabase, using fallback:', error);
+      poolItems = EXPANDED_ITEM_POOL;
+    }
+
     // Select items to analyze
     const itemsToAnalyze = fullScan
-      ? EXPANDED_ITEM_POOL
-      : EXPANDED_ITEM_POOL.sort(() => Math.random() - 0.5).slice(0, sampleSize);
+      ? poolItems
+      : poolItems.sort(() => Math.random() - 0.5).slice(0, sampleSize);
 
     console.log(`🔄 [POOL OPTIMIZER] Analyzing ${itemsToAnalyze.length} items...`);
 

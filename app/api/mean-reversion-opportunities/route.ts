@@ -7,6 +7,7 @@ import {
   MeanReversionSignal
 } from '@/lib/meanReversionAnalysis';
 import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
+import { getCustomPoolItems } from '@/lib/poolManagement';
 import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -79,7 +80,6 @@ export async function GET(request: Request) {
     const minPotential = parseInt(searchParams.get('minPotential') || '0');
     const categoryFilter = searchParams.get('category');
     const botFilter = searchParams.get('botLikelihood');
-    const batchSize = parseInt(searchParams.get('batchSize') || '15'); // Reduced from 40 to 15 for reliable JSON parsing
 
     if (verboseAnalysisLogging) {
       console.log(`ðŸ” Fresh analysis - AI-first opportunities (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
@@ -100,9 +100,40 @@ export async function GET(request: Request) {
       });
     }
 
-    // Filter item pool based on criteria
+    // Fetch item pool from Supabase database
+    let itemsToAnalyze;
+    try {
+      const dbPool = await getCustomPoolItems();
+      if (dbPool && dbPool.length > 0) {
+        // Map database pool items to analysis format
+        itemsToAnalyze = dbPool
+          .filter(item => item.enabled !== false) // Only include enabled items
+          .map(item => ({
+            id: item.item_id,
+            name: item.item_name,
+            category: (item.category || 'resources') as any,
+            botLikelihood: 'high' as const,
+            volumeTier: 'high' as const,
+            demandType: 'constant' as const
+          }));
+        console.log(`📊 Fetched ${itemsToAnalyze.length} enabled items from Supabase pool`);
+      } else {
+        throw new Error('Empty pool from database');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to fetch pool from Supabase, using fallback:', error);
+      itemsToAnalyze = EXPANDED_ITEM_POOL;
+      console.log(`📊 Using fallback pool with ${itemsToAnalyze.length} items`);
+    }
 
-    let itemsToAnalyze = EXPANDED_ITEM_POOL;
+    if (itemsToAnalyze.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'Item pool is empty. Please add items via /admin/',
+        opportunities: [],
+        summary: { totalAnalyzed: 0, viableOpportunities: 0 }
+      });
+    }
 
     if (categoryFilter) {
       itemsToAnalyze = itemsToAnalyze.filter(i => i.category === categoryFilter);
@@ -273,28 +304,37 @@ export async function GET(request: Request) {
       if (verboseAnalysisLogging) {
         console.log(`ðŸ¤– Starting AI analysis on ${completedSignals.length} items...`);
       }
-      const batches = chunkArray(completedSignals, Math.max(10, batchSize));
+      // Reduce batch size to 10 to ensure AI can process all items thoroughly
+      const batches = chunkArray(completedSignals, 10);
 
 
       for (const batch of batches) {
-        // Compressed prompt - let AI be the expert, minimal fluff
-        const prompt = `OSRS flip strategist focused on botted mean-reversion dumps. Evaluate EVERY item below and return a JSON decision. Account for 2% GE Tax (rounds down to nearest whole GP); profit must clear tax.
+        // Enhanced prompt for unique, item-specific reasoning
+        const prompt = `You are an expert OSRS market analyst. Analyze each item with UNIQUE, SPECIFIC reasoning based on its individual market dynamics.
 
-Required JSON per item:
-- include (boolean)
-- confidenceScore (0-100)
-- logic: object ({ "thesis": "behavioral narrative", "vulnerability": "risk factor", "trigger": "invalidation price" })
-- entryNow, entryRangeLow, entryRangeHigh (gp)
-- exitBase, exitStretch (gp)
-- stopLoss (gp)
-- holdWeeks (integer)
-- suggestedInvestment (gp)
-- volatilityRisk (low|medium|high)
+CRITICAL INSTRUCTIONS:
+1. You MUST return a decision for EVERY item listed (${batch.length} items total)
+2. Each item has different supply/demand patterns - your analysis MUST reflect these differences
+3. Avoid generic templates - be specific about THIS item's situation
+4. Account for 2% GE Tax (rounds down to nearest whole GP)
+
+For each item, provide:
+- WHY is this item undervalued RIGHT NOW? (Be specific - mention deviations, bot activity, market events)
+- WHAT makes this item's pattern unique compared to others in the batch?
+- WHAT are the specific risks for THIS item (not generic risks)?
+
+EXAMPLES OF GOOD REASONING:
+✅ "Rune arrows down 46.1% vs blended avg. Recent bot purge created supply shock. Historical pattern shows 2-3 week recovery post-ban. 83.8% upside to 90d avg."
+✅ "Karambwan at 534gp vs 90d avg 980gp (45% discount). ToB/CoX demand stable but bot supply spiked. Support held at 520gp 3x in past 6mo. Low-risk entry."
+
+EXAMPLES OF BAD (GENERIC) REASONING:
+❌ "Trading below average. Capitulation detected. Recovery expected."
+❌ "Bot supply pattern. Monitor for bounce confirmation."
 
 MARKET CONTEXT:
 ${marketContext}
 
-DATA (ID|Name|Cur|EntryRange|ExitRange|Stop|Dev7|Dev90|Dev365|BotDump|Conf|Liq|Supply|HoldWk|Bot|Risk|Pot%|VolVel):
+ITEMS TO ANALYZE (${batch.length} total - YOU MUST RETURN ALL ${batch.length}):
 
 ${batch
             .map((s) => {
@@ -303,17 +343,26 @@ ${batch
               const exitBase = Math.round(s.exitPriceBase ?? s.targetSellPrice ?? s.currentPrice);
               const exitStretch = Math.round(s.exitPriceStretch ?? exitBase);
               const stop = Math.round(s.stopLoss ?? s.entryPriceNow ?? s.currentPrice * 0.9);
-              return `${s.itemId}|${s.itemName}|${Math.round(s.currentPrice)}|${entryLow}-${entryHigh}|${exitBase}-${exitStretch}|${stop}|${s.shortTerm.currentDeviation.toFixed(1)}|${s.mediumTerm.currentDeviation.toFixed(1)}|${s.longTerm.currentDeviation.toFixed(1)}|${s.botDumpScore.toFixed(0)}|${s.confidenceScore}|${s.liquidityScore}|${s.supplyStability}|${s.expectedRecoveryWeeks}|${s.botLikelihood}|${s.volatilityRisk}|${s.reversionPotential.toFixed(1)}|${(s.volumeVelocity ?? 1).toFixed(2)}\nCap:${s.capitulationSignal}\nRec:${s.recoverySignal}\nPlan:${s.holdNarrative}`;
+              return `ID:${s.itemId} | ${s.itemName}
+Current: ${Math.round(s.currentPrice)}gp | Entry: ${entryLow}-${entryHigh}gp | Exit: ${exitBase}-${exitStretch}gp | Stop: ${stop}gp
+Deviations: 7d=${s.shortTerm.currentDeviation.toFixed(1)}% | 90d=${s.mediumTerm.currentDeviation.toFixed(1)}% | 365d=${s.longTerm.currentDeviation.toFixed(1)}%
+Bot Dump Score: ${s.botDumpScore.toFixed(0)} | Confidence: ${s.confidenceScore} | Liquidity: ${s.liquidityScore} | Supply Stability: ${s.supplyStability}
+Bot Likelihood: ${s.botLikelihood} | Risk: ${s.volatilityRisk} | Potential: ${s.reversionPotential.toFixed(1)}% | Hold: ${s.expectedRecoveryWeeks}wk
+Capitulation: ${s.capitulationSignal}
+Recovery: ${s.recoverySignal}
+Plan: ${s.holdNarrative}`;
             })
-            .join('\n\n')}
+            .join('\n\n---\n\n')}
 
-Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, no additional text).`;
+Return ONLY valid JSON: {"items":[{"id":number,"include":boolean,"confidenceScore":number,"reasoning":"unique 2-3 sentence analysis","entryNow":number,"entryRangeLow":number,"entryRangeHigh":number,"exitBase":number,"exitStretch":number,"stopLoss":number,"holdWeeks":number,"suggestedInvestment":number,"volatilityRisk":"low|medium|high","logic":{"thesis":"why undervalued","vulnerability":"specific risk","trigger":"invalidation price"}}]}
+
+REMEMBER: Return ALL ${batch.length} items in your response.`;
 
 
         const aiResponse = await client.chat.completions.create({
           model: 'gpt-4o-mini',
-          max_tokens: 3200,
-          temperature: 0.2,
+          max_tokens: 4500, // Increased from 3200 to allow more detailed, unique reasoning
+          temperature: 0.3, // Slightly higher for more creative, varied responses
           response_format: { type: 'json_object' },
           messages: [
             {

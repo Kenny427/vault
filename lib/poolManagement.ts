@@ -71,7 +71,7 @@ export async function addPoolItem(item: {
     added_by: string;
 }) {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await adminSupabase
             .from('custom_pool_items')
             .insert({
                 item_id: item.item_id,
@@ -102,7 +102,7 @@ export async function addPoolItem(item: {
  */
 export async function updatePoolItem(id: string, updates: Partial<PoolItem>) {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await adminSupabase
             .from('custom_pool_items')
             .update({
                 ...updates,
@@ -129,7 +129,7 @@ export async function updatePoolItem(id: string, updates: Partial<PoolItem>) {
  */
 export async function deletePoolItem(id: string) {
     try {
-        const { error } = await supabase
+        const { error } = await adminSupabase
             .from('custom_pool_items')
             .delete()
             .eq('id', id);
