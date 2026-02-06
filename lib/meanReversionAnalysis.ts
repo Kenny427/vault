@@ -89,6 +89,120 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
+ * PRICE VALIDATION - Ensures AI-generated price guidance is sane
+ * Prevents issues like karambwan prices being 15x off
+ */
+export interface ValidatedPrices {
+  entryOptimal: number;
+  exitConservative: number;
+  exitAggressive: number;
+  triggerStop: number;
+  violations: string[];
+  useDefaults: boolean;
+}
+
+export function validateAndConstrainPrices(
+  aiPrices: {
+    entryOptimal?: number | null;
+    exitConservative?: number | null;
+    exitAggressive?: number | null;
+    triggerStop?: number | null;
+  },
+  signal: {
+    currentPrice: number;
+    entryPriceNow: number;
+    entryRangeLow: number;
+    entryRangeHigh: number;
+    exitPriceBase: number;
+    exitPriceStretch: number;
+    stopLoss: number;
+    longTerm: TimeframeData;
+    shortTerm: TimeframeData;
+  }
+): ValidatedPrices {
+  const violations: string[] = [];
+
+  // Get historical context from signal
+  const currentPrice = signal.currentPrice;
+
+  // Validate entry price
+  let entryOptimal = aiPrices.entryOptimal ?? signal.entryPriceNow;
+  if (!entryOptimal || entryOptimal <= 0) {
+    entryOptimal = signal.entryPriceNow;
+  } else if (entryOptimal > currentPrice * 1.15 || entryOptimal < currentPrice * 0.85) {
+    // Entry must be within ±15% of current (give AI more flexibility than server gate)
+    violations.push(
+      `Entry ${entryOptimal}gp is ${Math.abs(entryOptimal / currentPrice - 1) * 100}% off current ${currentPrice}gp`
+    );
+    entryOptimal = clamp(entryOptimal, Math.max(1, currentPrice * 0.90), currentPrice * 1.10);
+  }
+
+  // Validate exit prices
+  let exitConservative =
+    aiPrices.exitConservative ?? signal.exitPriceBase ?? currentPrice;
+  let exitAggressive =
+    aiPrices.exitAggressive ?? signal.exitPriceStretch ?? currentPrice;
+
+  if (!exitConservative || exitConservative <= entryOptimal) {
+    violations.push(
+      `Exit conservative ${exitConservative}gp <= entry ${entryOptimal}gp`
+    );
+    exitConservative = signal.exitPriceBase;
+  } else if (exitConservative > currentPrice * 3) {
+    // Exit shouldn't be >3x current price (unless item is extremely depressed)
+    const upside = exitConservative / currentPrice;
+    if (upside > 5) {
+      violations.push(
+        `Exit conservative ${exitConservative}gp is ${(upside * 100).toFixed(0)}% above current - unrealistic recovery`
+      );
+      exitConservative = Math.min(
+        signal.exitPriceBase,
+        Math.max(entryOptimal * 1.2, currentPrice * 1.5)
+      );
+    }
+  }
+
+  if (!exitAggressive || exitAggressive < exitConservative) {
+    violations.push(
+      `Exit aggressive ${exitAggressive}gp < conservative ${exitConservative}gp`
+    );
+    exitAggressive = signal.exitPriceStretch;
+  }
+
+  // Validate stop loss
+  let triggerStop = aiPrices.triggerStop ?? signal.stopLoss;
+  if (!triggerStop || triggerStop >= entryOptimal) {
+    violations.push(`Stop loss ${triggerStop}gp >= entry ${entryOptimal}gp`);
+    triggerStop = Math.max(1, Math.round(entryOptimal * 0.90));
+  }
+
+  // Detect major violations that warrant using defaults
+  if (violations.length >= 2) {
+    console.warn(
+      `⚠️ PRICE GUIDANCE: Multiple violations detected for item. Using default ranges.`,
+      violations
+    );
+    return {
+      entryOptimal: signal.entryPriceNow,
+      exitConservative: signal.exitPriceBase,
+      exitAggressive: signal.exitPriceStretch,
+      triggerStop: signal.stopLoss,
+      violations,
+      useDefaults: true,
+    };
+  }
+
+  return {
+    entryOptimal,
+    exitConservative,
+    exitAggressive,
+    triggerStop,
+    violations,
+    useDefaults: false,
+  };
+}
+
+/**
  * Calculate average price over a specific timeframe
  */
 function calculateTimeframeMetrics(

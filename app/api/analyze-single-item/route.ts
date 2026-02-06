@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
-import { analyzeMeanReversionOpportunity, MeanReversionSignal } from '@/lib/meanReversionAnalysis';
+import { analyzeMeanReversionOpportunity, MeanReversionSignal, validateAndConstrainPrices } from '@/lib/meanReversionAnalysis';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -320,16 +320,16 @@ export async function GET(request: Request) {
     
     const strategistPrompt = `You are an expert OSRS market analyst. Perform DEEP DIVE analysis on this item's investment potential.
 
-ITEM: ${baseSignal.itemName}
+ITEM: ${baseSignal.itemName} (ID: ${itemId})
 CURRENT PRICE: ${baseSignal.currentPrice}gp
 
-TIMEFRAME DATA:
-- 7d avg: ${baseSignal.shortTerm.avgPrice}gp (dev: ${baseSignal.shortTerm.currentDeviation.toFixed(1)}%)
-- 90d avg: ${baseSignal.mediumTerm.avgPrice}gp (dev: ${baseSignal.mediumTerm.currentDeviation.toFixed(1)}%)
-- 365d avg: ${baseSignal.longTerm.avgPrice}gp (dev: ${baseSignal.longTerm.currentDeviation.toFixed(1)}%)
+HISTORICAL CONTEXT (12-month range):
+- 7d avg: ${baseSignal.shortTerm.avgPrice}gp (current is ${baseSignal.shortTerm.currentDeviation.toFixed(1)}% from this)
+- 90d avg: ${baseSignal.mediumTerm.avgPrice}gp (current is ${baseSignal.mediumTerm.currentDeviation.toFixed(1)}% from this)
+- 365d avg: ${baseSignal.longTerm.avgPrice}gp (current is ${baseSignal.longTerm.currentDeviation.toFixed(1)}% from this)
+- Max Deviation: ${baseSignal.maxDeviation.toFixed(1)}%
 
 METRICS:
-- Max Deviation: ${baseSignal.maxDeviation.toFixed(1)}%
 - Reversion Potential: ${baseSignal.reversionPotential.toFixed(1)}%
 - Confidence: ${baseSignal.confidenceScore}%
 - Bot Likelihood: ${baseSignal.botLikelihood}
@@ -337,12 +337,19 @@ METRICS:
 - Liquidity Score: ${baseSignal.liquidityScore}
 - Volatility Risk: ${baseSignal.volatilityRisk}
 
-TARGET PRICES:
+BASE RECOMMENDATIONS (for reference):
 - Entry Now: ${baseSignal.entryPriceNow}gp
 - Entry Range: ${baseSignal.entryRangeLow}-${baseSignal.entryRangeHigh}gp
-- Exit Base: ${baseSignal.exitPriceBase}gp
-- Exit Stretch: ${baseSignal.exitPriceStretch}gp
+- Exit Base Target: ${baseSignal.exitPriceBase}gp
+- Exit Stretch Target: ${baseSignal.exitPriceStretch}gp
 - Stop Loss: ${baseSignal.stopLoss}gp
+
+⚠️ PRICE GUIDANCE CONSTRAINTS (Must follow):
+- Entry price MUST be within ±15% of current (${Math.round(baseSignal.currentPrice * 0.85)}-${Math.round(baseSignal.currentPrice * 1.15)}gp)
+- Exit conservative MUST be higher than entry and avoid >3x current price
+- Exit aggressive can be higher but should not exceed 2x the 365d average
+- Stop loss must be lower than entry price
+- All prices must be realistic based on historical 12-month range
 
 TASK: Provide a comprehensive investment thesis with structured reasoning:
 
@@ -358,26 +365,26 @@ TASK: Provide a comprehensive investment thesis with structured reasoning:
    - Expected recovery timeline and catalysts
    - Risk/reward assessment
 
-5. **PRICE GUIDANCE**:
-   - entryOptimal: Best entry price for this trade
-   - exitConservative: Safe exit that covers taxes
-   - exitAggressive: Optimistic target if conditions are perfect
+5. **PRICE GUIDANCE** (MUST follow constraints):
+   - entryOptimal: Best entry price for this trade (within ±15% of current)
+   - exitConservative: Safe exit that covers taxes and fees
+   - exitAggressive: Optimistic target (realistic based on history)
    - triggerStop: Hard stop loss price
 
-Return ONLY valid JSON (no markdown):
+Return ONLY valid JSON with no markdown, no additional text:
 {
   "logic": {
-    "thesis": "...",
-    "vulnerability": "...",
-    "trigger": "..."
+    "thesis": "2-3 sentence investment thesis",
+    "vulnerability": "Bear case / counterargument",
+    "trigger": "Invalidation point for thesis"
   },
-  "strategicNarrative": "...",
+  "strategicNarrative": "3-4 sentence detailed analysis",
   "confidenceAdjustment": 0,
   "priceTargets": {
-    "entryOptimal": 0,
-    "exitConservative": 0,
-    "exitAggressive": 0,
-    "triggerStop": 0
+    "entryOptimal": ${baseSignal.currentPrice},
+    "exitConservative": ${baseSignal.exitPriceBase},
+    "exitAggressive": ${baseSignal.exitPriceStretch},
+    "triggerStop": ${baseSignal.stopLoss}
   },
   "volumeVelocity": ${baseSignal.mediumTerm.volumeAvg > 0 ? (baseSignal.shortTerm.volumeAvg / baseSignal.mediumTerm.volumeAvg).toFixed(2) : '1.0'},
   "holdingPeriod": "${baseSignal.estimatedHoldingPeriod}"
@@ -418,24 +425,33 @@ Return ONLY valid JSON (no markdown):
     const auditorPrompt = `You are a skeptical investment auditor. Review this OSRS item analysis and identify hidden traps.
 
 ITEM: ${baseSignal.itemName} (${itemId})
+CURRENT PRICE: ${baseSignal.currentPrice}gp
 STRATEGIST THESIS: ${strategistData.logic?.thesis || 'Buy opportunity based on mean reversion'}
 STRATEGIST NARRATIVE: ${strategistData.strategicNarrative || baseSignal.reasoning}
+PROPOSED ENTRY: ${strategistData.priceTargets?.entryOptimal || baseSignal.entryPriceNow}gp
+PROPOSED EXIT: ${strategistData.priceTargets?.exitConservative || baseSignal.exitPriceBase}gp
+
+PRICE SANITY CHECKS (red flags):
+1. Is entry price within ±15% of current price? (within ${Math.round(baseSignal.currentPrice * 0.85)}-${Math.round(baseSignal.currentPrice * 1.15)}gp)
+2. Is exit target realistic vs historical 365d average (${baseSignal.longTerm.avgPrice}gp)?
+3. Does the proposed upside exceed the confidence level? (High upside + low confidence = trap)
+4. Are there any structural change indicators being ignored?
 
 CRITIQUE THE FOLLOWING:
 1. Is this a real mean-reversion or structural decline?
 2. Are the volume patterns genuine or fake/manipulated?
 3. Is the bot likelihood assessment correct?
-4. Are there better alternatives worth considering?
+4. **Are the price targets realistic and constrained?** Flag if entry/exit violate expected ranges.
 
 Provide:
 - **decision**: "approve" | "caution" | "reject"
-- **auditorNote**: 1-2 sentence critique
+- **auditorNote**: 1-2 sentence critique (include price concerns if found)
 - **confidencePenalty**: 0-25 (penalty points if skeptical)
 
 Return ONLY valid JSON:
 {
   "decision": "approve",
-  "auditorNote": "...",
+  "auditorNote": "Detailed critique with any price concerns",
   "confidencePenalty": 0
 }`;
 
@@ -468,6 +484,29 @@ Return ONLY valid JSON:
       console.error('Failed to parse auditor response:', e);
     }
     
+    // VALIDATE and constrain AI-generated price guidance
+    const validatedPrices = validateAndConstrainPrices(
+      {
+        entryOptimal: strategistData.priceTargets?.entryOptimal,
+        exitConservative: strategistData.priceTargets?.exitConservative,
+        exitAggressive: strategistData.priceTargets?.exitAggressive,
+        triggerStop: strategistData.priceTargets?.triggerStop,
+      },
+      baseSignal
+    );
+
+    if (validatedPrices.violations.length > 0) {
+      console.warn(
+        `⚠️ Price Guidance Validation - Item ${baseSignal.itemName} (${itemId}):`,
+        validatedPrices.violations
+      );
+      if (validatedPrices.useDefaults) {
+        console.warn(
+          `   Using default price ranges instead of AI guidance`
+        );
+      }
+    }
+    
     // Merge AI insights into signal
     const enhancedSignal: MeanReversionSignal = {
       ...baseSignal,
@@ -488,10 +527,10 @@ Return ONLY valid JSON:
       )),
       auditorDecision: auditorData.decision || 'approve',
       auditorNotes: auditorData.auditorNote,
-      buyIfDropsTo: strategistData.priceTargets?.entryOptimal,
-      sellAtMin: strategistData.priceTargets?.exitConservative,
-      sellAtMax: strategistData.priceTargets?.exitAggressive,
-      abortIfRisesAbove: strategistData.priceTargets?.triggerStop,
+      buyIfDropsTo: validatedPrices.entryOptimal,
+      sellAtMin: validatedPrices.exitConservative,
+      sellAtMax: validatedPrices.exitAggressive,
+      abortIfRisesAbove: validatedPrices.triggerStop,
     };
     
     console.log(`✅ Deep analysis complete: decision=${enhancedSignal.auditorDecision}, final confidence=${enhancedSignal.confidenceScore}%`);
