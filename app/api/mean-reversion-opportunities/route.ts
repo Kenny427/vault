@@ -487,7 +487,7 @@ ${top3.map(s =>
 Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
 
       const detailResponse = await client.chat.completions.create({
-        model: 'gpt-4-turbo',
+        model: 'gpt-4o-mini',
         max_tokens: 600, // Reduced from 800
         messages: [
           {
@@ -496,6 +496,23 @@ Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
           },
         ],
       });
+
+      // Track detailed analysis cost
+      const detailUsage = detailResponse.usage;
+      if (detailUsage) {
+        const detailInputCost = (detailUsage.prompt_tokens / 1000) * 0.00015; // GPT-4o-mini: $0.00015/1K
+        const detailOutputCost = (detailUsage.completion_tokens / 1000) * 0.0006; // GPT-4o-mini: $0.0006/1K
+        const detailBatchCost = detailInputCost + detailOutputCost;
+        
+        totalInputTokens += detailUsage.prompt_tokens;
+        totalOutputTokens += detailUsage.completion_tokens;
+        totalTokens += detailUsage.total_tokens;
+        totalCostUSD += detailBatchCost;
+        
+        if (verboseAnalysisLogging) {
+          console.log(`💰 Detailed analysis: ${detailUsage.prompt_tokens} in + ${detailUsage.completion_tokens} out = ${detailUsage.total_tokens} tokens | Cost: $${detailBatchCost.toFixed(4)} ($${detailInputCost.toFixed(4)} in + $${detailOutputCost.toFixed(4)} out)`);
+        }
+      }
 
       const detailText = detailResponse.choices[0]?.message.content || '';
       
