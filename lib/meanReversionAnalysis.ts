@@ -20,29 +20,29 @@ export interface MeanReversionSignal {
   itemId: number;
   itemName: string;
   currentPrice: number;
-  
+
   // Multi-timeframe analysis
   shortTerm: TimeframeData; // 7 days
   mediumTerm: TimeframeData; // 90 days
   longTerm: TimeframeData; // 365 days
-  
+
   // Investment metrics
   maxDeviation: number; // Biggest % drop vs historical
   reversionPotential: number; // Expected % gain on reversion
   confidenceScore: number; // 0-100, based on volume & consistency
   investmentGrade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
-  
+
   // Risk assessment
   volatilityRisk: 'low' | 'medium' | 'high';
   liquidityScore: number; // 0-100
   estimatedHoldingPeriod: string; // e.g., "2-4 weeks", "1-3 months"
-  
+
   // Bot activity indicators
   botLikelihood: 'very high' | 'high' | 'medium' | 'low';
   supplyStability: number; // 0-100, higher = more stable
-  
+
   // Recommendation
-    suggestedInvestment: number; // GP amount
+  suggestedInvestment: number; // GP amount
   targetSellPrice: number;
   stopLoss: number;
   reasoning: string;
@@ -56,13 +56,13 @@ export interface MeanReversionSignal {
   exitPriceStretch: number;
   holdNarrative: string;
   expectedRecoveryWeeks: number;
-  
+
   // AI-provided price guidance
   buyIfDropsTo?: number; // Aggressive entry point
   sellAtMin?: number; // Conservative exit (covers GE tax)
   sellAtMax?: number; // Optimistic exit target
   abortIfRisesAbove?: number; // Stop-loss trigger
-  
+
   // Phase 3: AI Intelligence enhancements
   logic?: {
     thesis: string; // The "Why"
@@ -213,24 +213,24 @@ function calculateTimeframeMetrics(
   // Convert to seconds since API returns timestamps in seconds, not milliseconds
   const cutoffTime = Math.floor(Date.now() / 1000) - (daysBack * 24 * 60 * 60);
   const relevantData = priceData.filter(d => d.timestamp >= cutoffTime);
-  
+
   if (relevantData.length === 0) {
     return { avg: 0, volatility: 0, volumeAvg: 0 };
   }
-  
+
   // Calculate average price (midpoint of high/low)
   const prices = relevantData.map(d => (d.avgHighPrice + d.avgLowPrice) / 2);
   const avg = prices.reduce((sum, p) => sum + p, 0) / prices.length;
-  
+
   // Calculate volatility (standard deviation)
   const squaredDiffs = prices.map(p => Math.pow(p - avg, 2));
   const variance = squaredDiffs.reduce((sum, d) => sum + d, 0) / prices.length;
   const volatility = Math.sqrt(variance);
-  
+
   // Calculate average volume
   const volumes = relevantData.map(d => d.highPriceVolume + d.lowPriceVolume);
   const volumeAvg = volumes.reduce((sum, v) => sum + v, 0) / volumes.length;
-  
+
   return { avg, volatility, volumeAvg };
 }
 
@@ -244,10 +244,10 @@ function assessBotLikelihood(priceData: PriceDataPoint[]): {
   if (priceData.length < 30) {
     return { likelihood: 'low', supplyStability: 50 };
   }
-  
+
   // Recent 30 days
   const recentData = priceData.slice(-30);
-  
+
   // Many OSRS items have no volume data (0/0), so we check price consistency instead
   // Bots create consistent pricing patterns
   const prices = recentData.map(d => (d.avgHighPrice + d.avgLowPrice) / 2);
@@ -255,11 +255,11 @@ function assessBotLikelihood(priceData: PriceDataPoint[]): {
   const priceVariance = prices.reduce((sum, p) => sum + Math.pow(p - avgPrice, 2), 0) / prices.length;
   const priceStdDev = Math.sqrt(priceVariance);
   const priceCV = avgPrice > 0 ? (priceStdDev / avgPrice) * 100 : 50;
-  
+
   // Lower price variation = more stable/bot-like
   // Most OSRS items have 10-30% variation, bots are under 10%
   const supplyStability = Math.max(0, Math.min(100, 100 - (priceCV * 2)));
-  
+
   let likelihood: 'very high' | 'high' | 'medium' | 'low';
   if (priceCV < 5) {
     likelihood = 'very high'; // Extremely stable price
@@ -270,7 +270,7 @@ function assessBotLikelihood(priceData: PriceDataPoint[]): {
   } else {
     likelihood = 'low'; // Volatile
   }
-  
+
   return { likelihood, supplyStability };
 }
 
@@ -298,9 +298,9 @@ function assessVolatilityRisk(
 ): 'low' | 'medium' | 'high' {
   const shortTermPercent = (shortTermVol / avgPrice) * 100;
   const longTermPercent = (longTermVol / avgPrice) * 100;
-  
+
   const avgVolPercent = (shortTermPercent + longTermPercent) / 2;
-  
+
   if (avgVolPercent < 5) return 'low';
   if (avgVolPercent < 15) return 'medium';
   return 'high';
@@ -600,12 +600,38 @@ function assessDowntrendPenalty(priceData: PriceDataPoint[]): {
  * MAIN ANALYSIS FUNCTION
  * Analyzes an item for mean-reversion investment opportunities
  */
+export function calculateMaxDeviation(priceData: PriceDataPoint[]): number {
+  if (!priceData || priceData.length < 5) return 0;
+
+  const metrics7d = calculateTimeframeMetrics(priceData, 7);
+  const metrics30d = calculateTimeframeMetrics(priceData, 30);
+  const metrics90d = calculateTimeframeMetrics(priceData, 90);
+  const metrics180d = calculateTimeframeMetrics(priceData, 180);
+  const metrics365d = calculateTimeframeMetrics(priceData, 365);
+
+  const latest = priceData[priceData.length - 1];
+  const currentPrice = (latest.avgHighPrice + latest.avgLowPrice) / 2;
+
+  const dev7d = metrics7d.avg > 0 ? ((metrics7d.avg - currentPrice) / metrics7d.avg) * 100 : 0;
+  const dev30d = metrics30d.avg > 0 ? ((metrics30d.avg - currentPrice) / metrics30d.avg) * 100 : 0;
+  const dev90d = metrics90d.avg > 0 ? ((metrics90d.avg - currentPrice) / metrics90d.avg) * 100 : 0;
+  const dev180d = metrics180d.avg > 0 ? ((metrics180d.avg - currentPrice) / metrics180d.avg) * 100 : 0;
+  const dev365d = metrics365d.avg > 0 ? ((metrics365d.avg - currentPrice) / metrics365d.avg) * 100 : 0;
+
+  return Math.max(dev7d, dev30d, dev90d, dev180d, dev365d);
+}
+
+/**
+ * MAIN ANALYSIS FUNCTION
+ * Analyzes an item for mean-reversion investment opportunities
+ */
 export async function analyzeMeanReversionOpportunity(
   itemId: number,
   itemName: string,
   priceData: PriceDataPoint[]
 ): Promise<MeanReversionSignal | null> {
-  if (!priceData || priceData.length < 5) {
+  const maxDeviation = calculateMaxDeviation(priceData);
+  if (maxDeviation < 1) {
     return null;
   }
 
@@ -623,12 +649,6 @@ export async function analyzeMeanReversionOpportunity(
   const dev90d = metrics90d.avg > 0 ? ((metrics90d.avg - currentPrice) / metrics90d.avg) * 100 : 0;
   const dev180d = metrics180d.avg > 0 ? ((metrics180d.avg - currentPrice) / metrics180d.avg) * 100 : 0;
   const dev365d = metrics365d.avg > 0 ? ((metrics365d.avg - currentPrice) / metrics365d.avg) * 100 : 0;
-
-  const maxDeviation = Math.max(dev7d, dev30d, dev90d, dev180d, dev365d);
-
-  if (maxDeviation < 1) {
-    return null;
-  }
 
   const { likelihood: botLikelihood, supplyStability } = assessBotLikelihood(priceData);
 
@@ -652,10 +672,10 @@ export async function analyzeMeanReversionOpportunity(
     botLikelihood === 'very high'
       ? 20
       : botLikelihood === 'high'
-      ? 15
-      : botLikelihood === 'medium'
-      ? 8
-      : 0;
+        ? 15
+        : botLikelihood === 'medium'
+          ? 8
+          : 0;
 
   botDumpScore += Math.max(0, supplyStability - 60) * 0.2;
   botDumpScore = clamp(botDumpScore, 0, 100);
@@ -730,10 +750,10 @@ export async function analyzeMeanReversionOpportunity(
     botLikelihood === 'very high'
       ? 0.6
       : botLikelihood === 'high'
-      ? 0.75
-      : botLikelihood === 'medium'
-      ? 1
-      : 1.25;
+        ? 0.75
+        : botLikelihood === 'medium'
+          ? 1
+          : 1.25;
   const recoveryModifier = recoveryStrength > 60 ? 0.8 : recoveryStrength > 35 ? 0.95 : 1.15;
   const expectedRecoveryWeeks = Math.max(
     2,
@@ -833,14 +853,14 @@ export function rankInvestmentOpportunities(
     const gradeValue = { 'A+': 6, 'A': 5, 'B+': 4, 'B': 3, 'C': 2, 'D': 1 };
     const gradeA = gradeValue[a.investmentGrade];
     const gradeB = gradeValue[b.investmentGrade];
-    
+
     if (gradeA !== gradeB) return gradeB - gradeA;
-    
+
     // Secondary: Reversion potential
     if (Math.abs(a.reversionPotential - b.reversionPotential) > 5) {
       return b.reversionPotential - a.reversionPotential;
     }
-    
+
     // Tertiary: Confidence score
     return b.confidenceScore - a.confidenceScore;
   });
@@ -859,13 +879,13 @@ export function filterViableOpportunities(
     .filter(s => {
       // Must have some confidence (allowing lower scores to show more opportunities)
       if (s.confidenceScore < minConfidence) return false;
-      
+
       // Must be actually undervalued (1%+ minimum to show in results)
       if (s.maxDeviation < 1) return false;
-      
+
       // Must have at least some potential for gains
       if (s.reversionPotential < minReversionPotential) return false;
-      
+
       // Include all grades - let UI sorting handle quality filtering
       return true;
     });
