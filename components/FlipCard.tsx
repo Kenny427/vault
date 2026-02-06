@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import SetAlertModal from './SetAlertModal';
+import ItemNotesModal from './ItemNotesModal';
 
 interface FlipCardProps {
   opportunity: FlipOpportunity;
@@ -16,6 +17,7 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
   const isInFavorites = favorites.some(item => item.id === opportunity.itemId);
   
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
 
   const formatNumber = (value: number) => {
     const abs = Math.abs(value);
@@ -203,7 +205,7 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
 
 
       {/* Quick Actions */}
-      <div className="p-3 border-t border-slate-700 bg-slate-900/30 grid grid-cols-2 gap-2">
+      <div className="p-3 border-t border-slate-700 bg-slate-900/30 grid grid-cols-3 gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -222,15 +224,32 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
         >
           🔔 Alert
         </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowNotesModal(true);
+          }}
+          className="py-2 px-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded transition-colors"
+        >
+          📝 Notes
+        </button>
       </div>
 
-      {/* Modal - rendered outside card using portal */}
+      {/* Modals - rendered outside card using portal */}
       {showSetAlertModal && typeof document !== 'undefined' && createPortal(
         <SetAlertModal
           itemId={opportunity.itemId}
           itemName={opportunity.itemName}
           currentPrice={opportunity.currentPrice}
           onClose={() => setShowSetAlertModal(false)}
+        />,
+        document.body
+      )}
+      {showNotesModal && typeof document !== 'undefined' && createPortal(
+        <ItemNotesModal
+          itemId={opportunity.itemId}
+          itemName={opportunity.itemName}
+          onClose={() => setShowNotesModal(false)}
         />,
         document.body
       )}

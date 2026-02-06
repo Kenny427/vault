@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import PriceChart from './PriceChart';
 import SearchBar from './SearchBar';
+import ItemNotesModal from './ItemNotesModal';
 import { getItemDailyVolume, getItemDetails, getItemHistory, getItemPrice, resolveIconUrl } from '@/lib/api/osrs';
 import { useDashboardStore } from '@/lib/store';
 
@@ -23,6 +24,7 @@ export default function ItemPage() {
   const params = useParams();
   const itemId = Number(params?.id);
   const [timeframe, setTimeframe] = useState<Timeframe>('30d');
+  const [showNotesModal, setShowNotesModal] = useState(false);
   const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
   const isFavorite = favorites.some(item => item.id === itemId);
 
@@ -215,6 +217,12 @@ export default function ItemPage() {
           >
             {isFavorite ? '★ Favorited' : '☆ Add to Favorites'}
           </button>
+          <button
+            onClick={() => setShowNotesModal(true)}
+            className="ml-2 px-3 py-1.5 text-xs rounded border bg-purple-600 text-white border-purple-600 hover:bg-purple-700 transition-colors"
+          >
+            📝 Notes
+          </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -362,6 +370,14 @@ export default function ItemPage() {
           </div>
         )}
       </div>
+
+      {showNotesModal && (
+        <ItemNotesModal
+          itemId={itemId}
+          itemName={itemDetails?.name || `Item ${itemId}`}
+          onClose={() => setShowNotesModal(false)}
+        />
+      )}
     </div>
   );
 }

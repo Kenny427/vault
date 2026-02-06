@@ -31,6 +31,7 @@ import AddPortfolioItemModal from './AddPortfolioItemModal';
 import AddPortfolioSaleModal from './AddPortfolioSaleModal';
 import RecordTradeModal from './RecordTradeModal';
 import SetAlertModal from './SetAlertModal';
+import ItemNotesModal from './ItemNotesModal';
 import TradeHistory from './TradeHistory';
 import PendingTransactionsModal from './PendingTransactionsModal';
 import SearchBar from './SearchBar';
@@ -67,6 +68,7 @@ export default function Portfolio() {
   const [showPendingTransactions, setShowPendingTransactions] = useState(false);
   const [showRecordTradeModal, setShowRecordTradeModal] = useState<{ item: any; currentPrice: number } | null>(null);
   const [showSetAlertModal, setShowSetAlertModal] = useState<{ itemId: number; itemName: string; currentPrice: number } | null>(null);
+  const [showNotesModal, setShowNotesModal] = useState<{ itemId: number; itemName: string } | null>(null);
   const [showTradeHistory, setShowTradeHistory] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [aiReview, setAIReview] = useState<PortfolioSummaryAI | null>(null);
@@ -441,6 +443,13 @@ export default function Portfolio() {
                               >
                                 🔔
                               </button>
+                              <button
+                                onClick={() => setShowNotesModal({ itemId: item.itemId, itemName: item.itemName })}
+                                className="text-purple-400 hover:text-purple-300 hover:bg-purple-900/20 transition-colors p-1.5 rounded text-base"
+                                title="Notes"
+                              >
+                                📝
+                              </button>
                             </>
                           )}
                           <button
@@ -578,6 +587,14 @@ export default function Portfolio() {
           itemName={showSetAlertModal.itemName}
           currentPrice={showSetAlertModal.currentPrice}
           onClose={() => setShowSetAlertModal(null)}
+        />
+      )}
+
+      {showNotesModal && (
+        <ItemNotesModal
+          itemId={showNotesModal.itemId}
+          itemName={showNotesModal.itemName}
+          onClose={() => setShowNotesModal(null)}
         />
       )}
 
