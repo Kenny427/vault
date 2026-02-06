@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import PriceChart from './PriceChart';
 import SearchBar from './SearchBar';
 import ItemNotesModal from './ItemNotesModal';
+import DeepAnalysisModal from './DeepAnalysisModal';
 import { getItemDailyVolume, getItemDetails, getItemHistory, getItemPrice, resolveIconUrl } from '@/lib/api/osrs';
 import { useDashboardStore } from '@/lib/store';
 
@@ -25,6 +26,7 @@ export default function ItemPage() {
   const itemId = Number(params?.id);
   const [timeframe, setTimeframe] = useState<Timeframe>('30d');
   const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showDeepAnalysis, setShowDeepAnalysis] = useState(false);
   const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
   const isFavorite = favorites.some(item => item.id === itemId);
 
@@ -230,6 +232,12 @@ export default function ItemPage() {
           >
             📝 Notes
           </button>
+          <button
+            onClick={() => setShowDeepAnalysis(true)}
+            className="ml-2 px-3 py-1.5 text-xs rounded border bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-600 hover:from-indigo-700 hover:to-purple-700 transition-all"
+          >
+            🧠 Deep Analysis
+          </button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -383,6 +391,14 @@ export default function ItemPage() {
           itemId={itemId}
           itemName={itemDetails?.name || `Item ${itemId}`}
           onClose={() => setShowNotesModal(false)}
+        />
+      )}
+
+      {showDeepAnalysis && (
+        <DeepAnalysisModal
+          itemId={itemId}
+          itemName={itemDetails?.name || `Item ${itemId}`}
+          onClose={() => setShowDeepAnalysis(false)}
         />
       )}
     </div>

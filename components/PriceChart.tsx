@@ -94,14 +94,17 @@ export default function PriceChart({
   useEffect(() => {
     setVisibleLines((prev) => {
       const next = { ...prev };
+      let changed = false;
       extraLines.forEach((line) => {
-        if (next[line.id] === undefined) {
-          next[line.id] = line.defaultVisible;
+        if (prev[line.id] === undefined) {
+          next[line.id] = line.defaultVisible ?? defaultLinesOn;
+          changed = true;
         }
       });
-      return next;
+      return changed ? next : prev;
     });
-  }, [extraLines]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extraLines.length]);
 
   const toggleLine = (key: string) => {
     setVisibleLines((prev) => ({ ...prev, [key]: !prev[key] }));
