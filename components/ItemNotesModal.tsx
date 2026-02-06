@@ -29,8 +29,19 @@ export default function ItemNotesModal({ itemId, itemName, onClose }: ItemNotesM
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-900 border-2 border-osrs-accent/30 rounded-lg max-w-md w-full">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={(e) => {
+        e.stopPropagation();
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-slate-900 border-2 border-osrs-accent/30 rounded-lg max-w-md w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-6">
           <h2 className="text-2xl font-bold text-slate-100 mb-1">Item Notes</h2>
           <p className="text-slate-400 text-sm mb-6">{itemName}</p>
