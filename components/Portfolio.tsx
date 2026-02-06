@@ -35,8 +35,8 @@ import TradeHistory from './TradeHistory';
 import PendingTransactionsModal from './PendingTransactionsModal';
 import SearchBar from './SearchBar';
 import { getBatchPrices } from '@/lib/api/osrs';
-import { useChat } from '@/lib/chatContext';
 import { usePendingTransactionsStore } from '@/lib/pendingTransactionsStore';
+
 
 interface PortfolioAIReview {
   itemId: number;
@@ -89,11 +89,11 @@ export default function Portfolio() {
   const [isCalculatingTargets, setIsCalculatingTargets] = useState(false);
   const items = usePortfolioStore((state) => state.items);
   const removeItem = usePortfolioStore((state) => state.removeItem);
-  const pendingTransactions = usePendingTransactionsStore((state) => state.transactions);
+    const pendingTransactions = usePendingTransactionsStore((state) => state.transactions);
   const [prices, setPrices] = useState<Record<number, { high: number; low: number }>>({});
-  const { openChat } = useChat();
 
   const itemIds = useMemo(() => [...new Set(items.map(item => item.itemId))], [items]);
+
 
   useEffect(() => {
     if (itemIds.length === 0) {
