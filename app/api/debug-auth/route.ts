@@ -23,9 +23,11 @@ export async function GET(request: Request) {
             expectedAdminEmail: 'kenstorholt@gmail.com',
             userError: userError ? userError.message : null,
             cookieNames,
+            host: request.headers.get('host'),
+            origin: request.headers.get('origin'),
             nodeEnv: process.env.NODE_ENV,
             supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing',
-            deploy_checker: "v2-forced-dynamic-test", // If you DON'T see this, it hasn't deployed
+            deploy_checker: "v3-middleware-test",
             message: adminStatus
                 ? '✅ You are an admin!'
                 : user
