@@ -8,7 +8,6 @@ import {
 } from '@/lib/meanReversionAnalysis';
 import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
 import { getCustomPoolItems } from '@/lib/poolManagement';
-import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -26,29 +25,8 @@ function chunkArray<T>(items: T[], size: number) {
 }
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-const verboseAnalysisLogging = process.env.VAULT_VERBOSE_ALPHA === '1';
 
-type AiOpportunityDecision = {
-  id: number;
-  include: boolean;
-  confidenceScore: number;
-  entryNow?: number;
-  entryRangeLow?: number;
-  entryRangeHigh?: number;
-  exitBase?: number;
-  exitStretch?: number;
-  targetSellPrice?: number;
-  stopLoss?: number;
-  holdWeeks?: number;
-  suggestedInvestment?: number;
-  volatilityRisk: 'low' | 'medium' | 'high';
-  logic: {
-    thesis: string;
-    vulnerability: string;
-    trigger: string;
-  };
-  reasoning?: string;
-};
+// Decisions are handled via any in logic for flexibility
 
 export async function GET(request: Request) {
   try {
@@ -89,7 +67,8 @@ export async function GET(request: Request) {
     if (categoryFilter) itemsToAnalyze = itemsToAnalyze.filter(i => i.category === categoryFilter);
     if (botFilter) itemsToAnalyze = itemsToAnalyze.filter(i => i.botLikelihood === botFilter);
 
-    // Step 1: Sequential Price Analysis
+    // Analyze items in pool
+    const initialPoolSize = itemsToAnalyze.length;
     const analysisResults: MeanReversionSignal[] = [];
     const filteredOutItems: any[] = [];
     const API_BATCH_SIZE = 5;
@@ -121,7 +100,7 @@ export async function GET(request: Request) {
     let totalTokens = 0;
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
-    let totalCostUSD = 0;
+    let accTotalCost = 0;
 
     const batches = chunkArray(completedSignals, 10);
     const CONCURRENCY_LIMIT = 5;
@@ -151,7 +130,7 @@ Items: ${batch.map(s => `ID:${s.itemId} | ${s.itemName} | P:${Math.round(s.curre
               totalInputTokens += usage.prompt_tokens;
               totalOutputTokens += usage.completion_tokens;
               totalTokens += usage.total_tokens;
-              totalCostUSD += (usage.prompt_tokens / 1000 * 0.00015) + (usage.completion_tokens / 1000 * 0.0006);
+              accTotalCost += (usage.prompt_tokens / 1000 * 0.00015) + (usage.completion_tokens / 1000 * 0.0006);
             }
 
             const parsed = JSON.parse(aiResponse.choices[0]?.message?.content || '{}');
@@ -197,14 +176,28 @@ Items: ${batch.map(s => `ID:${s.itemId} | ${s.itemName} | P:${Math.round(s.curre
     topOpportunities = topOpportunities.filter(s => s.confidenceScore >= minConfidence && s.reversionPotential >= minPotential);
     const afterThresholdCount = topOpportunities.length;
 
+    const finalCostUSD = parseFloat(accTotalCost.toFixed(4));
+
     const summary = {
-      totalAnalyzed: completedSignals.length,
+      totalAnalyzed: initialPoolSize,
       viableOpportunities: topOpportunities.length,
       aiAnalyzedCount,
       aiApprovedCount,
+      aiMissingCount: completedSignals.length - aiAnalyzedCount,
+      preFilteredCount: filteredOutItems.length,
       preThresholdCount: beforeThresholdCount,
       filteredByThreshold: beforeThresholdCount - afterThresholdCount,
-      totalCostUSD: parseFloat(totalCostUSD.toFixed(4)),
+      openaiCost: {
+        totalTokens: totalTokens,
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+        costUSD: finalCostUSD,
+        breakdown: {
+          model: 'gpt-4o-mini',
+          inputCostUSD: parseFloat((totalInputTokens / 1000 * 0.00015).toFixed(4)),
+          outputCostUSD: parseFloat((totalOutputTokens / 1000 * 0.0006).toFixed(4))
+        }
+      }
     };
 
     console.log(`[API] Done. Evaluated: ${aiAnalyzedCount}, Approved: ${aiApprovedCount}, Result: ${topOpportunities.length}`);
@@ -212,7 +205,10 @@ Items: ${batch.map(s => `ID:${s.itemId} | ${s.itemName} | P:${Math.round(s.curre
     return NextResponse.json({
       success: true,
       opportunities: topOpportunities,
+      detailedReasonings: [], // Placeholder for frontend
       summary,
+      filteredItems: filteredOutItems.map(i => ({ itemId: i.itemId, itemName: i.itemName, reason: i.reason })),
+      filterStats: [], // Placeholder for frontend
       timestamp: new Date().toISOString()
     });
 
