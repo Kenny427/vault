@@ -3,7 +3,7 @@ import { markNotificationRead } from '@/lib/adminAnalytics';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
 export async function POST(
-    request: Request,
+    _request: Request,
     { params }: { params: { id: string } }
 ) {
     try {
