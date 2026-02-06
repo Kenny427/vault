@@ -4,7 +4,7 @@
  * Cost-Effective AI Integration:
  * - Runs once per week (not per query)
  * - Analyzes entire item pool in one batch
- * - Caches results for 7 days
+ * - Caches results for 7 days (per user, synced via Supabase)
  * - Identifies structural vs temporary price changes
  * - Flags emerging opportunities
  * 
@@ -12,6 +12,7 @@
  */
 
 import { MeanReversionSignal } from './meanReversionAnalysis';
+import { supabase } from './supabase';
 
 export interface AIMarketInsight {
   itemId: number;
@@ -47,7 +48,6 @@ export interface WeeklyAnalysisCache {
 }
 
 const CACHE_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-const CACHE_KEY = 'weekly_ai_analysis';
 
 /**
  * Check if cached analysis is still valid
@@ -59,17 +59,30 @@ function isCacheValid(cache: WeeklyAnalysisCache | null): boolean {
 }
 
 /**
- * Get cached analysis from localStorage
+ * Get cached analysis from Supabase
  */
-function getCachedAnalysis(): WeeklyAnalysisCache | null {
-  if (typeof window === 'undefined') return null;
-  
+async function getCachedAnalysis(): Promise<WeeklyAnalysisCache | null> {
   try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (!cached) return null;
-    
-    const data = JSON.parse(cached) as WeeklyAnalysisCache;
-    return isCacheValid(data) ? data : null;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+
+    const { data, error } = await supabase
+      .from('ai_analysis_cache')
+      .select('generated_at, expires_at, insights, market_overview, top_opportunities')
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (error || !data) return null;
+
+    const cache: WeeklyAnalysisCache = {
+      generatedAt: data.generated_at,
+      expiresAt: data.expires_at,
+      insights: data.insights,
+      marketOverview: data.market_overview,
+      topOpportunities: data.top_opportunities,
+    };
+
+    return isCacheValid(cache) ? cache : null;
   } catch (error) {
     console.error('Failed to load cached AI analysis:', error);
     return null;
@@ -77,21 +90,27 @@ function getCachedAnalysis(): WeeklyAnalysisCache | null {
 }
 
 /**
- * Save analysis to cache
+ * Save analysis to Supabase cache
  */
-function cacheAnalysis(insights: AIMarketInsight[], marketOverview: string, topOpportunities: number[]): void {
-  if (typeof window === 'undefined') return;
-  
-  const cache: WeeklyAnalysisCache = {
-    generatedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + CACHE_DURATION_MS).toISOString(),
-    insights,
-    marketOverview,
-    topOpportunities
-  };
-  
+async function cacheAnalysis(insights: AIMarketInsight[], marketOverview: string, topOpportunities: number[]): Promise<void> {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const now = new Date();
+    const expiresAt = new Date(Date.now() + CACHE_DURATION_MS);
+
+    await supabase
+      .from('ai_analysis_cache')
+      .upsert({
+        user_id: session.user.id,
+        generated_at: now.toISOString(),
+        expires_at: expiresAt.toISOString(),
+        insights,
+        market_overview: marketOverview,
+        top_opportunities: topOpportunities,
+      }, { onConflict: 'user_id' });
+
   } catch (error) {
     console.error('Failed to cache AI analysis:', error);
   }
@@ -217,7 +236,7 @@ export async function getWeeklyAIAnalysis(
   signals: MeanReversionSignal[]
 ): Promise<WeeklyAnalysisCache> {
   // Check cache first
-  const cached = getCachedAnalysis();
+  const cached = await getCachedAnalysis();
   if (cached) {
     console.log('Using cached AI analysis from', cached.generatedAt);
     return cached;
@@ -229,7 +248,7 @@ export async function getWeeklyAIAnalysis(
   const { insights, marketOverview, topOpportunities } = await callAIForBatchAnalysis(signals);
   
   // Cache for future use
-  cacheAnalysis(insights, marketOverview, topOpportunities);
+  await cacheAnalysis(insights, marketOverview, topOpportunities);
   
   return {
     generatedAt: new Date().toISOString(),
@@ -257,9 +276,17 @@ export function getItemAIInsight(
 export async function forceRefreshAnalysis(
   signals: MeanReversionSignal[]
 ): Promise<WeeklyAnalysisCache> {
-  // Clear cache
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(CACHE_KEY);
+  // Clear cache from Supabase
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      await supabase
+        .from('ai_analysis_cache')
+        .delete()
+        .eq('user_id', session.user.id);
+    }
+  } catch (error) {
+    console.error('Failed to clear AI cache:', error);
   }
   
   // Generate new
