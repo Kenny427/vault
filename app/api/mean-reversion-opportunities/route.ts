@@ -162,6 +162,10 @@ export async function GET(request: Request) {
     let aiAnalyzedCount = 0;
     let aiApprovedCount = 0;
     let aiMissingCount = 0;
+    let totalTokens = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let totalCostUSD = 0;
 
 
         if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
@@ -227,11 +231,20 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
 
         // Log token usage for cost tracking
         const usage = aiResponse.usage;
-                if (usage && verboseAnalysisLogging) {
+                if (usage) {
           const inputCost = (usage.prompt_tokens / 1000) * 0.00015; // GPT-4o-mini: $0.00015/1K
           const outputCost = (usage.completion_tokens / 1000) * 0.0006; // GPT-4o-mini: $0.0006/1K
-          const totalCost = inputCost + outputCost;
-          console.log(`💰 Batch ${batches.indexOf(batch) + 1}/${batches.length}: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${usage.total_tokens} tokens | Cost: $${totalCost.toFixed(4)} ($${inputCost.toFixed(4)} in + $${outputCost.toFixed(4)} out)`);
+          const batchCost = inputCost + outputCost;
+          
+          // Accumulate totals
+          totalInputTokens += usage.prompt_tokens;
+          totalOutputTokens += usage.completion_tokens;
+          totalTokens += usage.total_tokens;
+          totalCostUSD += batchCost;
+          
+          if (verboseAnalysisLogging) {
+            console.log(`💰 Batch ${batches.indexOf(batch) + 1}/${batches.length}: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${usage.total_tokens} tokens | Cost: $${batchCost.toFixed(4)} ($${inputCost.toFixed(4)} in + $${outputCost.toFixed(4)} out)`);
+          }
         }
 
 
@@ -545,8 +558,18 @@ Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
         'B+': topOpportunities.filter(s => s.investmentGrade === 'B+').length,
         'B': topOpportunities.filter(s => s.investmentGrade === 'B').length,
         'C': topOpportunities.filter(s => s.investmentGrade === 'C').length,
+      },
+      openaiCost: {
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+        totalTokens: totalTokens,
+        costUSD: parseFloat(totalCostUSD.toFixed(4))
       }
     };
+    
+    if (totalCostUSD > 0) {
+      console.log(`💰 Total OpenAI cost for this refresh: $${totalCostUSD.toFixed(4)} (${totalInputTokens} input + ${totalOutputTokens} output tokens)`);
+    }
     
     return NextResponse.json({
       success: true,

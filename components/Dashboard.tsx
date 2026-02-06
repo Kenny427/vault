@@ -137,6 +137,7 @@ export default function Dashboard() {
   const [scanProgress, setScanProgress] = useState(0);
     const [scanMessage, setScanMessage] = useState('Awaiting command');
   const [scanTip, setScanTip] = useState('');
+  const [analysisCost, setAnalysisCost] = useState<{ costUSD: number; totalTokens: number } | null>(null);
   const [analysisStats, setAnalysisStats] = useState<{
     aiAnalyzedCount: number;
     aiApprovedCount: number;
@@ -200,7 +201,6 @@ export default function Dashboard() {
     setScanProgress(8);
 
     let progressInterval: NodeJS.Timeout | null = null;
-    let parseInterval: NodeJS.Timeout | null = null;
     let tipInterval: NodeJS.Timeout | null = null;
 
     try {
@@ -285,6 +285,14 @@ export default function Dashboard() {
           aiMissingCount: data.summary.aiMissingCount || 0,
         });
         setTotalAnalyzed(data.summary.totalAnalyzed || 0);
+        
+        // Track API cost
+        if (data.summary.openaiCost) {
+          setAnalysisCost({
+            costUSD: data.summary.openaiCost.costUSD,
+            totalTokens: data.summary.openaiCost.totalTokens
+          });
+        }
       }
 
 
@@ -655,6 +663,12 @@ export default function Dashboard() {
                                                             {!loading && analysisStats && (
                       <div className="text-xs text-blue-200/80">
                         Analysis: {analysisStats.preFilteredCount} signals captured → {analysisStats.aiAnalyzedCount} AI evaluated → {analysisStats.aiApprovedCount} approved{typeof analysisStats.aiMissingCount === 'number' && analysisStats.aiMissingCount > 0 ? ` (${analysisStats.aiMissingCount} missing)` : ''}
+                      </div>
+                    )}
+                    
+                    {!loading && analysisCost && (
+                      <div className="text-xs text-blue-300/80 mt-1">
+                        💰 Cost: ${analysisCost.costUSD.toFixed(4)} ({analysisCost.totalTokens.toLocaleString()} tokens)
                       </div>
                     )}
 
