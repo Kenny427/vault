@@ -12,6 +12,7 @@ import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
 import FilteredItemsModal from './FilteredItemsModal';
+import SettingsModal from './SettingsModal';
 import KeyboardShortcuts from './KeyboardShortcuts';
 import { FlipOpportunity, FlipType } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
@@ -158,6 +159,7 @@ export default function Dashboard() {
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
     const [filteredItems, setFilteredItems] = useState<{ itemId: number; itemName: string; reason: string }[]>([]);
   const [showFilteredItems, setShowFilteredItems] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const [lastRefresh, setLastRefresh] = useState<Date | null>(() => {
     if (typeof window !== 'undefined') {
@@ -501,6 +503,12 @@ export default function Dashboard() {
               <h1 className="text-2xl font-semibold text-slate-100">Vault</h1>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowSettings(true)}
+                className="px-4 py-2 text-sm text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
+              >
+                Settings
+              </button>
               <button
                 onClick={logout}
                 className="px-4 py-2 text-sm text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
@@ -875,6 +883,9 @@ export default function Dashboard() {
         onClose={() => setShowFilteredItems(false)}
         filteredItems={filteredItems}
       />
+
+      {/* Settings Modal */}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
 
       {/* Keyboard Shortcuts Handler */}
       <KeyboardShortcuts />
