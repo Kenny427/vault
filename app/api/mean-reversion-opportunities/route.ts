@@ -235,19 +235,20 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
         }
 
 
-                        const rawContent = aiResponse.choices[0]?.message?.content;
+                                const rawContent = aiResponse.choices[0]?.message?.content as unknown;
         let responseText = '';
         if (typeof rawContent === 'string') {
           responseText = rawContent;
         } else if (Array.isArray(rawContent)) {
-          responseText = rawContent
-            .map((part: any) => {
+          responseText = (rawContent as Array<any>)
+            .map((part) => {
               if (typeof part === 'string') return part;
               if (part?.type === 'text') return part.text?.value ?? '';
               return '';
             })
             .join('');
         }
+
 
         let parsed: { items?: AiOpportunityDecision[] } = {};
         try {
