@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { isAdmin } from '@/lib/adminAuth';
 import { createBroadcast } from '@/lib/adminAnalytics';
-import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
     try {
@@ -9,9 +9,17 @@ export async function POST(request: Request) {
         const authorized = await isAdmin();
 
         if (!authorized) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+
+        const supabase = createServerSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id;
+
+        if (!userId) {
             return NextResponse.json(
-                { error: 'Unauthorized. Admin access required.' },
-                { status: 403 }
+                { error: 'Not authenticated' },
+                { status: 401 }
             );
         }
 
@@ -26,15 +34,6 @@ export async function POST(request: Request) {
             );
         }
 
-        // Get current user ID
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: 'Not authenticated' },
-                { status: 401 }
-            );
-        }
-
         const notification = await createBroadcast({
             title,
             message,
@@ -42,7 +41,7 @@ export async function POST(request: Request) {
             targetUsers: targetUsers || 'all',
             userIds: userIds || undefined,
             expiresAt: expiresAt ? new Date(expiresAt) : undefined,
-            createdBy: session.user.id,
+            createdBy: userId,
         });
 
         if (!notification) {
@@ -74,6 +73,7 @@ export async function GET() {
             );
         }
 
+        const supabase = createServerSupabaseClient();
         const { data, error } = await supabase
             .from('notifications')
             .select('*')

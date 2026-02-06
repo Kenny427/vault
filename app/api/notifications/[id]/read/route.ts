@@ -1,22 +1,23 @@
 import { NextResponse } from 'next/server';
 import { markNotificationRead } from '@/lib/adminAnalytics';
-import { supabase } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
 export async function POST(
-    _request: Request,
+    request: Request,
     { params }: { params: { id: string } }
 ) {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const supabase = createServerSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
 
-        if (!session?.user?.id) {
+        if (!user) {
             return NextResponse.json(
-                { error: 'Not authenticated' },
+                { error: 'Unauthorized' },
                 { status: 401 }
             );
         }
 
-        const success = await markNotificationRead(params.id, session.user.id);
+        const success = await markNotificationRead(params.id, user.id);
 
         if (!success) {
             return NextResponse.json(

@@ -5,9 +5,15 @@ import { createClient } from '@supabase/supabase-js';
  * This bypasses RLS for admin operations
  */
 export function createAdminSupabaseClient() {
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!serviceRoleKey && process.env.NODE_ENV === 'production') {
+        console.error('❌ CRITICAL: SUPABASE_SERVICE_ROLE_KEY is missing in production! Falling back to ANON key (this will cause RLS errors).');
+    }
+
     return createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
             auth: {
                 autoRefreshToken: false,

@@ -99,7 +99,7 @@ export async function addPoolItem(item: {
             .single();
 
         if (error) {
-            console.error('Error adding pool item:', error);
+            console.error('Error adding pool item:', error.message, error.details);
             return null;
         }
 
@@ -126,7 +126,7 @@ export async function updatePoolItem(id: string, updates: Partial<PoolItem>) {
             .single();
 
         if (error) {
-            console.error('Error updating pool item:', error);
+            console.error('Error updating pool item:', error.message, error.details);
             return null;
         }
 

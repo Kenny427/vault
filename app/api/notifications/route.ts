@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getUserNotifications } from '@/lib/adminAnalytics';
-import { supabase } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
 export async function GET() {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const supabase = createServerSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
 
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: 'Not authenticated' },
-                { status: 401 }
-            );
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const notifications = await getUserNotifications(session.user.id);
+        const notifications = await getUserNotifications(user.id);
 
         return NextResponse.json({ notifications });
     } catch (error) {
