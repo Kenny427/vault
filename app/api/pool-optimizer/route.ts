@@ -81,8 +81,8 @@ export async function POST(request: Request) {
       const dbPool = await getCustomPoolItems();
       if (dbPool && dbPool.length > 0) {
         poolItems = dbPool
-          .filter(item => item.enabled !== false)
-          .map(item => ({
+          .filter((item: any) => item.enabled !== false)
+          .map((item: any) => ({
             id: item.item_id,
             name: item.item_name,
             category: (item.category || 'resources') as any,
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
     console.log(`🔄 [POOL OPTIMIZER] Analyzing ${itemsToAnalyze.length} items...`);
 
     // Fetch current data for all items
-    const itemDataPromises = itemsToAnalyze.map(async (item) => {
+    const itemDataPromises = itemsToAnalyze.map(async (item: any) => {
       try {
         const [price, history] = await Promise.all([
           getItemPrice(item.id),
@@ -155,7 +155,7 @@ export async function POST(request: Request) {
     console.log(`📊 [POOL OPTIMIZER] Successfully fetched data for ${itemsWithData.length} items`);
 
     // Score each item
-    const scores: PoolItemScore[] = itemsWithData.map((item) => {
+    const scores: PoolItemScore[] = itemsWithData.map((item: any) => {
       // Bot activity score (higher = more stable supply = better for mean-reversion)
       const botActivityScore =
         item.botLikelihood === 'very_high' ? 95 : item.botLikelihood === 'high' ? 75 : 50;

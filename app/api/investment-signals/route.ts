@@ -49,8 +49,8 @@ export async function GET(request: Request) {
       const dbPool = await getCustomPoolItems();
       if (dbPool && dbPool.length > 0) {
         poolItems = dbPool
-          .filter(item => item.enabled !== false)
-          .map(item => ({
+          .filter((item: any) => item.enabled !== false)
+          .map((item: any) => ({
             id: item.item_id,
             name: item.item_name,
             category: (item.category || 'resources') as any,
@@ -67,13 +67,13 @@ export async function GET(request: Request) {
     }
 
     const priorityItems = poolItems
-      .filter(i =>
+      .filter((i: any) =>
         (i.botLikelihood === 'very_high' || i.botLikelihood === 'high') &&
         (i.volumeTier === 'massive' || i.volumeTier === 'high')
       )
       .slice(0, 60);
 
-    const analysisPromises = priorityItems.map(async (item) => {
+    const analysisPromises = priorityItems.map(async (item: any) => {
       try {
         const priceHistory = await getItemHistory(item.id, 365 * 24 * 60 * 60);
         if (!priceHistory || priceHistory.length < 30) return null;

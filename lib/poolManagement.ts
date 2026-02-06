@@ -194,17 +194,17 @@ export async function getPoolRecommendations() {
 
         // Items to consider removing (low success rate, analyzed multiple times)
         const underperformers = performance.filter(
-            (item) => item.times_analyzed >= 5 && item.success_rate < 20
+            (item: any) => item.times_analyzed >= 5 && item.success_rate < 20
         );
 
         // Items performing well (high success rate)
         const topPerformers = performance
-            .filter((item) => item.times_analyzed >= 3 && item.success_rate >= 70)
-            .sort((a, b) => b.success_rate - a.success_rate)
+            .filter((item: any) => item.times_analyzed >= 3 && item.success_rate >= 70)
+            .sort((a: any, b: any) => b.success_rate - a.success_rate)
             .slice(0, 10);
 
         // Items that haven't been analyzed recently
-        const staleItems = performance.filter((item) => {
+        const staleItems = performance.filter((item: any) => {
             if (!item.last_analyzed_at) return false;
             const daysSinceAnalysis =
                 (Date.now() - new Date(item.last_analyzed_at).getTime()) /
@@ -215,7 +215,7 @@ export async function getPoolRecommendations() {
         // Calculate overall pool health
         const totalItems = performance.length;
         const avgSuccessRate =
-            performance.reduce((sum, item) => sum + item.success_rate, 0) /
+            performance.reduce((sum: number, item: any) => sum + item.success_rate, 0) /
             (totalItems || 1);
 
         return {
