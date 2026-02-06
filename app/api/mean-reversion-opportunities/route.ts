@@ -3,7 +3,6 @@ import OpenAI from 'openai';
 import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
 import {
   analyzeMeanReversionOpportunity,
-  calculateMaxDeviation,
   rankInvestmentOpportunities,
   MeanReversionSignal
 } from '@/lib/meanReversionAnalysis';
