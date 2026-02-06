@@ -128,7 +128,7 @@ export async function POST(request: Request) {
     // Rate limiting
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown';
     const rateCheck = analyzeItemLimiter.check(clientIP);
-    
+
     if (!rateCheck.allowed) {
       return NextResponse.json(
         { error: `Rate limit exceeded. Please try again in ${rateCheck.retryAfter} seconds.` },
@@ -147,7 +147,7 @@ export async function POST(request: Request) {
 
     // Get popular items first to match against
     const popularItems = await getPopularItems();
-    
+
     // Smart item name extraction: find matching item in pool from user's question
     // Examples: "avantoe a good flip" -> "Avantoe", "tell me about runite bolts" -> "Runite bolts"
     let matchedItem = null;
@@ -162,10 +162,10 @@ export async function POST(request: Request) {
         matchedItem = popularItems.find(i => i.id === id) || null;
       }
     }
-    
+
     // Try exact match first (most precise)
     matchedItem = matchedItem || popularItems.find(i => i.name.toLowerCase() === lowerQuery);
-    
+
     // If no exact match, try to match with dose numbers (e.g., "Super attack(1)" should match exactly, not Super attack(4))
     if (!matchedItem) {
       // If query contains a dose number like (1), (2), (3), (4), match only items with the same dose
@@ -181,7 +181,7 @@ export async function POST(request: Request) {
         });
       }
     }
-    
+
     // If no dose-specific match, find item name within the query
     if (!matchedItem) {
       matchedItem = popularItems.find(i => {
@@ -189,7 +189,7 @@ export async function POST(request: Request) {
         return lowerQuery.includes(itemLower) || itemLower.includes(lowerQuery);
       });
     }
-    
+
     // If still no match, try partial word matching
     if (!matchedItem) {
       const queryWords = lowerQuery.split(/\s+/).filter(w => !w.match(/^\(\d\)$/)); // Exclude dose numbers
@@ -214,7 +214,7 @@ export async function POST(request: Request) {
         { status: 404 }
       );
     }
-    
+
     const item = matchedItem;
 
     // Get current price and history
@@ -259,7 +259,7 @@ export async function POST(request: Request) {
     // Determine if this is a buying or exit strategy question
     const isExitStrategyQuestion = userQuestion && /\b(holding|bought at|I bought|I own|my position|exit strategy)\b/i.test(userQuestion);
     const isBuyingQuestion = userQuestion && /\b(should I flip|should I buy|is .+ a good flip|good opportunity|worth buying|flip .+\?)\b/i.test(userQuestion);
-    
+
     // Add user context based on question type
     let userContext = '';
     if (isExitStrategyQuestion && !isBuyingQuestion) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getAllUsers, getAggregatedStats } from '@/lib/supabaseAdminServices';
 import { isAdmin } from '@/lib/adminAuth';
+import { getRecentErrors } from '@/lib/adminAnalytics';
 
 export async function GET(request: Request) {
     try {
@@ -14,19 +14,17 @@ export async function GET(request: Request) {
             );
         }
 
-        const [users, stats] = await Promise.all([
-            getAllUsers(),
-            getAggregatedStats(),
-        ]);
+        // Get limit parameter from query string
+        const { searchParams } = new URL(request.url);
+        const limit = parseInt(searchParams.get('limit') || '50');
 
-        return NextResponse.json({
-            users,
-            stats,
-        });
+        const errors = await getRecentErrors(limit);
+
+        return NextResponse.json({ errors });
     } catch (error) {
-        console.error('Error in admin users API:', error);
+        console.error('Error in errors API:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch users' },
+            { error: 'Failed to fetch errors' },
             { status: 500 }
         );
     }

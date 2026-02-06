@@ -8,7 +8,7 @@ export async function GET(
 ) {
     try {
         // Check if user is admin
-        const authorized = await isAdmin();
+        const authorized = await isAdmin(_request);
 
         if (!authorized) {
             return NextResponse.json(

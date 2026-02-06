@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
+import { getDatabaseItemPool } from '@/lib/expandedItemPool';
 import { getItemPrice, getItemHistoryWithVolumes } from '@/lib/api/osrs';
 
 // Type for pool scores
@@ -74,9 +74,12 @@ export async function POST(request: Request) {
 
     const cacheTtlMs = Math.max(1, cacheHours) * 60 * 60 * 1000;
 
+    // Fetch item pool from database
+    const EXPANDED_ITEM_POOL = await getDatabaseItemPool();
+
     // Select items to analyze
-    const itemsToAnalyze = fullScan 
-      ? EXPANDED_ITEM_POOL 
+    const itemsToAnalyze = fullScan
+      ? EXPANDED_ITEM_POOL
       : EXPANDED_ITEM_POOL.sort(() => Math.random() - 0.5).slice(0, sampleSize);
 
     console.log(`🔄 [POOL OPTIMIZER] Analyzing ${itemsToAnalyze.length} items...`);
@@ -235,15 +238,15 @@ Return JSON in this exact format:
 
 ITEMS:
 ${batch
-  .map(
-    (item) =>
-      `- ID:${item.id} Name:${item.name} Category:${item.category} Bot:${item.botLikelihood} VolumeTier:${item.volumeTier} AvgVol:${Math.round(
-        item.avgVolume
-      )} Volatility:${item.volatility.toFixed(1)}% Trend:${item.trend} RecentAvg:${Math.round(
-        item.recentAvg
-      )} AvgPrice:${Math.round(item.avgPrice)}`
-  )
-  .join('\n')}
+            .map(
+              (item) =>
+                `- ID:${item.id} Name:${item.name} Category:${item.category} Bot:${item.botLikelihood} VolumeTier:${item.volumeTier} AvgVol:${Math.round(
+                  item.avgVolume
+                )} Volatility:${item.volatility.toFixed(1)}% Trend:${item.trend} RecentAvg:${Math.round(
+                  item.recentAvg
+                )} AvgPrice:${Math.round(item.avgPrice)}`
+            )
+            .join('\n')}
 `;
 
         const aiResponse = await client.chat.completions.create({

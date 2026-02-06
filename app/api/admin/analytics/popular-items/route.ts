@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getAllUsers, getAggregatedStats } from '@/lib/supabaseAdminServices';
 import { isAdmin } from '@/lib/adminAuth';
+import { getPopularItems } from '@/lib/adminAnalytics';
 
 export async function GET(request: Request) {
     try {
@@ -14,19 +14,20 @@ export async function GET(request: Request) {
             );
         }
 
-        const [users, stats] = await Promise.all([
-            getAllUsers(),
-            getAggregatedStats(),
-        ]);
+        const popularItems = await getPopularItems();
 
-        return NextResponse.json({
-            users,
-            stats,
-        });
+        if (!popularItems) {
+            return NextResponse.json(
+                { error: 'Failed to fetch popular items' },
+                { status: 500 }
+            );
+        }
+
+        return NextResponse.json(popularItems);
     } catch (error) {
-        console.error('Error in admin users API:', error);
+        console.error('Error in popular items API:', error);
         return NextResponse.json(
-            { error: 'Failed to fetch users' },
+            { error: 'Failed to fetch popular items' },
             { status: 500 }
         );
     }

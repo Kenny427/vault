@@ -6,6 +6,7 @@ const client = new OpenAI({
 });
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // Simple in-memory cache with timestamp
 let briefingCache: {
@@ -71,7 +72,7 @@ Be concise, actionable, and focus on what a trader should do TODAY.`;
     });
 
     const briefing = response.choices[0]?.message.content || 'Unable to generate briefing.';
-    
+
     // Log token usage
     const usage = response.usage;
     if (usage) {

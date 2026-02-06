@@ -6,8 +6,6 @@ import SearchBar from './SearchBar';
 import FlipCard from './FlipCard';
 import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
-import PoolManager from './PoolManager';
-import PoolManagementPanel from './PoolManagementPanel';
 import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
@@ -190,9 +188,9 @@ export default function Dashboard() {
       }
     }
 
-    // ALWAYS use the curated pool - no custom pools, no DB pools
-    // This ensures only the curated item pool is analyzed
-    const itemsToAnalyze: PoolItem[] = getAllAnalysisItems().map(item => ({
+    // Fetch item pool from database
+    const poolItems = await getAllAnalysisItems();
+    const itemsToAnalyze: PoolItem[] = poolItems.map(item => ({
       id: item.id,
       name: item.name,
       addedAt: Date.now(),
@@ -534,8 +532,8 @@ export default function Dashboard() {
               setShowMenu(false);
             }}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'portfolio' && !activeMenuTab
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
+              ? 'text-osrs-accent border-b-2 border-osrs-accent'
+              : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             💼 Portfolio
@@ -547,8 +545,8 @@ export default function Dashboard() {
               setShowMenu(false);
             }}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'opportunities' && !activeMenuTab
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
+              ? 'text-osrs-accent border-b-2 border-osrs-accent'
+              : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             ⚡ Alpha Feed
@@ -561,8 +559,8 @@ export default function Dashboard() {
               setShowMenu(false);
             }}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'performance' && !activeMenuTab
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
+              ? 'text-osrs-accent border-b-2 border-osrs-accent'
+              : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             📈 Performance
@@ -574,8 +572,8 @@ export default function Dashboard() {
               setShowMenu(false);
             }}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'alerts' && !activeMenuTab
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
+              ? 'text-osrs-accent border-b-2 border-osrs-accent'
+              : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             🔔 Price Alerts
@@ -587,8 +585,8 @@ export default function Dashboard() {
               setShowMenu(false);
             }}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'favorites' && !activeMenuTab
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
+              ? 'text-osrs-accent border-b-2 border-osrs-accent'
+              : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             ⭐ Favorites
@@ -599,8 +597,8 @@ export default function Dashboard() {
             <button
               onClick={() => setShowMenu(!showMenu)}
               className={`px-4 py-3 font-semibold transition-all rounded-lg ${showMenu
-                  ? 'text-osrs-accent bg-slate-700/50'
-                  : 'text-slate-400 hover:text-slate-300'
+                ? 'text-osrs-accent bg-slate-700/50'
+                : 'text-slate-400 hover:text-slate-300'
                 }`}
               title="More options"
             >
