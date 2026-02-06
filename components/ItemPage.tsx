@@ -173,7 +173,14 @@ export default function ItemPage() {
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
-          <SearchBar onItemSelect={(item) => router.push(`/item/${item.id}`)} />
+          <SearchBar onItemSelect={(item) => {
+            // If navigating to a different item, use hard navigation
+            if (item.id !== itemId) {
+              window.location.href = `/item/${item.id}`;
+            } else {
+              router.refresh();
+            }
+          }} />
         </div>
 
         <div className="flex items-center gap-4">
