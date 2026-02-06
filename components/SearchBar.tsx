@@ -148,22 +148,21 @@ export default function SearchBar({ onItemSelect }: SearchBarProps) {
               📈 Popular Trading Items
             </div>
           )}
+
           {suggestions.map((item) => (
             <button
-              key={`${item.id}-${item.name}`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // Don't close dropdown yet - let it close naturally
-                onItemSelect(item);
-              }}
+              type="button"
+                            key={`${item.id}-${item.name}`}
               onMouseDown={(e) => {
                 e.preventDefault();
+
                 e.stopPropagation();
+                handleSelect(item);
               }}
               className="w-full px-4 py-3 text-left hover:bg-slate-700 transition-colors border-b border-slate-700 last:border-b-0"
             >
               <div className="font-medium text-slate-100">{item.name}</div>
+
               <div className="text-xs text-slate-400">
                 {item.members ? '(Members)' : '(F2P)'} {item.value && `• GE: ${item.value}`}
               </div>

@@ -25,21 +25,37 @@ function chunkArray<T>(items: T[], size: number) {
   return chunks;
 }
 
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+const verboseAnalysisLogging = process.env.VAULT_VERBOSE_ALPHA === '1';
+
+
 type AiOpportunityDecision = {
+
   id: number;
   include: boolean;
   confidenceScore: number;
   investmentGrade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
-  targetSellPrice: number;
-  estimatedHoldingPeriod: string;
-  suggestedInvestment: number;
+  entryNow?: number;
+  entryRangeLow?: number;
+  entryRangeHigh?: number;
+    exitBase?: number;
+  exitStretch?: number;
+    targetSellPrice?: number;
+  stopLoss?: number;
+  holdWeeks?: number;
+  estimatedHoldingPeriod?: string;
+  suggestedInvestment?: number;
+
   volatilityRisk: 'low' | 'medium' | 'high';
   reasoning: string;
   buyIfDropsTo?: number;
   sellAtMin?: number;
   sellAtMax?: number;
   abortIfRisesAbove?: number;
+  notes?: string;
+  holdNarrative?: string;
 };
+
 
 
 
@@ -55,15 +71,18 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     
     // Configuration
-    const minConfidence = parseInt(searchParams.get('minConfidence') || '40');
-    const minPotential = parseInt(searchParams.get('minPotential') || '10');
+        const minConfidence = parseInt(searchParams.get('minConfidence') || '0');
+    const minPotential = parseInt(searchParams.get('minPotential') || '0');
     const categoryFilter = searchParams.get('category');
     const botFilter = searchParams.get('botLikelihood');
-    const batchSize = parseInt(searchParams.get('batchSize') || '15'); // Reduced from 40 to 15 for reliable JSON parsing
+        const batchSize = parseInt(searchParams.get('batchSize') || '15'); // Reduced from 40 to 15 for reliable JSON parsing
     
-    console.log(`🔍 Fresh analysis - AI-first opportunities (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
+    if (verboseAnalysisLogging) {
+      console.log(`🔍 Fresh analysis - AI-first opportunities (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
+    }
     
     // Filter item pool based on criteria
+
     let itemsToAnalyze = EXPANDED_ITEM_POOL;
     
     if (categoryFilter) {
@@ -76,26 +95,35 @@ export async function GET(request: Request) {
     
     // Analyze all items in the pool (including lower-tier items)
     // Focus on botted items but don't exclude any
-    const priorityItems = itemsToAnalyze;
+        const priorityItems = itemsToAnalyze;
     
-    console.log(`📊 Analyzing ${priorityItems.length} items from pool`);
+    if (verboseAnalysisLogging) {
+      console.log(`📊 Analyzing ${priorityItems.length} items from pool`);
+    }
 
     // Fetch price data and analyze each item (AI will decide final inclusion)
+
     const analysisPromises = priorityItems.map(async (item) => {
       try {
 
         // Fetch 1 year of price history with volume data
         const priceData = await getItemHistoryWithVolumes(item.id, 365 * 24 * 60 * 60);
         
-        if (!priceData) {
-          console.log(`⚠️ Item ${item.id} (${item.name}): No price history available`);
+                if (!priceData) {
+          if (verboseAnalysisLogging) {
+            console.log(`⚠️ Item ${item.id} (${item.name}): No price history available`);
+          }
           return null;
         }
 
-        console.log(`📈 Item ${item.id} (${item.name}): Retrieved ${priceData.length} data points`);
+        if (verboseAnalysisLogging) {
+          console.log(`📈 Item ${item.id} (${item.name}): Retrieved ${priceData.length} data points`);
+        }
         
         if (priceData.length < 5) {
-          console.log(`   ⚠️ Only ${priceData.length} data points (need >= 5)`);
+          if (verboseAnalysisLogging) {
+            console.log(`   ⚠️ Only ${priceData.length} data points (need >= 5)`);
+          }
           return null;
         }
         
@@ -106,9 +134,10 @@ export async function GET(request: Request) {
           priceData
         );
         
-        if (signal) {
+        if (signal && verboseAnalysisLogging) {
           console.log(`✓ ${item.name}: confidence=${signal.confidenceScore}%, potential=${signal.reversionPotential.toFixed(1)}%, grade=${signal.investmentGrade}`);
         }
+
         
         return signal;
       } catch (error) {
@@ -121,111 +150,72 @@ export async function GET(request: Request) {
     const allSignals = await Promise.all(analysisPromises);
     let completedSignals = allSignals.filter((s): s is MeanReversionSignal => s !== null);
 
-    // Track which items get filtered out and why
+        // Maintain compatibility with frontend diagnostics; AI now decides all filtering.
     const filteredItems: { itemId: number; itemName: string; reason: string }[] = [];
+    
+        if (verboseAnalysisLogging) {
+      console.log(`📈 Completed analysis: ${completedSignals.length}/${priorityItems.length} items had sufficient data (all forwarded to AI)`);
+    }
+    
+        let topOpportunities: MeanReversionSignal[] = [];
 
-    // Apply conservative pre-filtering before sending to AI
-    // Keep filters minimal - let AI be the main decision maker
-    completedSignals = completedSignals.filter((s) => {
-      // Only filter obvious non-starters to reduce AI cost
-      // AI will make the final smart decisions
-      
-      // 1. Must be below at least ONE historical average (basic requirement for mean-reversion)
-      if (s.currentPrice >= s.mediumTerm.avgPrice && s.currentPrice >= s.longTerm.avgPrice) {
-        filteredItems.push({
-          itemId: s.itemId,
-          itemName: s.itemName,
-          reason: 'Above both 90d and 365d averages (no discount)'
-        });
-        return false;
-      }
-      
-      // 2. Must have minimal signal (but very lenient - AI decides quality)
-      if (s.confidenceScore < 15 || s.reversionPotential < 3) {
-        filteredItems.push({
-          itemId: s.itemId,
-          itemName: s.itemName,
-          reason: `Very weak signal (confidence ${s.confidenceScore}%, potential ${s.reversionPotential.toFixed(1)}%)`
-        });
-        return false;
-      }
-      
-      // 3. Must have minimal liquidity (can't flip items with zero volume)
-      if (s.liquidityScore < 2) {
-        filteredItems.push({
-          itemId: s.itemId,
-          itemName: s.itemName,
-          reason: `Nearly illiquid (score ${s.liquidityScore}/10)`
-        });
-        return false;
-      }
-      
-      // All other decisions left to AI - it's smarter than hard rules
-      return true;
-    });
-    
-    console.log(`📈 Completed analysis: ${completedSignals.length}/${priorityItems.length} items had sufficient data`);
-    
-    let topOpportunities: MeanReversionSignal[] = [];
     let aiAnalyzedCount = 0;
     let aiApprovedCount = 0;
+    let aiMissingCount = 0;
 
-    if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
-      console.log(`🤖 Starting AI analysis on ${completedSignals.length} items...`);
+
+        if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
+      if (verboseAnalysisLogging) {
+        console.log(`🤖 Starting AI analysis on ${completedSignals.length} items...`);
+      }
       const batches = chunkArray(completedSignals, Math.max(10, batchSize));
+
 
       for (const batch of batches) {
         // Compressed prompt - let AI be the expert, minimal fluff
-        const prompt = `OSRS mean-reversion analyzer. Evaluate ALL items below.
+                const prompt = `OSRS flip strategist focused on botted mean-reversion dumps. Evaluate EVERY item below and return a JSON decision (include=false for rejects). User wants to buy now—entries must be executable immediately (within ±1% of current unless explicitly rejecting).
 
-INCLUDE items with:
-- 10-30% below 90d/365d avg (mean-reversion window)
-- Strong liquidity + stable supply
-- No structural downtrends or value traps
-- Multi-timeframe alignment preferred
+Hard rules:
+- You must return one JSON entry per item listed (do not omit items). Default to include=false.
+- You may set include=true for at most 30 items in this batch; all remaining entries must still appear with include=false.
+- Auto-reject (include=false) when: confidence < 35, expected upside < 12%, liquidityScore < 25, or botDump score < 25.
+- Favor items with strong bot-dump signatures and recovery signals; reject structural downtrends.
 
-EXCLUDE items with:
-- Structural downtrends (consistently declining)
-- Very low liquidity (<3)
-- Extreme volatility without support
+Required JSON fields per item:
+- include (boolean) — true to trade now, false to skip
+- confidenceScore (0-100) and investmentGrade (A+/A/B+/B/C/D)
+- entryNow (gp), entryRangeLow, entryRangeHigh — actionable entry window anchored to current price
+- exitBase and exitStretch — primary and stretch sell targets (gp)
+- stopLoss — defensive exit (gp)
+- holdWeeks (integer) + estimatedHoldingPeriod (string)
+- suggestedInvestment (gp) sized for personal trading
+- volatilityRisk (low|medium|high)
+- reasoning — 2 tight sentences referencing timeframes, bot-dump, recovery, risks
+Optional (include when useful): buyIfDropsTo, sellAtMin, sellAtMax, abortIfRisesAbove, notes, holdNarrative.
 
-Format: ID|Name|Cur|Avg90|Avg365|Dev7%|Dev90%|Dev365%|Vol7|Vol365|Pot%|Conf|Liq|Sup|Bot|Risk
+DATA (ID|Name|Cur|EntryRange|ExitRange|Stop|Dev7|Dev90|Dev365|BotDump|Conf|Liq|Supply|HoldWk|Bot|Risk|Pot%):
 
 ${batch
-  .map(
-    (s) =>
-      `${s.itemId}|${s.itemName}|${s.currentPrice}|${Math.round(
-        s.mediumTerm.avgPrice
-      )}|${Math.round(s.longTerm.avgPrice)}|${s.shortTerm.currentDeviation.toFixed(
-        1
-      )}|${s.mediumTerm.currentDeviation.toFixed(1)}|${s.longTerm.currentDeviation.toFixed(
-        1
-      )}|${s.shortTerm.volatility.toFixed(1)}|${s.longTerm.volatility.toFixed(
-        1
-      )}|${s.reversionPotential.toFixed(1)}|${s.confidenceScore}|${s.liquidityScore}|${
-        s.supplyStability
-      }|${s.botLikelihood}|${s.volatilityRisk}`
-  )
-  .join('\n')}
 
-For INCLUDED items, provide detailed reasoning with three parts:
-1) Why buy: Price vs historical, supply/demand signals, liquidity status
-2) When to sell: Price target, alternative exit conditions
-3) Key risks: Market factors, bot activity, volatility concerns
+  .map((s) => {
+    const entryLow = Math.round(s.entryRangeLow ?? s.entryPriceNow ?? s.currentPrice);
+    const entryHigh = Math.round(s.entryRangeHigh ?? s.entryPriceNow ?? s.currentPrice);
+    const exitBase = Math.round(s.exitPriceBase ?? s.targetSellPrice ?? s.currentPrice);
+    const exitStretch = Math.round(s.exitPriceStretch ?? exitBase);
+    const stop = Math.round(s.stopLoss ?? s.entryPriceNow ?? s.currentPrice * 0.9);
+        return `${s.itemId}|${s.itemName}|${Math.round(s.currentPrice)}|${entryLow}-${entryHigh}|${exitBase}-${exitStretch}|${stop}|${s.shortTerm.currentDeviation.toFixed(1)}|${s.mediumTerm.currentDeviation.toFixed(1)}|${s.longTerm.currentDeviation.toFixed(1)}|${s.botDumpScore.toFixed(0)}|${s.confidenceScore}|${s.liquidityScore}|${s.supplyStability}|${s.expectedRecoveryWeeks}|${s.botLikelihood}|${s.volatilityRisk}|${s.reversionPotential.toFixed(1)}\nCap:${s.capitulationSignal}\nRec:${s.recoverySignal}\nPlan:${s.holdNarrative}`;
 
-Also provide:
-- buyIfDropsTo: Aggressive entry price (5-10% below current)
-- sellAtMin/sellAtMax: Price range for exit (min after GE tax recovery, max for greed)
-- abortIfRisesAbove: Stop-loss price if reversal fails
+  })
+  .join('\n\n')}
 
-Return JSON for ALL ${batch.length} items (set include=false for rejects).
-CRITICAL: Return ONLY raw JSON, no markdown blocks, no code fences, no explanations.
-Use valid JSON: double quotes, proper booleans, no trailing commas.
-Example: {"items":[{"id":563,"include":true,"confidenceScore":72,"investmentGrade":"A","targetSellPrice":250,"estimatedHoldingPeriod":"2-4w","suggestedInvestment":500000,"volatilityRisk":"low","buyIfDropsTo":225,"sellAtMin":250,"sellAtMax":270,"abortIfRisesAbove":200,"reasoning":"15% below 90d avg ($250 vs $265). Stable demand for runes during high-activity seasons. Sell once price recovers to historical range."}]}`;
+Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, no additional text).`;
 
-        const aiResponse = await client.chat.completions.create({
+
+                const aiResponse = await client.chat.completions.create({
           model: 'gpt-4o-mini',
-          max_tokens: 3000, // Increased for 15 items (~200 tokens each)
+          max_tokens: 3200,
+          temperature: 0.2,
+          response_format: { type: 'json_object' },
           messages: [
             {
               role: 'user',
@@ -234,104 +224,227 @@ Example: {"items":[{"id":563,"include":true,"confidenceScore":72,"investmentGrad
           ],
         });
 
+
         // Log token usage for cost tracking
         const usage = aiResponse.usage;
-        if (usage) {
+                if (usage && verboseAnalysisLogging) {
           const inputCost = (usage.prompt_tokens / 1000) * 0.00015; // GPT-4o-mini: $0.00015/1K
           const outputCost = (usage.completion_tokens / 1000) * 0.0006; // GPT-4o-mini: $0.0006/1K
           const totalCost = inputCost + outputCost;
           console.log(`💰 Batch ${batches.indexOf(batch) + 1}/${batches.length}: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${usage.total_tokens} tokens | Cost: $${totalCost.toFixed(4)} ($${inputCost.toFixed(4)} in + $${outputCost.toFixed(4)} out)`);
         }
 
-        const responseText = aiResponse.choices[0]?.message.content || '';
-        
-        // Strip markdown code blocks if present
-        let cleanedText = responseText.trim();
-        if (cleanedText.startsWith('```json')) {
-          cleanedText = cleanedText.replace(/^```json\s*/, '').replace(/```\s*$/, '');
-        } else if (cleanedText.startsWith('```')) {
-          cleanedText = cleanedText.replace(/^```\s*/, '').replace(/```\s*$/, '');
-        }
-        
-        const jsonMatch = cleanedText.match(/\{[\s\S]*\}/);
-        
-        let parsed = { items: [] };
-        if (jsonMatch) {
-          try {
-            parsed = JSON.parse(jsonMatch[0]);
-          } catch (parseError) {
-            console.error(`❌ AI returned invalid JSON for batch. Error: ${parseError}`);
-            console.error(`   Response preview: ${responseText.substring(0, 500)}...`);
-            // Try to fix common JSON issues
-            try {
-              // Replace single quotes with double quotes and fix true/false
-              const fixed = jsonMatch[0]
-                .replace(/'/g, '"')
-                .replace(/include:\s*(true|false)/g, '"include":$1')
-                .replace(/(\w+):/g, '"$1":'); // Quote unquoted keys
-              parsed = JSON.parse(fixed);
-              console.log(`   ✓ Fixed JSON and parsed successfully`);
-            } catch (fixError) {
-              console.error(`   ❌ Could not fix JSON, skipping batch`);
-              parsed = { items: [] };
-            }
-          }
+
+                        const rawContent = aiResponse.choices[0]?.message?.content;
+        let responseText = '';
+        if (typeof rawContent === 'string') {
+          responseText = rawContent;
+        } else if (Array.isArray(rawContent)) {
+          responseText = rawContent
+            .map((part: any) => {
+              if (typeof part === 'string') return part;
+              if (part?.type === 'text') return part.text?.value ?? '';
+              return '';
+            })
+            .join('');
         }
 
-        if (Array.isArray(parsed.items)) {
-          parsed.items.forEach((decision: AiOpportunityDecision) => {
+        let parsed: { items?: AiOpportunityDecision[] } = {};
+        try {
+          parsed = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('❌ AI returned invalid JSON for batch.', parseError);
+          console.error(`   Response preview: ${responseText.substring(0, 500)}...`);
+          parsed = {};
+        }
+
+                        if (!Array.isArray(parsed.items) && verboseAnalysisLogging) {
+          console.warn('⚠️ AI response missing valid items array. Raw preview:', responseText.substring(0, 400));
+        }
+
+                if (Array.isArray(parsed.items)) {
+          if (verboseAnalysisLogging) {
+            console.log(`🤖 AI returned ${parsed.items.length} item decisions in batch`);
+          }
+
+
+          const returnedIds = new Set<number>();
+
+          parsed.items.forEach((decision: AiOpportunityDecision, index: number) => {
+                        if (typeof decision.id !== 'number') {
+              const fallbackId = index < batch.length ? batch[index]?.itemId : undefined;
+              if (typeof fallbackId === 'number') {
+                decision.id = fallbackId;
+              } else {
+                return;
+              }
+            }
+
+            returnedIds.add(decision.id);
             const base = batch.find((b) => b.itemId === decision.id);
-            if (!base) return;
+            if (!base) {
+              return;
+            }
+
             aiAnalyzedCount += 1;
 
-            if (!decision.include) {
-              return; // AI rejected this opportunity
+
+            const includeDecision = decision.include === undefined ? true : decision.include;
+            if (!includeDecision) {
+              return;
             }
 
+
+                        const entryNow = Math.round(decision.entryNow ?? base.entryPriceNow ?? base.currentPrice);
+            const entryRangeLow = Math.round(decision.entryRangeLow ?? base.entryRangeLow ?? entryNow);
+            const entryRangeHigh = Math.round(decision.entryRangeHigh ?? base.entryRangeHigh ?? entryNow);
+
+            const exitBase = Math.round(
+              decision.exitBase ??
+              decision.targetSellPrice ??
+              base.exitPriceBase ??
+              base.targetSellPrice ??
+              base.currentPrice
+            );
+                        const exitStretch = Math.round(decision.exitStretch ?? base.exitPriceStretch ?? exitBase);
+            const stopLoss = Math.round(decision.stopLoss ?? base.stopLoss ?? entryNow * 0.93);
+            const holdWeeks = Math.max(1, Math.round(decision.holdWeeks ?? base.expectedRecoveryWeeks ?? 4));
+            const reversionPotential = ((exitBase - base.currentPrice) / base.currentPrice) * 100;
+
+            const gatingFailure =
+              reversionPotential < 12 ||
+              (base.confidenceScore ?? 0) < 35 ||
+              (base.liquidityScore ?? 0) < 25 ||
+              (base.botDumpScore ?? 0) < 25;
+
+                                                if (gatingFailure) {
+              if (verboseAnalysisLogging) {
+                console.log(
+                  `⚠️ Server gate rejected ${base.itemName} (id ${base.itemId}) — pot ${reversionPotential.toFixed(
+                    1
+                  )}%, conf ${base.confidenceScore}, liq ${base.liquidityScore}, dump ${base.botDumpScore}`
+                );
+              }
+
+              filteredItems.push({
+                itemId: base.itemId,
+                itemName: base.itemName,
+                reason: `Server gate: upside ${reversionPotential.toFixed(1)}%, conf ${base.confidenceScore}, liq ${base.liquidityScore}, dump ${base.botDumpScore}`,
+              });
+              return;
+            }
+
+
             aiApprovedCount += 1;
-            const targetSell = decision.targetSellPrice > 0 ? decision.targetSellPrice : base.targetSellPrice;
-            const reversionPotential = ((targetSell - base.currentPrice) / base.currentPrice) * 100;
 
             const merged: MeanReversionSignal = {
+
               ...base,
-              confidenceScore: Math.max(0, Math.min(100, decision.confidenceScore)),
-              investmentGrade: decision.investmentGrade,
-              targetSellPrice: targetSell,
-              estimatedHoldingPeriod: decision.estimatedHoldingPeriod,
-              suggestedInvestment: decision.suggestedInvestment > 0 ? decision.suggestedInvestment : base.suggestedInvestment,
-              volatilityRisk: decision.volatilityRisk,
-              reasoning: decision.reasoning,
-              buyIfDropsTo: decision.buyIfDropsTo,
-              sellAtMin: decision.sellAtMin,
-              sellAtMax: decision.sellAtMax,
-              abortIfRisesAbove: decision.abortIfRisesAbove,
+              confidenceScore: clamp(decision.confidenceScore ?? base.confidenceScore, 0, 100),
+              investmentGrade: decision.investmentGrade ?? base.investmentGrade,
+              targetSellPrice: exitBase,
+              estimatedHoldingPeriod: decision.estimatedHoldingPeriod ?? base.estimatedHoldingPeriod,
+              suggestedInvestment:
+                decision.suggestedInvestment && decision.suggestedInvestment > 0
+                  ? decision.suggestedInvestment
+                  : base.suggestedInvestment,
+                            volatilityRisk: decision.volatilityRisk ?? base.volatilityRisk,
+              reasoning: decision.reasoning ?? base.reasoning,
+              sellAtMin: decision.sellAtMin ?? base.sellAtMin ?? exitBase,
+              sellAtMax: decision.sellAtMax ?? base.sellAtMax ?? exitStretch,
+
+              abortIfRisesAbove: decision.abortIfRisesAbove ?? base.abortIfRisesAbove ?? stopLoss,
               reversionPotential,
+              entryPriceNow: entryNow,
+              entryRangeLow,
+              entryRangeHigh,
+              exitPriceBase: exitBase,
+              exitPriceStretch: exitStretch,
+              stopLoss,
+              expectedRecoveryWeeks: holdWeeks,
+              holdNarrative: decision.holdNarrative ?? base.holdNarrative,
             };
 
             topOpportunities.push(merged);
           });
+
+                              const missingInBatch = batch.filter((item) => !returnedIds.has(item.itemId));
+                    if (missingInBatch.length > 0) {
+            aiMissingCount += missingInBatch.length;
+            if (verboseAnalysisLogging) {
+              console.warn(
+                `⚠️ AI omitted ${missingInBatch.length} item(s) from response: ${missingInBatch
+                  .map((item) => item.itemId)
+                  .join(', ')}`
+              );
+            }
+            missingInBatch.forEach((item) => {
+
+              filteredItems.push({
+                itemId: item.itemId,
+                itemName: item.itemName,
+                reason: 'AI omitted entry; auto-rejected by server gate',
+              });
+            });
+          }
+
+
+        }
+
+      }
+
+      // Deduplicate by item (keep highest confidence / upside)
+      const uniqueMap = new Map<number, MeanReversionSignal>();
+      for (const opp of topOpportunities) {
+        const existing = uniqueMap.get(opp.itemId);
+        if (!existing) {
+          uniqueMap.set(opp.itemId, opp);
+          continue;
+        }
+        const existingConfidence = existing.confidenceScore ?? 0;
+        const oppConfidence = opp.confidenceScore ?? 0;
+        if (
+          oppConfidence > existingConfidence ||
+          (oppConfidence === existingConfidence && (opp.reversionPotential ?? 0) > (existing.reversionPotential ?? 0))
+        ) {
+          uniqueMap.set(opp.itemId, opp);
         }
       }
-      console.log(`🤖 AI analysis complete: processed ${batches.length} batches`);
-      console.log(`   📊 Sent ${completedSignals.length} items to AI, received decisions for ${aiAnalyzedCount} items`);
-      console.log(`   ✅ AI approved ${aiApprovedCount} items (before threshold filtering)`);
+      topOpportunities = Array.from(uniqueMap.values());
+
+      const MAX_AI_APPROVED = 36;
+      if (topOpportunities.length > MAX_AI_APPROVED) {
+
+                topOpportunities = topOpportunities
+          .sort((a, b) => {
+            const confDiff = (b.confidenceScore ?? 0) - (a.confidenceScore ?? 0);
+            if (confDiff !== 0) return confDiff;
+            const potDiff = (b.reversionPotential ?? 0) - (a.reversionPotential ?? 0);
+            if (potDiff !== 0) return potDiff;
+            return (b.liquidityScore ?? 0) - (a.liquidityScore ?? 0);
+          })
+          .slice(0, MAX_AI_APPROVED);
+      }
+
+
     } else if (completedSignals.length > 0) {
+
       // Fallback to rule-based if AI not configured
-      console.log(`⚠️ No OpenAI key found - using rule-based analysis only`);
+      if (verboseAnalysisLogging) {
+        console.log(`⚠️ No OpenAI key found - using rule-based analysis only`);
+      }
       topOpportunities = [...completedSignals];
     }
 
+
     // Apply minimum thresholds after AI
-    const beforeThresholdCount = topOpportunities.length;
+        const beforeThresholdCount = topOpportunities.length;
     topOpportunities = topOpportunities.filter(
       (s) => s.confidenceScore >= minConfidence && s.reversionPotential >= minPotential
     );
-
-    console.log(
-      `✅ Final result: ${topOpportunities.length} opportunities (${beforeThresholdCount - topOpportunities.length} filtered by thresholds: confidence>=${minConfidence}%, potential>=${minPotential}%)`
-    );
     
     // Include filter stats in response for frontend tracking
+
     const filterStats = filteredItems.map(item => ({
       itemId: item.itemId,
       itemName: item.itemName,
@@ -406,11 +519,13 @@ Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
     
     // Calculate summary statistics
     const summary = {
-      totalAnalyzed: priorityItems.length,
+            totalAnalyzed: priorityItems.length,
       viableOpportunities: topOpportunities.length,
       aiAnalyzedCount,
       aiApprovedCount,
+      aiMissingCount,
       preFilteredCount: completedSignals.length,
+
       avgConfidence: topOpportunities.length > 0
         ? topOpportunities.reduce((sum, s) => sum + s.confidenceScore, 0) / topOpportunities.length
         : 0,
@@ -473,9 +588,12 @@ export async function POST(request: Request) {
       );
     }
     
-    console.log(`🔍 Analyzing ${itemIds.length} specific items`);
+        if (verboseAnalysisLogging) {
+      console.log(`🔍 Analyzing ${itemIds.length} specific items`);
+    }
     
     // Find items in pool
+
     const items = EXPANDED_ITEM_POOL.filter(i => itemIds.includes(i.id));
     
     // Analyze each

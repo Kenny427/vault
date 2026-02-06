@@ -118,7 +118,7 @@ export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   { id: 259, name: "Irit leaf", category: "herbs", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 2998, name: "Toadflax", category: "herbs", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 255, name: "Harralander", category: "herbs", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
-  { id: 3049, name: "Avantoe", category: "herbs", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 261, name: "Avantoe", category: "herbs", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   
   // === SECONDARY INGREDIENTS (Bot Gathered) ===
   { id: 231, name: "Snape grass", category: "secondaries", botLikelihood: "very_high", volumeTier: "high", demandType: "skilling" },
@@ -136,19 +136,20 @@ export const EXPANDED_ITEM_POOL: ItemPoolEntry[] = [
   { id: 12934, name: "Zulrah's scales", category: "pvm_drops", botLikelihood: "very_high", volumeTier: "massive", demandType: "pvm" },
   { id: 21622, name: "Volcanic ash", category: "pvm_drops", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 1391, name: "Battlestaff", category: "pvm_drops", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
-  { id: 892, name: "Rune arrow", category: "pvm_drops", botLikelihood: "high", volumeTier: "high", demandType: "pvm" },
   
   // === NEW ADDITIONS ===
-  { id: 807, name: "Yew longbow", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
-  { id: 809, name: "Yew longbow(u)", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
-  { id: 3971, name: "Magic longbow", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
-  { id: 3973, name: "Magic longbow(u)", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
-  { id: 9072, name: "Air orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
-  { id: 9073, name: "Water orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
-  { id: 9074, name: "Fire orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
-  { id: 9076, name: "Earth orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 855, name: "Yew longbow", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 66, name: "Yew longbow(u)", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 859, name: "Magic longbow", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 70, name: "Magic longbow(u)", category: "resources", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 575, name: "Air orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 571, name: "Water orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 569, name: "Fire orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
+  { id: 573, name: "Earth orb", category: "secondaries", botLikelihood: "high", volumeTier: "high", demandType: "skilling" },
   { id: 1634, name: "Dynamite", category: "secondaries", botLikelihood: "medium", volumeTier: "medium", demandType: "skilling" },
-  { id: 30072, name: "Aldarium", category: "potions", botLikelihood: "medium", volumeTier: "medium", demandType: "skilling" },
+  { id: 7936, name: "Pure essence", category: "resources", botLikelihood: "very_high", volumeTier: "massive", demandType: "skilling" },
+  { id: 1783, name: "Bucket of sand", category: "secondaries", botLikelihood: "very_high", volumeTier: "massive", demandType: "skilling" },
+  { id: 8778, name: "Oak plank", category: "resources", botLikelihood: "high", volumeTier: "massive", demandType: "skilling" },
 ];
 
 

@@ -24,25 +24,44 @@ import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
 type MenuTab = 'admin' | 'pool-management';
 
-const SCAN_MESSAGES = [
-  'Consulting the Grand Exchange spirits…',
-  'Divining flips from price runes…',
-  'Feeding the AI dragon…',
-  'Calibrating anti‑value‑trap sensors…',
-  'Summoning the flip oracle…',
-  'Scanning for safe mean‑reversion…',
-  'Hunting for volatility with discipline…',
-];
+
 
 /**
  * Convert MeanReversionSignal to FlipOpportunity for UI display
  */
 function convertMeanReversionToFlipOpportunity(signal: any): FlipOpportunity {
+    const geTax = 0.02;
+  const entryPrice = Math.round(signal.entryPriceNow ?? signal.currentPrice);
+  const entryRangeLow = Math.round(signal.entryRangeLow ?? entryPrice);
+  const entryRangeHigh = Math.round(signal.entryRangeHigh ?? entryPrice);
+  const exitBase = Math.round(signal.exitPriceBase ?? signal.targetSellPrice ?? signal.currentPrice);
+  const exitStretch = Math.round(signal.exitPriceStretch ?? exitBase);
+  const stopLossPrice = Math.round(signal.stopLoss ?? entryPrice * 0.93);
+  const netSellPrice = Math.round(exitBase * (1 - geTax));
+  const profitPerUnit = Math.max(0, netSellPrice - entryPrice);
+  const roi = entryPrice > 0 ? (profitPerUnit / entryPrice) * 100 : 0;
+  const profitMargin = roi;
+
+  const suggestedInvestment = signal.suggestedInvestment ?? entryPrice * 10;
+  const recommendedQuantity = entryPrice > 0 ? Math.max(1, Math.floor(suggestedInvestment / entryPrice)) : 0;
+  const totalInvestment = recommendedQuantity * entryPrice;
+  const totalProfit = recommendedQuantity * profitPerUnit;
+
+  const buyWindowText = `${entryRangeLow.toLocaleString()}-${entryRangeHigh.toLocaleString()}gp`;
+  const sellWindowText =
+    exitStretch > exitBase
+      ? `${exitBase.toLocaleString()}-${exitStretch.toLocaleString()}gp`
+      : `${exitBase.toLocaleString()}gp`;
+
+  const buyNarrative = `Buy now in the ${buyWindowText} window. ${signal.capitulationSignal ?? 'Bot dump detected, expecting rebound.'}`.trim();
+  const sellNarrative = `Scale out at ${sellWindowText}. Cut if closes below ${stopLossPrice.toLocaleString()}gp. ${signal.recoverySignal ?? ''}`.trim();
+
   return {
+
     itemId: signal.itemId,
     itemName: signal.itemName,
     currentPrice: signal.currentPrice,
-    averagePrice: signal.mediumTerm.avgPrice,
+    averagePrice: signal.longTerm.avgPrice,
     averagePrice30: signal.mediumTerm.avgPrice,
     averagePrice90: signal.mediumTerm.avgPrice,
     averagePrice180: signal.longTerm.avgPrice,
@@ -52,41 +71,48 @@ function convertMeanReversionToFlipOpportunity(signal: any): FlipOpportunity {
     trend: signal.maxDeviation > 10 ? 'bearish' : 'bullish',
     recommendation: 'buy',
     opportunityScore: signal.confidenceScore,
-    historicalLow: signal.currentPrice,
-    historicalHigh: signal.targetSellPrice,
-    flipType: signal.confidenceScore >= 85 ? 'high-confidence' : 
-             signal.confidenceScore >= 65 ? 'deep-value' : 
-             signal.confidenceScore >= 40 ? 'mean-reversion' : 
+    historicalLow: signal.entryRangeLow ?? signal.currentPrice,
+    historicalHigh: exitStretch,
+    flipType: signal.confidenceScore >= 85 ? 'high-confidence' :
+             signal.confidenceScore >= 65 ? 'deep-value' :
+             signal.confidenceScore >= 40 ? 'mean-reversion' :
              'risky-upside',
     flipTypeConfidence: signal.confidenceScore,
-    buyPrice: signal.currentPrice,
-    sellPrice: signal.targetSellPrice,
-    profitPerUnit: signal.targetSellPrice - signal.currentPrice,
-    profitMargin: ((signal.targetSellPrice - signal.currentPrice) / signal.currentPrice) * 100,
-    roi: signal.reversionPotential,
+    buyPrice: entryPrice,
+    sellPrice: exitBase,
+    profitPerUnit,
+    profitMargin,
+    roi,
     riskLevel: signal.volatilityRisk,
     confidence: signal.confidenceScore,
     estimatedHoldTime: signal.estimatedHoldingPeriod,
     volatility: signal.maxDeviation,
     volumeScore: signal.liquidityScore,
     dailyVolume: signal.mediumTerm.volumeAvg,
-    buyWhen: `Below ${signal.mediumTerm.avgPrice}gp (currently ${signal.currentPrice}gp)`,
-    sellWhen: `At or above ${signal.targetSellPrice}gp target`,
+    buyWhen: buyNarrative,
+    sellWhen: sellNarrative,
     momentum: signal.reversionPotential * 0.5,
     acceleration: 0,
     tradingRange: signal.maxDeviation,
     consistency: signal.supplyStability,
     spreadQuality: Math.min(100, signal.liquidityScore + signal.confidenceScore / 2),
-    recommendedQuantity: Math.floor(signal.suggestedInvestment / signal.currentPrice),
-    totalInvestment: signal.suggestedInvestment,
-    totalProfit: (signal.targetSellPrice - signal.currentPrice) * Math.floor(signal.suggestedInvestment / signal.currentPrice),
-    aiReasoning: signal.reasoning,
-    buyIfDropsTo: signal.buyIfDropsTo,
-    sellAtMin: signal.sellAtMin,
-    sellAtMax: signal.sellAtMax,
-    abortIfRisesAbove: signal.abortIfRisesAbove,
+    recommendedQuantity,
+    totalInvestment,
+    totalProfit,
+        aiReasoning: signal.reasoning,
+    aiEntryLow: entryRangeLow,
+    aiEntryHigh: entryRangeHigh,
+    aiExitBase: exitBase,
+    aiExitStretch: exitStretch,
+    aiStopLoss: stopLossPrice,
+    aiHoldWeeks: signal.expectedRecoveryWeeks,
+    sellAtMin: signal.sellAtMin ?? exitBase,
+    sellAtMax: signal.sellAtMax ?? exitStretch,
+    abortIfRisesAbove: signal.abortIfRisesAbove ?? stopLossPrice,
   };
 }
+
+
 
 export default function Dashboard() {
   const router = useRouter();
@@ -110,21 +136,22 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [scanProgress, setScanProgress] = useState(0);
-  const [scanMessage, setScanMessage] = useState('Awaiting command');
-  const [analysisStats, setAnalysisStats] = useState<{ aiAnalyzedCount: number; aiApprovedCount: number; preFilteredCount: number } | null>(null);
+    const [scanMessage, setScanMessage] = useState('Awaiting command');
+  const [analysisStats, setAnalysisStats] = useState<{
+    aiAnalyzedCount: number;
+    aiApprovedCount: number;
+    preFilteredCount: number;
+    aiMissingCount?: number;
+  } | null>(null);
+
+
   const [totalAnalyzed, setTotalAnalyzed] = useState<number | null>(null);
   const [showRefreshWarning, setShowRefreshWarning] = useState(false);
   const [detailedAnalyses, setDetailedAnalyses] = useState<{ itemId: number; itemName: string; detailedAnalysis: string }[]>([]);
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
-  const [filteredItems, setFilteredItems] = useState<{ itemId: number; itemName: string; reason: string }[]>([]);
+    const [filteredItems, setFilteredItems] = useState<{ itemId: number; itemName: string; reason: string }[]>([]);
   const [showFilteredItems, setShowFilteredItems] = useState(false);
-  const [minConfidenceThreshold] = useState<number>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('osrs-min-confidence');
-      return saved ? Number(saved) : 45;
-    }
-    return 45;
-  });
+
   const [lastRefresh, setLastRefresh] = useState<Date | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-last-refresh');
@@ -167,33 +194,46 @@ export default function Dashboard() {
       return;
     }
 
-    setLoading(true);
+        setLoading(true);
     setError('');
+    setScanMessage('Collecting market data (Step 1/3)');
+    setScanProgress(8);
 
     try {
       // Call mean-reversion opportunities endpoint (analyze all items in pool)
-      const response = await fetch('/api/mean-reversion-opportunities');
+      setScanMessage('Gathering market data (Step 1/3)');
+      const responsePromise = fetch('/api/mean-reversion-opportunities');
+      setScanProgress(20);
+      setScanMessage('Synthesising AI shortlist (Step 2/3)');
+      const response = await responsePromise;
+      setScanProgress(60);
       
       if (!response.ok) {
+
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to analyze mean-reversion opportunities');
       }
 
-      const data = await response.json();
+            const data = await response.json();
+      setScanMessage('Finalising alpha feed (Step 3/3)');
+      setScanProgress(80);
       
       if (!data.success || !data.opportunities) {
+
         console.error('API Response:', data);
         throw new Error('Invalid response from analysis API');
       }
 
-      if (data.summary) {
+            if (data.summary) {
         setAnalysisStats({
           aiAnalyzedCount: data.summary.aiAnalyzedCount || 0,
           aiApprovedCount: data.summary.aiApprovedCount || 0,
           preFilteredCount: data.summary.preFilteredCount || 0,
+          aiMissingCount: data.summary.aiMissingCount || 0,
         });
         setTotalAnalyzed(data.summary.totalAnalyzed || 0);
       }
+
 
       // Store detailed analyses
       if (data.detailedReasonings && Array.isArray(data.detailedReasonings)) {
@@ -266,27 +306,19 @@ export default function Dashboard() {
     loadingRef.current = loading;
   }, [loading]);
 
-  useEffect(() => {
-    if (!loading) {
-      setScanProgress(0);
-      setScanMessage('Awaiting command');
+    useEffect(() => {
+    if (loading) {
       return;
     }
 
-    let progress = 0;
-    let messageIndex = 0;
+    const resetTimer = setTimeout(() => {
+      setScanProgress(0);
+      setScanMessage('Awaiting command');
+    }, 1800);
 
-    setScanMessage(SCAN_MESSAGES[0]);
-    const intervalId = setInterval(() => {
-      progress = Math.min(90, progress + Math.floor(Math.random() * 8) + 3);
-      setScanProgress(progress);
-
-      messageIndex = (messageIndex + 1) % SCAN_MESSAGES.length;
-      setScanMessage(SCAN_MESSAGES[messageIndex]);
-    }, 1200);
-
-    return () => clearInterval(intervalId);
+    return () => clearTimeout(resetTimer);
   }, [loading]);
+
 
   // Check price alerts periodically
   const checkAlerts = usePriceAlertsStore(state => state.checkAlerts);
@@ -338,13 +370,13 @@ export default function Dashboard() {
 
 
   // Filter opportunities based on settings
-  let filteredOpportunities = opportunities.filter(opp => {
+    let filteredOpportunities = opportunities.filter(opp => {
     if (opp.opportunityScore < minOpportunityScore) return false;
-    if (opp.confidence < minConfidenceThreshold) return false;
     // Only filter by recommendation if it's been set (AI pass sets this)
     if (opp.recommendation && opp.recommendation !== 'buy') return false;
     
     // Flip type filter
+
     if (flipTypeFilter !== 'all' && opp.flipType !== flipTypeFilter) return false;
     
     return true;
@@ -420,7 +452,7 @@ export default function Dashboard() {
           >
             💼 Portfolio
           </button>
-          <button
+                    <button
             onClick={() => {
               setActiveTab('opportunities');
               setActiveMenuTab(null);
@@ -432,8 +464,9 @@ export default function Dashboard() {
                 : 'text-slate-400 hover:text-slate-300'
             }`}
           >
-            🎯 Opportunities
+            ⚡ Alpha Feed
           </button>
+
           <button
             onClick={() => {
               setActiveTab('performance');
@@ -543,11 +576,13 @@ export default function Dashboard() {
                     )}
                     {!loading && !lastRefresh && <span>Ready to analyze</span>}
                   </div>
-                    {!loading && analysisStats && (
+                                                            {!loading && analysisStats && (
                       <div className="text-xs text-blue-200/80">
-                        Analysis: {analysisStats.preFilteredCount} pre-filtered → {analysisStats.aiAnalyzedCount} AI evaluated → {analysisStats.aiApprovedCount} approved
+                        Analysis: {analysisStats.preFilteredCount} signals captured → {analysisStats.aiAnalyzedCount} AI evaluated → {analysisStats.aiApprovedCount} approved{typeof analysisStats.aiMissingCount === 'number' && analysisStats.aiMissingCount > 0 ? ` (${analysisStats.aiMissingCount} missing)` : ''}
                       </div>
                     )}
+
+
                   {loading && (
                     <div className="w-full bg-blue-900 rounded-full h-2 overflow-hidden">
                       <div
@@ -631,13 +666,14 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-end">
-              <div className="w-full bg-slate-800 border border-slate-700 rounded p-3 text-center">
-                <p className="text-xs text-slate-400 mb-1">Opportunities Found</p>
+                        <div className="w-full bg-slate-800 border border-slate-700 rounded p-3 text-center">
+                <p className="text-xs text-slate-400 mb-1">Signals Found</p>
                 <p className="text-2xl font-bold text-osrs-accent">{filteredOpportunities.length}</p>
                 <p className="text-xs text-slate-400">
                   of {totalAnalyzed ?? opportunities.length} analyzed
                 </p>
               </div>
+
             </div>
           </div>
         </div>
@@ -645,10 +681,11 @@ export default function Dashboard() {
         {/* Opportunities Grid */}
         <div className="space-y-8">
           {displayOpportunities.length > 0 && (
-            <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-slate-200 mb-2">🧠 AI Top Picks Reasoning</h3>
+                        <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
+              <h3 className="text-sm font-semibold text-slate-200 mb-2">🧠 AI Alpha Breakdown</h3>
               <ul className="space-y-2 text-sm text-slate-300">
                 {displayOpportunities.slice(0, 3).map((opp, idx) => (
+
                   <li key={opp.itemId} className="flex gap-2">
                     <span className="text-osrs-accent">#{idx + 1}</span>
                     <span className="font-semibold text-slate-100">{opp.itemName}:</span>
@@ -659,14 +696,15 @@ export default function Dashboard() {
             </div>
           )}
           {displayOpportunities.length > 0 && (
-            <div>
+                        <div>
               <h2 className="text-2xl font-bold text-slate-100 mb-1 flex items-center gap-2">
                 <span className="w-8 h-8 bg-orange-900 text-orange-400 rounded flex items-center justify-center text-lg">
                   📊
                 </span>
-                {`Flip Opportunities (${displayOpportunities.length})`}
+                {`Alpha Feed (${displayOpportunities.length})`}
               </h2>
-              <p className="text-slate-400 text-sm mb-4">Items trading below historical averages</p>
+              <p className="text-slate-400 text-sm mb-4">Live mean-reversion flips cleared by the AI gate</p>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {displayOpportunities.map((opp: FlipOpportunity) => (
                   <FlipCard

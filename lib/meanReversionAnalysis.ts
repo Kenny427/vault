@@ -42,10 +42,20 @@ export interface MeanReversionSignal {
   supplyStability: number; // 0-100, higher = more stable
   
   // Recommendation
-  suggestedInvestment: number; // GP amount
+    suggestedInvestment: number; // GP amount
   targetSellPrice: number;
   stopLoss: number;
   reasoning: string;
+  botDumpScore: number;
+  capitulationSignal: string;
+  recoverySignal: string;
+  entryPriceNow: number;
+  entryRangeLow: number;
+  entryRangeHigh: number;
+  exitPriceBase: number;
+  exitPriceStretch: number;
+  holdNarrative: string;
+  expectedRecoveryWeeks: number;
   
   // AI-provided price guidance
   buyIfDropsTo?: number; // Aggressive entry point
@@ -53,6 +63,7 @@ export interface MeanReversionSignal {
   sellAtMax?: number; // Optimistic exit target
   abortIfRisesAbove?: number; // Stop-loss trigger
 }
+
 
 export interface PriceDataPoint {
   timestamp: number;
@@ -62,10 +73,15 @@ export interface PriceDataPoint {
   lowPriceVolume: number;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
 /**
  * Calculate average price over a specific timeframe
  */
 function calculateTimeframeMetrics(
+
   priceData: PriceDataPoint[],
   daysBack: number
 ): { avg: number; volatility: number; volumeAvg: number } {
@@ -166,57 +182,63 @@ function assessVolatilityRisk(
 }
 
 /**
- * Calculate confidence score for mean reversion
- * This is SELECTIVE but lenient - want good opportunities, not impossible ones
+ * Calculate confidence score for mean reversion with bot-dump emphasis
  */
-function calculateConfidence(
-  deviation: number,
-  liquidityScore: number,
-  supplyStability: number,
-  volatilityRisk: 'low' | 'medium' | 'high',
-  downtrendPenalty: number = 0
-): number {
-  // Start at 0 - must EARN the score
-  let confidence = 0;
-  
-  // DEVIATION: The most important factor - this is the primary signal
-  if (deviation < 8) return 0; // Hard minimum
-  if (deviation >= 8 && deviation < 12) confidence = 30;
-  if (deviation >= 12 && deviation < 15) confidence = 40;
-  if (deviation >= 15 && deviation < 20) confidence = 55;
-  if (deviation >= 20 && deviation < 30) confidence = 75;
-  if (deviation >= 30) confidence = 90;
-  
-  // VOLATILITY RISK: Apply to base confidence but don't eliminate
-  // OSRS items naturally have some volatility, so be lenient
-  if (volatilityRisk === 'high') {
-    confidence = Math.max(20, confidence - 20); // Large penalty but floor at 20
-  } else if (volatilityRisk === 'medium') {
-    confidence = Math.max(25, confidence - 10); // Moderate penalty
-  } else if (volatilityRisk === 'low') {
-    confidence = Math.min(100, confidence + 10); // Small bonus
+function calculateConfidence({
+  mediumDeviation,
+  longDeviation,
+  liquidityScore,
+  supplyStability,
+  volatilityRisk,
+  downtrendPenalty = 0,
+  botDumpScore,
+  recoveryStrength,
+}: {
+  mediumDeviation: number;
+  longDeviation: number;
+  liquidityScore: number;
+  supplyStability: number;
+  volatilityRisk: 'low' | 'medium' | 'high';
+  downtrendPenalty?: number;
+  botDumpScore: number;
+  recoveryStrength: number;
+}): number {
+  const weightedDeviation = Math.max(0, mediumDeviation) * 0.65 + Math.max(0, longDeviation) * 0.35;
+  let confidence = weightedDeviation * 2.2;
+
+  if (botDumpScore > 0) {
+    confidence += Math.min(20, botDumpScore * 0.25);
   }
 
-  // DOWNTREND PENALTY: Critical - prevents value traps
-  // Applied HARD - don't just reduce, can eliminate opportunities
-  if (downtrendPenalty > 0) {
-    confidence = Math.max(0, confidence - downtrendPenalty);
+  if (recoveryStrength > 0) {
+    confidence += Math.min(15, recoveryStrength * 0.2);
   }
-  
-  // SUPPLY STABILITY: Bonus for good stability, penalty for poor
+
+  if (volatilityRisk === 'low') {
+    confidence += 8;
+  } else if (volatilityRisk === 'medium') {
+    confidence -= 8;
+  } else {
+    confidence -= 18;
+  }
+
   if (supplyStability >= 80) {
-    confidence = Math.min(100, confidence + 8);
+    confidence += 6;
   } else if (supplyStability < 30) {
-    confidence = Math.max(20, confidence - 8); // Only small penalty, not elimination
+    confidence -= 8;
   }
-  
-  // LIQUIDITY: Small bonus only if good
+
   if (liquidityScore >= 70) {
-    confidence = Math.min(100, confidence + 5);
+    confidence += 5;
+  } else if (liquidityScore < 20) {
+    confidence -= 5;
   }
-  
-  return Math.max(0, Math.min(100, confidence));
+
+  confidence -= downtrendPenalty;
+
+  return clamp(confidence, 0, 100);
 }
+
 
 /**
  * Assign investment grade (STRICT)
@@ -236,67 +258,69 @@ function assignInvestmentGrade(confidenceScore: number): 'A+' | 'A' | 'B+' | 'B'
 }
 
 /**
- * Estimate holding period based on deviation and bot likelihood
+ * Convert expected recovery in weeks into a readable holding period string
  */
-function estimateHoldingPeriod(
-  deviation: number,
-  _volatility: number,
-  botLikelihood: string
-): string {
-  // Botted items revert faster
-  const botMultiplier = botLikelihood === 'very high' ? 0.5 : 
-                        botLikelihood === 'high' ? 0.7 : 
-                        botLikelihood === 'medium' ? 1.0 : 1.3;
-  
-  const baseWeeks = (deviation / 5) * botMultiplier;
-  
-  if (baseWeeks < 2) return '1-2 weeks';
-  if (baseWeeks < 4) return '2-4 weeks';
-  if (baseWeeks < 8) return '1-2 months';
-  if (baseWeeks < 12) return '2-3 months';
+function estimateHoldingPeriod(expectedRecoveryWeeks: number): string {
+  if (expectedRecoveryWeeks <= 2) return '1-2 weeks';
+  if (expectedRecoveryWeeks <= 4) return '2-4 weeks';
+  if (expectedRecoveryWeeks <= 8) return '1-2 months';
+  if (expectedRecoveryWeeks <= 12) return '2-3 months';
   return '3-6 months';
 }
 
+
 /**
- * Generate investment recommendation
+ * Generate investment recommendation narrative
  */
 function generateRecommendation(
-  _itemName: string,
+  itemName: string,
   _currentPrice: number,
   reversionPotential: number,
   confidenceScore: number,
   botLikelihood: string,
   maxDeviation: number,
-  downtrendReasoning?: string
+  downtrendReasoning: string | undefined,
+  capitulationSignal: string,
+  recoverySignal: string,
+  estimatedHoldingPeriod: string
 ): string {
-  const reasons: string[] = [];
-  
-  if (maxDeviation > 20) {
-    reasons.push(`Currently ${maxDeviation.toFixed(1)}% below historical average`);
+  const notes: string[] = [];
+
+  if (maxDeviation > 0) {
+    notes.push(`Trading ${maxDeviation.toFixed(1)}% under blended 90/365d averages`);
   }
-  
+
+  if (capitulationSignal) {
+    notes.push(capitulationSignal);
+  }
+
+  if (recoverySignal) {
+    notes.push(recoverySignal);
+  }
+
   if (botLikelihood === 'very high' || botLikelihood === 'high') {
-    reasons.push('Heavily botted item with stable supply - predictable reversion');
+    notes.push('Bot supply pattern detected – bans historically trigger fast rebounds');
   }
-  
-  if (downtrendReasoning && !downtrendReasoning.includes('No strong downtrend') && !downtrendReasoning.includes('No significant')) {
-    reasons.push(downtrendReasoning);
+
+  if (downtrendReasoning && !/No (strong|significant) downtrend/i.test(downtrendReasoning)) {
+    notes.push(downtrendReasoning);
   }
-  
-  if (reversionPotential > 30) {
-    reasons.push(`High upside potential: ${reversionPotential.toFixed(1)}% expected gain`);
-  } else if (reversionPotential > 15) {
-    reasons.push(`Solid potential: ${reversionPotential.toFixed(1)}% expected gain`);
+
+  if (reversionPotential > 0) {
+    notes.push(`Upside ≈ ${reversionPotential.toFixed(1)}% with ${estimatedHoldingPeriod} hold`);
   }
-  
-  if (confidenceScore > 85) {
-    reasons.push('Very high confidence in mean reversion');
-  } else if (confidenceScore > 70) {
-    reasons.push('High confidence in price recovery');
-  }
-  
-  return reasons.join('. ') + '.';
+
+  notes.push(`Confidence ${confidenceScore.toFixed(0)}% on ${itemName}`);
+
+  const sanitize = (text: string) => text.replace(/\s+/g, ' ').trim();
+
+  return notes
+    .map(sanitize)
+    .filter(Boolean)
+    .map(note => (note.endsWith('.') ? note.slice(0, -1) : note))
+    .join('. ') + '.';
 }
+
 
 /**
  * Calculate trend slope using linear regression
@@ -457,81 +481,150 @@ export async function analyzeMeanReversionOpportunity(
   priceData: PriceDataPoint[]
 ): Promise<MeanReversionSignal | null> {
   if (!priceData || priceData.length < 5) {
-    return null; // Need at least 5 data points
+    return null;
   }
-  
-  // Calculate metrics for each timeframe
+
   const metrics7d = calculateTimeframeMetrics(priceData, 7);
   const metrics30d = calculateTimeframeMetrics(priceData, 30);
   const metrics90d = calculateTimeframeMetrics(priceData, 90);
   const metrics180d = calculateTimeframeMetrics(priceData, 180);
   const metrics365d = calculateTimeframeMetrics(priceData, 365);
-  
-  // Current price (most recent)
+
   const latest = priceData[priceData.length - 1];
   const currentPrice = (latest.avgHighPrice + latest.avgLowPrice) / 2;
-  
-  // Calculate deviations
+
   const dev7d = metrics7d.avg > 0 ? ((metrics7d.avg - currentPrice) / metrics7d.avg) * 100 : 0;
   const dev30d = metrics30d.avg > 0 ? ((metrics30d.avg - currentPrice) / metrics30d.avg) * 100 : 0;
   const dev90d = metrics90d.avg > 0 ? ((metrics90d.avg - currentPrice) / metrics90d.avg) * 100 : 0;
   const dev180d = metrics180d.avg > 0 ? ((metrics180d.avg - currentPrice) / metrics180d.avg) * 100 : 0;
   const dev365d = metrics365d.avg > 0 ? ((metrics365d.avg - currentPrice) / metrics365d.avg) * 100 : 0;
-  
-  // Find maximum deviation (best opportunity)
+
   const maxDeviation = Math.max(dev7d, dev30d, dev90d, dev180d, dev365d);
-  
-  // Skip if not undervalued (need at least 1% deviation to analyze everything)
+
   if (maxDeviation < 1) {
-    return null; // Item is consistently at or above historical average
+    return null;
   }
-  
-  // Assess bot activity
+
   const { likelihood: botLikelihood, supplyStability } = assessBotLikelihood(priceData);
-  
-  // Calculate reversion potential
-  // Use the timeframe with the best (highest) average as target
-  const targetPrice = Math.max(metrics90d.avg, metrics180d.avg, metrics365d.avg);
-  const reversionPotential = ((targetPrice - currentPrice) / currentPrice) * 100;
-  
-  // Risk assessment
+
+  const mediumDeviation = Math.max(0, dev90d, dev30d);
+  const longDeviation = Math.max(0, dev365d, dev180d);
+
+  const shortTermShock = Math.max(0, dev7d - dev30d);
+  const mediumGap = Math.max(0, dev30d - dev90d);
+  const longGap = Math.max(0, dev90d - dev365d);
+
+  const volumeSpikeRatio =
+    metrics30d.volumeAvg > 0 ? metrics7d.volumeAvg / Math.max(1, metrics30d.volumeAvg) : 1;
+
+  let botDumpScore =
+    shortTermShock * 2.4 +
+    mediumGap * 1.6 +
+    longGap * 1.1 +
+    (volumeSpikeRatio > 1 ? (volumeSpikeRatio - 1) * 25 : 0);
+
+  botDumpScore +=
+    botLikelihood === 'very high'
+      ? 20
+      : botLikelihood === 'high'
+      ? 15
+      : botLikelihood === 'medium'
+      ? 8
+      : 0;
+
+  botDumpScore += Math.max(0, supplyStability - 60) * 0.2;
+  botDumpScore = clamp(botDumpScore, 0, 100);
+
+  const capitulationReasons: string[] = [];
+  if (shortTermShock > 4) {
+    capitulationReasons.push(`${shortTermShock.toFixed(1)}% drop vs 30d avg this week`);
+  }
+  if (volumeSpikeRatio > 1.25) {
+    capitulationReasons.push(`${((volumeSpikeRatio - 1) * 100).toFixed(0)}% volume spike (bot dump)`);
+  }
+  if (mediumGap > 3) {
+    capitulationReasons.push(`${mediumGap.toFixed(1)}% deeper than 90d average`);
+  }
+
+  const capitulationSignal = capitulationReasons.length
+    ? `Capitulation: ${capitulationReasons.join('; ')}`
+    : 'Capitulation: mild drift (no major dump detected)';
+
+  const { isReversing, reversingStrength, foundSupport } = detectTrendReversal(priceData);
+  let recoveryStrength = (isReversing ? reversingStrength : 0) + (foundSupport ? 12 : 0);
+  recoveryStrength += Math.max(0, longDeviation - shortTermShock) * 0.4;
+  recoveryStrength = clamp(recoveryStrength, 0, 100);
+
+  const recoveryReasons: string[] = [];
+  if (isReversing) {
+    recoveryReasons.push(`Reversal slope strength ${reversingStrength}%`);
+  }
+  if (foundSupport) {
+    recoveryReasons.push('Support forming near recent lows');
+  }
+  if (recoveryStrength > 50) {
+    recoveryReasons.push('Momentum turning upward');
+  }
+
+  const recoverySignal = recoveryReasons.length
+    ? `Recovery: ${recoveryReasons.join('; ')}`
+    : 'Recovery: accumulation phase (monitor for bounce confirmation)';
+
+  const targetAnchor = Math.max(metrics90d.avg, metrics180d.avg, metrics365d.avg);
+  const exitPriceBase = Math.round(Math.max(currentPrice * 1.06, targetAnchor * 0.99));
+  const exitPriceStretch = Math.round(Math.max(exitPriceBase * 1.05, targetAnchor * 1.03));
+
+  const entryPriceNow = Math.round(currentPrice);
+  const entryRangeLow = Math.max(1, Math.round(currentPrice * 0.985));
+  const entryRangeHigh = Math.round(currentPrice * 1.015);
+
+  const stopLoss = Math.max(1, Math.round(Math.min(currentPrice * 0.93, targetAnchor * 0.88)));
+
+  const reversionPotential = ((exitPriceBase - currentPrice) / currentPrice) * 100;
+
   const liquidityScore = calculateLiquidityScore(metrics30d.volumeAvg);
   const volatilityRisk = assessVolatilityRisk(metrics7d.volatility, metrics90d.volatility, currentPrice);
-  
-  // TREND ANALYSIS: Detect value traps
+
   const { penalty: downtrendPenalty, reasoning: downtrendReasoning } = assessDowntrendPenalty(priceData);
-  
-  if (downtrendPenalty > 0) {
-    console.log(`✓ ${itemName}: Applied downtrend penalty of ${downtrendPenalty} - ${downtrendReasoning}`);
-  }
-  
-  // Confidence calculation with trend penalties
-  const confidenceScore = calculateConfidence(
-    maxDeviation,
+
+  const confidenceScore = calculateConfidence({
+    mediumDeviation,
+    longDeviation,
     liquidityScore,
     supplyStability,
     volatilityRisk,
-    downtrendPenalty
-  );
-  
-  // DEBUG: Log detailed analysis for items with low confidence
-  if (confidenceScore < 30 && maxDeviation > 8) {
-    console.log(`   ⚠️ ${itemName}: dev=${maxDeviation.toFixed(1)}%, conf=${confidenceScore.toFixed(0)}%, stability=${supplyStability.toFixed(0)}%, volatility=${volatilityRisk}`);
-  }
-  
+    downtrendPenalty,
+    botDumpScore,
+    recoveryStrength,
+  });
+
   const investmentGrade = assignInvestmentGrade(confidenceScore);
-  const estimatedHoldingPeriod = estimateHoldingPeriod(maxDeviation, metrics30d.volatility, botLikelihood);
-  
-  // Investment sizing (based on confidence and liquidity)
-  const baseSuggestion = 10000000; // 10M base
-  const confidenceMultiplier = confidenceScore / 100;
-  const liquidityMultiplier = Math.min(1, liquidityScore / 80);
-  const suggestedInvestment = Math.floor(baseSuggestion * confidenceMultiplier * liquidityMultiplier);
-  
-  // Target and stop-loss
-  const targetSellPrice = Math.floor(targetPrice * 0.95); // Conservative target (95% of historical avg)
-  const stopLoss = Math.floor(currentPrice * 0.90); // 10% stop loss
-  
+
+  const baseDeviationForTiming = Math.max(8, mediumDeviation * 0.6 + longDeviation * 0.4);
+  const botSpeed =
+    botLikelihood === 'very high'
+      ? 0.6
+      : botLikelihood === 'high'
+      ? 0.75
+      : botLikelihood === 'medium'
+      ? 1
+      : 1.25;
+  const recoveryModifier = recoveryStrength > 60 ? 0.8 : recoveryStrength > 35 ? 0.95 : 1.15;
+  const expectedRecoveryWeeks = Math.max(
+    2,
+    Math.round((baseDeviationForTiming / 5) * botSpeed * recoveryModifier)
+  );
+  const estimatedHoldingPeriod = estimateHoldingPeriod(expectedRecoveryWeeks);
+
+  const baseSuggestion = 12_000_000;
+  const liquidityFactor = clamp(liquidityScore / 90, 0.4, 1.1);
+  const dumpFactor = 0.7 + botDumpScore / 200;
+  const suggestedInvestment = Math.round(
+    clamp(baseSuggestion * (confidenceScore / 100) * liquidityFactor * dumpFactor, 500_000, 25_000_000)
+  );
+
+  const targetSellPrice = exitPriceBase;
+
   const reasoning = generateRecommendation(
     itemName,
     currentPrice,
@@ -539,54 +632,70 @@ export async function analyzeMeanReversionOpportunity(
     confidenceScore,
     botLikelihood,
     maxDeviation,
-    downtrendReasoning
+    downtrendReasoning,
+    capitulationSignal,
+    recoverySignal,
+    estimatedHoldingPeriod
   );
-  
+
+  const holdNarrative = `Buy between ${entryRangeLow}-${entryRangeHigh}gp (current ${entryPriceNow}gp). Target ${exitPriceBase}-${exitPriceStretch}gp over ${estimatedHoldingPeriod}. Reassess if closes below ${stopLoss}gp or if volume spikes beyond ${Math.round(metrics30d.volumeAvg * 1.4)} units.`;
+
   return {
     itemId,
     itemName,
-    currentPrice: Math.floor(currentPrice),
-    
+    currentPrice: entryPriceNow,
+
     shortTerm: {
       period: '7d',
-      avgPrice: Math.floor(metrics7d.avg),
+      avgPrice: Math.round(metrics7d.avg),
       currentDeviation: dev7d,
       volatility: metrics7d.volatility,
-      volumeAvg: metrics7d.volumeAvg
+      volumeAvg: metrics7d.volumeAvg,
     },
     mediumTerm: {
       period: '90d',
-      avgPrice: Math.floor(metrics90d.avg),
+      avgPrice: Math.round(metrics90d.avg),
       currentDeviation: dev90d,
       volatility: metrics90d.volatility,
-      volumeAvg: metrics90d.volumeAvg
+      volumeAvg: metrics90d.volumeAvg,
     },
     longTerm: {
       period: '365d',
-      avgPrice: Math.floor(metrics365d.avg),
+      avgPrice: Math.round(metrics365d.avg),
       currentDeviation: dev365d,
       volatility: metrics365d.volatility,
-      volumeAvg: metrics365d.volumeAvg
+      volumeAvg: metrics365d.volumeAvg,
     },
-    
+
     maxDeviation,
     reversionPotential,
     confidenceScore,
     investmentGrade,
-    
+
     volatilityRisk,
     liquidityScore,
     estimatedHoldingPeriod,
-    
+
     botLikelihood,
     supplyStability,
-    
+
     suggestedInvestment,
     targetSellPrice,
     stopLoss,
-    reasoning
+    reasoning,
+    botDumpScore,
+    capitulationSignal,
+    recoverySignal,
+    entryPriceNow,
+    entryRangeLow,
+    entryRangeHigh,
+    exitPriceBase,
+    exitPriceStretch,
+    holdNarrative,
+    expectedRecoveryWeeks,
   };
 }
+
 
 /**
  * Rank opportunities by investment attractiveness

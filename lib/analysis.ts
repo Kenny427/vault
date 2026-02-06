@@ -68,14 +68,23 @@ export interface FlipOpportunity {
   totalProfit: number; // Total expected profit
 
   // Optional AI context
-  aiReasoning?: string;
+    aiReasoning?: string;
+
+  // Enhanced AI guidance fields
+  aiEntryLow?: number;
+  aiEntryHigh?: number;
+  aiExitBase?: number;
+  aiExitStretch?: number;
+  aiStopLoss?: number;
+  aiHoldWeeks?: number;
   
-  // AI-provided price guidance
+  // AI-provided price guidance (legacy)
   buyIfDropsTo?: number; // Aggressive entry point
   sellAtMin?: number; // Conservative exit (covers GE tax)
   sellAtMax?: number; // Optimistic exit target
   abortIfRisesAbove?: number; // Stop-loss trigger
 }
+
 
 /**
  * Calculate mean of an array

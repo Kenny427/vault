@@ -24,12 +24,13 @@
       "url": "/?tab=portfolio",
       "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
     },
-    {
-      "name": "Opportunities",
-      "short_name": "Opportunities",
-      "description": "Find flip opportunities",
+        {
+      "name": "Alpha Feed",
+      "short_name": "Alpha Feed",
+      "description": "View AI-curated flip signals",
       "url": "/?tab=opportunities",
       "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
     }
+
   ]
 }

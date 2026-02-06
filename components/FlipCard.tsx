@@ -150,29 +150,50 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
       )}
 
       {/* Price Guidance */}
-      {(opportunity.buyIfDropsTo || opportunity.sellAtMin || opportunity.sellAtMax || opportunity.abortIfRisesAbove) && (
+            {(opportunity.aiEntryLow || opportunity.aiEntryHigh || opportunity.aiExitBase || opportunity.aiExitStretch || opportunity.aiStopLoss) && (
         <div className="px-4 py-3 bg-slate-900/30 border-t border-slate-700">
           <p className="text-xs font-bold text-slate-400 mb-2">PRICE GUIDANCE</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            {opportunity.buyIfDropsTo && (
-              <div>
-                <p className="text-slate-500">Buy if drops to</p>
-                <p className="text-green-400 font-bold">{opportunity.buyIfDropsTo.toLocaleString()}gp</p>
+            {opportunity.aiEntryLow && opportunity.aiEntryHigh && (
+              <div className="col-span-2">
+                <p className="text-slate-500">Buy now range</p>
+                <p className="text-green-400 font-bold">
+                  {opportunity.aiEntryLow.toLocaleString()}gp – {opportunity.aiEntryHigh.toLocaleString()}gp
+                </p>
               </div>
             )}
-            {opportunity.abortIfRisesAbove && (
+            {opportunity.aiExitBase && (
               <div>
-                <p className="text-slate-500">Stop-loss at</p>
-                <p className="text-red-400 font-bold">{opportunity.abortIfRisesAbove.toLocaleString()}gp</p>
+                <p className="text-slate-500">Primary exit</p>
+                <p className="text-blue-400 font-bold">{opportunity.aiExitBase.toLocaleString()}gp</p>
               </div>
             )}
-            {opportunity.sellAtMin && (
+            {opportunity.aiExitStretch && opportunity.aiExitStretch !== opportunity.aiExitBase && (
+              <div>
+                <p className="text-slate-500">Stretch exit</p>
+                <p className="text-yellow-400 font-bold">{opportunity.aiExitStretch.toLocaleString()}gp</p>
+              </div>
+            )}
+            {opportunity.aiStopLoss && (
+              <div>
+                <p className="text-slate-500">Protect capital</p>
+                <p className="text-red-400 font-bold">{opportunity.aiStopLoss.toLocaleString()}gp</p>
+              </div>
+            )}
+            {opportunity.aiHoldWeeks && (
+              <div>
+                <p className="text-slate-500">Planned hold</p>
+                <p className="text-slate-300 font-bold">{opportunity.aiHoldWeeks} weeks</p>
+              </div>
+            )}
+            {opportunity.sellAtMin && !opportunity.aiExitBase && (
+
               <div>
                 <p className="text-slate-500">Sell min (safe)</p>
                 <p className="text-blue-400 font-bold">{opportunity.sellAtMin.toLocaleString()}gp</p>
               </div>
             )}
-            {opportunity.sellAtMax && (
+            {opportunity.sellAtMax && !opportunity.aiExitStretch && (
               <div>
                 <p className="text-slate-500">Sell max (greed)</p>
                 <p className="text-yellow-400 font-bold">{opportunity.sellAtMax.toLocaleString()}gp</p>
@@ -181,6 +202,7 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
           </div>
         </div>
       )}
+
 
       {/* Quick Actions */}
       <div className="p-3 border-t border-slate-700 bg-slate-900/30 grid grid-cols-3 gap-2">
