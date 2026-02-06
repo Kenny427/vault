@@ -10,15 +10,10 @@ interface InvestmentSignal {
   stopLoss: number;
   reversionPotential: number;
   confidenceScore: number;
-  strategicNarrative: string;
-  logic?: {
-    thesis: string;
-    vulnerability: string;
-    trigger: string;
-  };
-  auditorDecision?: 'approve' | 'caution' | 'reject';
-  auditorNotes?: string;
+  investmentGrade: string;
+  estimatedHoldingPeriod: string;
   suggestedInvestment: number;
+  reasoning: string;
   maxDeviation: number;
   liquidityScore: number;
   botLikelihood: string;
@@ -50,21 +45,21 @@ export default function InvestmentDashboard() {
   const [loading, setLoading] = useState(true);
   const [aiMetadata, setAiMetadata] = useState<any>(null);
   const [selectedView, setSelectedView] = useState<'opportunities' | 'portfolio'>('opportunities');
-
+  
   useEffect(() => {
     loadInvestmentSignals();
   }, []);
-
+  
   const loadInvestmentSignals = async (forceRefresh = false) => {
     setLoading(true);
     try {
-      const url = forceRefresh
+      const url = forceRefresh 
         ? '/api/investment-signals?refreshAI=true&limit=30'
         : '/api/investment-signals?limit=30';
-
+      
       const response = await fetch(url);
       const data = await response.json();
-
+      
       if (data.success) {
         setSignals(data.signals || []);
         setPortfolio(data.portfolioRecommendation || null);
@@ -76,30 +71,25 @@ export default function InvestmentDashboard() {
       setLoading(false);
     }
   };
-
-  const getStatusColor = (decision?: string, confidence?: number) => {
-    if (decision === 'approve') return 'bg-green-900/30 text-green-400 border-green-500/30';
-    if (decision === 'caution') return 'bg-yellow-900/30 text-yellow-400 border-yellow-500/30';
-    if (decision === 'reject') return 'bg-red-900/30 text-red-500 border-red-500/30';
-
-    // Fallback to confidence-based coloring if no auditor decision
-    if (confidence && confidence >= 70) return 'bg-green-900/30 text-green-400 border-green-500/30';
-    if (confidence && confidence >= 50) return 'bg-blue-900/30 text-blue-400 border-blue-500/30';
+  
+  const getGradeColor = (grade: string) => {
+    if (grade === 'A+' || grade === 'A') return 'bg-green-900/30 text-green-400 border-green-500/30';
+    if (grade === 'B+' || grade === 'B') return 'bg-blue-900/30 text-blue-400 border-blue-500/30';
     return 'bg-slate-700 text-slate-400 border-slate-600';
   };
-
+  
   const getSentimentIcon = (sentiment?: string) => {
     if (sentiment === 'bullish') return '📈';
     if (sentiment === 'bearish') return '📉';
     return '📊';
   };
-
+  
   const formatGP = (amount: number) => {
     if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)}M`;
     if (amount >= 1000) return `${(amount / 1000).toFixed(0)}K`;
     return amount.toString();
   };
-
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -111,7 +101,7 @@ export default function InvestmentDashboard() {
       </div>
     );
   }
-
+  
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -120,14 +110,14 @@ export default function InvestmentDashboard() {
           <h1 className="text-3xl font-bold text-slate-100">💎 Investment Dashboard</h1>
           <p className="text-slate-400 mt-1">Mean-Reversion Value Investing Strategy</p>
         </div>
-        <button
-          onClick={() => loadInvestmentSignals(true)}
+        <button 
+          onClick={() => loadInvestmentSignals(true)} 
           className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-slate-100"
         >
           🔄 Refresh Analysis
         </button>
       </div>
-
+      
       {/* AI Status Banner */}
       {aiMetadata && (
         <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
@@ -137,14 +127,14 @@ export default function InvestmentDashboard() {
               <h3 className="font-semibold text-blue-300">AI-Enhanced Analysis</h3>
               <p className="text-sm text-blue-200 mt-1">{aiMetadata.marketOverview}</p>
               <p className="text-xs text-blue-400 mt-2">
-                Generated: {new Date(aiMetadata.generatedAt).toLocaleDateString()} •
+                Generated: {new Date(aiMetadata.generatedAt).toLocaleDateString()} • 
                 Expires: {new Date(aiMetadata.expiresAt).toLocaleDateString()}
               </p>
             </div>
           </div>
         </div>
       )}
-
+      
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
@@ -156,7 +146,7 @@ export default function InvestmentDashboard() {
             <span className="text-3xl">🎯</span>
           </div>
         </div>
-
+        
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -171,7 +161,7 @@ export default function InvestmentDashboard() {
             <span className="text-3xl">📈</span>
           </div>
         </div>
-
+        
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -181,7 +171,7 @@ export default function InvestmentDashboard() {
             <span className="text-3xl">💰</span>
           </div>
         </div>
-
+        
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -194,29 +184,31 @@ export default function InvestmentDashboard() {
           </div>
         </div>
       </div>
-
+      
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b border-slate-700">
         <button
           onClick={() => setSelectedView('opportunities')}
-          className={`px-4 py-3 font-semibold transition-all ${selectedView === 'opportunities'
-            ? 'text-osrs-accent border-b-2 border-osrs-accent'
-            : 'text-slate-400 hover:text-slate-300'
-            }`}
+          className={`px-4 py-3 font-semibold transition-all ${
+            selectedView === 'opportunities'
+              ? 'text-osrs-accent border-b-2 border-osrs-accent'
+              : 'text-slate-400 hover:text-slate-300'
+          }`}
         >
           Investment Opportunities
         </button>
         <button
           onClick={() => setSelectedView('portfolio')}
-          className={`px-4 py-3 font-semibold transition-all ${selectedView === 'portfolio'
-            ? 'text-osrs-accent border-b-2 border-osrs-accent'
-            : 'text-slate-400 hover:text-slate-300'
-            }`}
+          className={`px-4 py-3 font-semibold transition-all ${
+            selectedView === 'portfolio'
+              ? 'text-osrs-accent border-b-2 border-osrs-accent'
+              : 'text-slate-400 hover:text-slate-300'
+          }`}
         >
           Recommended Portfolio
         </button>
       </div>
-
+      
       {/* Opportunities View */}
       {selectedView === 'opportunities' && (
         <div className="space-y-4">
@@ -231,20 +223,20 @@ export default function InvestmentDashboard() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <h3 className="text-xl font-bold text-slate-100">{signal.itemName}</h3>
-                    <span className={`px-2 py-1 rounded text-sm font-semibold border ${getStatusColor(signal.auditorDecision, signal.confidenceScore)}`}>
-                      {signal.auditorDecision ? signal.auditorDecision.toUpperCase() : 'ANALYZING'}
+                    <span className={`px-2 py-1 rounded text-sm font-semibold border ${getGradeColor(signal.investmentGrade)}`}>
+                      {signal.investmentGrade}
                     </span>
-                    {signal.logic && (
+                    {signal.aiInsight && (
                       <span className="px-2 py-1 rounded text-sm font-semibold bg-blue-900/30 text-blue-400 border border-blue-500/30">
-                        🧠 Dual-Pass Logic
+                        🧠 AI Enhanced
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-slate-400 mt-1">{signal.strategicNarrative}</p>
+                  <p className="text-sm text-slate-400 mt-1">{signal.reasoning}</p>
                 </div>
                 {signal.aiInsight && <span className="text-2xl">{getSentimentIcon(signal.aiInsight.marketSentiment)}</span>}
               </div>
-
+              
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
                   <p className="text-xs text-slate-500">Current Price</p>
@@ -263,7 +255,7 @@ export default function InvestmentDashboard() {
                   <p className="text-lg font-semibold text-slate-200">{signal.confidenceScore.toFixed(0)}%</p>
                 </div>
               </div>
-
+              
               {/* Price Deviation Chart */}
               <div className="bg-slate-900/50 rounded-lg p-4 mb-4">
                 <p className="text-sm font-semibold mb-3 text-slate-300">Price vs Historical Average</p>
@@ -288,12 +280,12 @@ export default function InvestmentDashboard() {
                   </div>
                 </div>
               </div>
-
+              
               {/* Investment Details */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-4">
                 <div className="flex items-center gap-2 text-slate-400">
                   <span>⏱️</span>
-                  <span>{signal.logic?.thesis || 'Short-term'}</span>
+                  <span>{signal.estimatedHoldingPeriod}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <span>💵</span>
@@ -305,10 +297,10 @@ export default function InvestmentDashboard() {
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <span>💧</span>
-                  <span>Liq: {signal.liquidityScore}/100</span>
+                  <span>Liquidity: {signal.liquidityScore}/100</span>
                 </div>
               </div>
-
+              
               {/* AI Insights */}
               {signal.aiInsight && (
                 <div className="p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
@@ -328,13 +320,13 @@ export default function InvestmentDashboard() {
           ))}
         </div>
       )}
-
+      
       {/* Portfolio View */}
       {selectedView === 'portfolio' && portfolio && (
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
           <h2 className="text-2xl font-bold text-slate-100 mb-2">Recommended Diversified Portfolio</h2>
           <p className="text-sm text-slate-400 mb-6">{portfolio.strategy}</p>
-
+          
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="p-4 bg-blue-900/20 rounded-lg">
               <p className="text-sm text-slate-400">Total Investment</p>
@@ -349,7 +341,7 @@ export default function InvestmentDashboard() {
               <p className="text-2xl font-bold text-purple-400">{portfolio.timeHorizon}</p>
             </div>
           </div>
-
+          
           <div className="space-y-3">
             {portfolio.holdings.map((holding, idx) => (
               <div key={idx} className="p-4 bg-slate-900/50 border border-slate-700 rounded-lg hover:bg-slate-900 transition-colors">
@@ -358,9 +350,7 @@ export default function InvestmentDashboard() {
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-slate-200">{holding.itemName}</p>
                       <span className="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-300">{holding.category}</span>
-                      <span className={`px-2 py-0.5 rounded text-xs border ${getStatusColor(undefined, holding.confidence)}`}>
-                        {holding.confidence}% CONF
-                      </span>
+                      <span className={`px-2 py-0.5 rounded text-xs border ${getGradeColor(holding.grade)}`}>{holding.grade}</span>
                     </div>
                     <div className="grid grid-cols-4 gap-4 mt-2 text-sm">
                       <div>

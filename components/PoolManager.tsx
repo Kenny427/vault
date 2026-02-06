@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getDatabaseItemPool, ItemPoolEntry } from '@/lib/expandedItemPool';
+import { EXPANDED_ITEM_POOL, ItemPoolEntry } from '@/lib/expandedItemPool';
 
 interface PoolAIReview {
   add: string[];
@@ -18,9 +18,7 @@ export default function PoolManager() {
   const [isReviewing, setIsReviewing] = useState(false);
 
   useEffect(() => {
-    getDatabaseItemPool().then(pool => {
-      setPoolItems([...pool].sort((a, b) => a.name.localeCompare(b.name)));
-    });
+    setPoolItems([...EXPANDED_ITEM_POOL].sort((a, b) => a.name.localeCompare(b.name)));
   }, []);
 
   const categories = {
@@ -49,7 +47,7 @@ export default function PoolManager() {
   const handleAddItem = () => {
     const trimmed = newItem.trim();
     if (!trimmed) return;
-
+    
     if (poolItems.some(item => item.name.toLowerCase() === trimmed.toLowerCase())) {
       alert('Item already exists in pool!');
       return;
@@ -87,7 +85,7 @@ export default function PoolManager() {
 
   const handleRemoveItem = (itemToRemove: ItemPoolEntry) => {
     if (!confirm(`Remove "${itemToRemove.name}" from pool?`)) return;
-
+    
     alert(`To remove items, please edit lib/expandedItemPool.ts directly. This ensures the pool stays synchronized.`);
   };
 
@@ -225,10 +223,11 @@ export default function PoolManager() {
             <button
               key={key}
               onClick={() => setCategoryFilter(key)}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${categoryFilter === key
+              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                categoryFilter === key
                   ? 'bg-osrs-accent text-slate-900'
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                }`}
+              }`}
             >
               {label.split(' ')[0]} ({getCategoryCount(key)})
             </button>
@@ -247,10 +246,11 @@ export default function PoolManager() {
                   <div className="text-sm text-slate-100 font-medium">{item.name}</div>
                   <div className="text-xs text-slate-400 mt-1 flex gap-2">
                     <span className="px-2 py-0.5 bg-slate-800 rounded">{item.category}</span>
-                    <span className={`px-2 py-0.5 rounded ${item.volumeTier === 'massive' ? 'bg-purple-900/50 text-purple-300' :
-                        item.volumeTier === 'high' ? 'bg-blue-900/50 text-blue-300' :
-                          'bg-slate-800 text-slate-400'
-                      }`}>
+                    <span className={`px-2 py-0.5 rounded ${
+                      item.volumeTier === 'massive' ? 'bg-purple-900/50 text-purple-300' :
+                      item.volumeTier === 'high' ? 'bg-blue-900/50 text-blue-300' :
+                      'bg-slate-800 text-slate-400'
+                    }`}>
                       {item.volumeTier}
                     </span>
                   </div>
