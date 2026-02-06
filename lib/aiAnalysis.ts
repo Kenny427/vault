@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import { FlipOpportunity, PricePoint } from './analysis';
+import type { MeanReversionSignal } from '@/lib/meanReversionAnalysis';
+
 
 // Lazy-loaded OpenAI client - only initialized when needed
 let client: OpenAI | null = null;
@@ -473,6 +475,19 @@ export interface PortfolioSummaryAI {
   items: PortfolioAIReview[];
 }
 
+interface EnrichedPortfolioItem {
+  itemId: number;
+  itemName: string;
+  quantity: number;
+  buyPrice: number;
+  currentPrice: number;
+  datePurchased: string;
+  unrealizedPL: number;
+  percentChange: number;
+  hasData: boolean;
+  signal?: MeanReversionSignal;
+}
+
 export async function analyzePortfolioWithAI(
   portfolioItems: Array<{
     itemId: number;
@@ -483,6 +498,7 @@ export async function analyzePortfolioWithAI(
     datePurchased: string;
   }>
 ): Promise<PortfolioSummaryAI> {
+
   const aiClient = getClient();
 
   if (portfolioItems.length === 0) {
@@ -500,8 +516,9 @@ export async function analyzePortfolioWithAI(
   const { getItemHistoryWithVolumes } = await import('@/lib/api/osrs');
   const { analyzeMeanReversionOpportunity } = await import('@/lib/meanReversionAnalysis');
 
-  const enrichedItems = await Promise.all(
+    const enrichedItems: EnrichedPortfolioItem[] = await Promise.all(
     portfolioItems.map(async (item) => {
+
       const unrealizedPL = (item.currentPrice * 0.98 - item.buyPrice) * item.quantity;
       const percentChange = ((item.currentPrice - item.buyPrice) / item.buyPrice) * 100;
       
@@ -526,13 +543,14 @@ export async function analyzePortfolioWithAI(
           priceData
         );
 
-        return {
+                return {
           ...item,
           unrealizedPL,
           percentChange,
           hasData: true,
-          signal,
+          ...(signal ? { signal } : {}),
         };
+
       } catch (error) {
         console.error(`Failed to fetch data for ${item.itemName}:`, error);
         return {
