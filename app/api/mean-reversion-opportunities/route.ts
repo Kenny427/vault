@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
 import {
@@ -82,16 +82,16 @@ export async function GET(request: Request) {
     const batchSize = parseInt(searchParams.get('batchSize') || '15'); // Reduced from 40 to 15 for reliable JSON parsing
 
     if (verboseAnalysisLogging) {
-      console.log(`🔍 Fresh analysis - AI-first opportunities (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
+      console.log(`ðŸ” Fresh analysis - AI-first opportunities (confidence>=${minConfidence}%, potential>=${minPotential}%)`);
     }
 
     // Fetch item pool from database
-    console.log('📊 Fetching item pool from database...');
+    console.log('ðŸ“Š Fetching item pool from database...');
 
-    console.log(`📊 Fetched ${EXPANDED_ITEM_POOL.length} items from database`);
+    console.log(`ðŸ“Š Fetched ${EXPANDED_ITEM_POOL.length} items from database`);
 
     if (EXPANDED_ITEM_POOL.length === 0) {
-      console.warn('⚠️ Database pool is empty! Run migrations to populate.');
+      console.warn('âš ï¸ Database pool is empty! Run migrations to populate.');
       return NextResponse.json({
         success: false,
         error: 'Item pool not configured. Please run database migrations.',
@@ -117,7 +117,7 @@ export async function GET(request: Request) {
     const priorityItems = itemsToAnalyze;
 
     if (verboseAnalysisLogging) {
-      console.log(`📊 Analyzing ${priorityItems.length} items from pool`);
+      console.log(`ðŸ“Š Analyzing ${priorityItems.length} items from pool`);
     }
 
     // Fetch price data and analyze each item (AI will decide final inclusion)
@@ -129,12 +129,12 @@ export async function GET(request: Request) {
     const API_BATCH_SIZE = 5;
     const itemChunks = chunkArray(priorityItems, API_BATCH_SIZE);
 
-    console.log(`🚀 Starting analysis in ${itemChunks.length} batches of ${API_BATCH_SIZE}...`);
+    console.log(`ðŸš€ Starting analysis in ${itemChunks.length} batches of ${API_BATCH_SIZE}...`);
 
     for (let batchIdx = 0; batchIdx < itemChunks.length; batchIdx++) {
       const chunk = itemChunks[batchIdx];
       if (verboseAnalysisLogging) {
-        console.log(`📦 Processing API batch ${batchIdx + 1}/${itemChunks.length}...`);
+        console.log(`ðŸ“¦ Processing API batch ${batchIdx + 1}/${itemChunks.length}...`);
       }
 
       const batchPromises = chunk.map(async (item) => {
@@ -195,7 +195,7 @@ export async function GET(request: Request) {
 
           return signal;
         } catch (error) {
-          console.error(`❌ Batch error for ${item.name}:`, error);
+          console.error(`âŒ Batch error for ${item.name}:`, error);
           return null;
         }
       });
@@ -211,13 +211,13 @@ export async function GET(request: Request) {
 
 
     // Log filtering summary
-    console.log(`\n📊 FILTERING SUMMARY:`);
+    console.log(`\nðŸ“Š FILTERING SUMMARY:`);
     console.log(`   Total items in pool: ${priorityItems.length}`);
     console.log(`   Items with sufficient data: ${completedSignals.length}`);
     console.log(`   Items filtered out: ${filteredOutItems.length}`);
 
     if (filteredOutItems.length > 0) {
-      console.log(`\n❌ FILTERED OUT ITEMS (${filteredOutItems.length}):`);
+      console.log(`\nâŒ FILTERED OUT ITEMS (${filteredOutItems.length}):`);
       filteredOutItems.forEach(item => {
         console.log(`   - ${item.itemName} (ID: ${item.itemId}): ${item.reason}`);
       });
@@ -227,7 +227,7 @@ export async function GET(request: Request) {
     const filteredItems: { itemId: number; itemName: string; reason: string }[] = filteredOutItems;
 
     if (verboseAnalysisLogging) {
-      console.log(`📈 Completed analysis: ${completedSignals.length}/${priorityItems.length} items had sufficient data (all forwarded to AI)`);
+      console.log(`ðŸ“ˆ Completed analysis: ${completedSignals.length}/${priorityItems.length} items had sufficient data (all forwarded to AI)`);
     }
 
     let topOpportunities: MeanReversionSignal[] = [];
@@ -264,14 +264,14 @@ export async function GET(request: Request) {
 - Avg Confidence: ${avgConfidence.toFixed(1)}%
 - Sector Trends: ${sectorTrends}`;
 
-    console.log(`🌍 Market Context Calculated: Panic Index ${globalPanicIndex}%`);
+    console.log(`ðŸŒ Market Context Calculated: Panic Index ${globalPanicIndex}%`);
     // --- END CONTEXT ---
 
     const trackingPromises: Promise<any>[] = [];
 
     if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
       if (verboseAnalysisLogging) {
-        console.log(`🤖 Starting AI analysis on ${completedSignals.length} items...`);
+        console.log(`ðŸ¤– Starting AI analysis on ${completedSignals.length} items...`);
       }
       const batches = chunkArray(completedSignals, Math.max(10, batchSize));
 
@@ -338,7 +338,7 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
           totalCostUSD += batchCost;
 
           if (verboseAnalysisLogging) {
-            console.log(`💰 Batch ${batches.indexOf(batch) + 1}/${batches.length}: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${usage.total_tokens} tokens | Cost: $${batchCost.toFixed(4)} ($${inputCost.toFixed(4)} in + $${outputCost.toFixed(4)} out)`);
+            console.log(`ðŸ’° Batch ${batches.indexOf(batch) + 1}/${batches.length}: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${usage.total_tokens} tokens | Cost: $${batchCost.toFixed(4)} ($${inputCost.toFixed(4)} in + $${outputCost.toFixed(4)} out)`);
           }
         }
 
@@ -362,18 +362,18 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
         try {
           parsed = JSON.parse(responseText);
         } catch (parseError) {
-          console.error('❌ AI returned invalid JSON for batch.', parseError);
+          console.error('âŒ AI returned invalid JSON for batch.', parseError);
           console.error(`   Response preview: ${responseText.substring(0, 500)}...`);
           parsed = {};
         }
 
         if (!Array.isArray(parsed.items) && verboseAnalysisLogging) {
-          console.warn('⚠️ AI response missing valid items array. Raw preview:', responseText.substring(0, 400));
+          console.warn('âš ï¸ AI response missing valid items array. Raw preview:', responseText.substring(0, 400));
         }
 
         if (Array.isArray(parsed.items)) {
           if (verboseAnalysisLogging) {
-            console.log(`🤖 AI returned ${parsed.items.length} item decisions in batch`);
+            console.log(`ðŸ¤– AI returned ${parsed.items.length} item decisions in batch`);
           }
 
 
@@ -410,7 +410,7 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
                   p_confidence: decision.confidenceScore ?? base.confidenceScore
                 }).then(({ error }: { error: any }) => {
                   if (error) {
-                    console.error(`❌ Failed to track rejected item ${base.itemName}:`, error);
+                    console.error(`âŒ Failed to track rejected item ${base.itemName}:`, error);
                   }
                 })
               );
@@ -443,7 +443,7 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
             if (gatingFailure) {
               if (verboseAnalysisLogging) {
                 console.log(
-                  `⚠️ Server gate rejected ${base.itemName} (id ${base.itemId}) — pot ${reversionPotential.toFixed(
+                  `âš ï¸ Server gate rejected ${base.itemName} (id ${base.itemId}) â€” pot ${reversionPotential.toFixed(
                     1
                   )}%, conf ${base.confidenceScore}, liq ${base.liquidityScore}, dump ${base.botDumpScore}`
                 );
@@ -458,7 +458,7 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
                   p_confidence: base.confidenceScore
                 }).then(({ error }: { error: any }) => {
                   if (error) {
-                    console.error(`❌ Failed to track gate rejected item ${base.itemName}:`, error);
+                    console.error(`âŒ Failed to track gate rejected item ${base.itemName}:`, error);
                   }
                 })
               );
@@ -478,7 +478,7 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
                 p_confidence: decision.confidenceScore ?? base.confidenceScore
               }).then(({ error }: { error: any }) => {
                 if (error) {
-                  console.error(`❌ Failed to track approved item ${base.itemName}:`, error);
+                  console.error(`âŒ Failed to track approved item ${base.itemName}:`, error);
                 }
               })
             );
@@ -518,7 +518,7 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
             aiMissingCount += missingInBatch.length;
             if (verboseAnalysisLogging) {
               console.warn(
-                `⚠️ AI omitted ${missingInBatch.length} item(s) from response: ${missingInBatch
+                `âš ï¸ AI omitted ${missingInBatch.length} item(s) from response: ${missingInBatch
                   .map((item) => item.itemId)
                   .join(', ')}`
               );
@@ -533,7 +533,7 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
                   p_confidence: item.confidenceScore || 0
                 }).then(({ error }: { error: any }) => {
                   if (error) {
-                    console.error(`❌ Failed to track omitted item ${item.itemName}:`, error);
+                    console.error(`âŒ Failed to track omitted item ${item.itemName}:`, error);
                   }
                 })
               );
@@ -589,7 +589,7 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
 
       // Fallback to rule-based if AI not configured
       if (verboseAnalysisLogging) {
-        console.log(`⚠️ No OpenAI key found - using rule-based analysis only`);
+        console.log(`âš ï¸ No OpenAI key found - using rule-based analysis only`);
       }
       topOpportunities = [...completedSignals];
     }
@@ -654,7 +654,7 @@ Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
         totalCostUSD += detailBatchCost;
 
         if (verboseAnalysisLogging) {
-          console.log(`💰 Detailed analysis: ${detailUsage.prompt_tokens} in + ${detailUsage.completion_tokens} out = ${detailUsage.total_tokens} tokens | Cost: $${detailBatchCost.toFixed(4)} ($${detailInputCost.toFixed(4)} in + $${detailOutputCost.toFixed(4)} out)`);
+          console.log(`ðŸ’° Detailed analysis: ${detailUsage.prompt_tokens} in + ${detailUsage.completion_tokens} out = ${detailUsage.total_tokens} tokens | Cost: $${detailBatchCost.toFixed(4)} ($${detailInputCost.toFixed(4)} in + $${detailOutputCost.toFixed(4)} out)`);
         }
       }
 
@@ -697,7 +697,7 @@ Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
       // We take the top opportunities (even beyond top 3) and subject them to a final validity check
       const auditingCandidates = topOpportunities.slice(0, 5);
       if (verboseAnalysisLogging) {
-        console.log(`🧐 Starting Auditor Pass on top ${auditingCandidates.length} items...`);
+        console.log(`ðŸ§ Starting Auditor Pass on top ${auditingCandidates.length} items...`);
       }
 
       const auditorPrompt = `You are a SKEPTICAL OSRS market auditor. Your job is to find reasons NOT to take the following trades.
@@ -787,9 +787,9 @@ Instructions:
     if (totalCostUSD > 0) {
       const inputCost = (totalInputTokens / 1000) * 0.00015;
       const outputCost = (totalOutputTokens / 1000) * 0.0006;
-      console.log(`\n💰 === TOTAL COST BREAKDOWN ===`);
-      console.log(`   Input tokens: ${totalInputTokens.toLocaleString()} × $0.00015/1K = $${inputCost.toFixed(4)}`);
-      console.log(`   Output tokens: ${totalOutputTokens.toLocaleString()} × $0.0006/1K = $${outputCost.toFixed(4)}`);
+      console.log(`\nðŸ’° === TOTAL COST BREAKDOWN ===`);
+      console.log(`   Input tokens: ${totalInputTokens.toLocaleString()} Ã— $0.00015/1K = $${inputCost.toFixed(4)}`);
+      console.log(`   Output tokens: ${totalOutputTokens.toLocaleString()} Ã— $0.0006/1K = $${outputCost.toFixed(4)}`);
       console.log(`   Total: ${totalTokens.toLocaleString()} tokens = $${totalCostUSD.toFixed(4)}`);
       console.log(`   Model: gpt-4o-mini`);
       console.log(`===========================\n`);
@@ -798,7 +798,7 @@ Instructions:
     // Await all performance tracking updates before returning
     if (trackingPromises.length > 0) {
       if (verboseAnalysisLogging) {
-        console.log(`💾 Awaiting ${trackingPromises.length} performance tracking updates...`);
+        console.log(`ðŸ’¾ Awaiting ${trackingPromises.length} performance tracking updates...`);
       }
       await Promise.all(trackingPromises).catch(err => {
         console.error('Error awaiting tracking promises:', err);
@@ -822,7 +822,7 @@ Instructions:
     });
 
   } catch (error) {
-    console.error('❌ Mean reversion analysis failed:');
+    console.error('âŒ Mean reversion analysis failed:');
     console.error('Error:', error);
     console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
     console.error('Stack:', error instanceof Error ? error.stack : 'No stack trace');
@@ -855,7 +855,7 @@ export async function POST(request: Request) {
     }
 
     if (verboseAnalysisLogging) {
-      console.log(`🔍 Analyzing ${itemIds.length} specific items`);
+      console.log(`ðŸ” Analyzing ${itemIds.length} specific items`);
     }
 
     // Fetch item pool from database
