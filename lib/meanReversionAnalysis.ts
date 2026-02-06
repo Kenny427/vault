@@ -30,12 +30,11 @@ export interface MeanReversionSignal {
   maxDeviation: number; // Biggest % drop vs historical
   reversionPotential: number; // Expected % gain on reversion
   confidenceScore: number; // 0-100, based on volume & consistency
-  investmentGrade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
+  volumeVelocity: number; // Current volume / Average volume multiplier
 
   // Risk assessment
   volatilityRisk: 'low' | 'medium' | 'high';
   liquidityScore: number; // 0-100
-  estimatedHoldingPeriod: string; // e.g., "2-4 weeks", "1-3 months"
 
   // Bot activity indicators
   botLikelihood: 'very high' | 'high' | 'medium' | 'low';
@@ -45,7 +44,7 @@ export interface MeanReversionSignal {
   suggestedInvestment: number; // GP amount
   targetSellPrice: number;
   stopLoss: number;
-  reasoning: string;
+  strategicNarrative: string;
   botDumpScore: number;
   capitulationSignal: string;
   recoverySignal: string;
@@ -64,7 +63,11 @@ export interface MeanReversionSignal {
   abortIfRisesAbove?: number; // Stop-loss trigger
 
   // Intelligence enhancements
-  marketAnalysis?: string;
+  logic?: {
+    thesis: string;
+    vulnerability: string;
+    trigger: string;
+  };
   riskFactors?: string[];
   auditorNotes?: string;
   auditorDecision?: 'approve' | 'caution' | 'reject';
@@ -245,24 +248,6 @@ function calculateConfidence({
   return clamp(confidence, 0, 100);
 }
 
-
-/**
- * Assign investment grade (STRICT)
- * A+ = Only exceptional opportunities (>85 confidence AND 20%+ deviation)
- * A  = Strong opportunities (>75 confidence AND 15%+ deviation)
- * B+ = Good opportunities (>65 confidence AND 10%+ deviation)
- * B  = Moderate opportunities (>50 confidence AND 8%+ deviation)
- * C  = Weak opportunities (anything else)
- */
-function assignInvestmentGrade(confidenceScore: number): 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D' {
-  if (confidenceScore >= 85) return 'A+';
-  if (confidenceScore >= 75) return 'A';
-  if (confidenceScore >= 65) return 'B+';
-  if (confidenceScore >= 50) return 'B';
-  if (confidenceScore >= 30) return 'C';
-  return 'D';
-}
-
 /**
  * Convert expected recovery in weeks into a readable holding period string
  */
@@ -273,6 +258,7 @@ function estimateHoldingPeriod(expectedRecoveryWeeks: number): string {
   if (expectedRecoveryWeeks <= 12) return '2-3 months';
   return '3-6 months';
 }
+
 
 
 /**
@@ -604,7 +590,6 @@ export async function analyzeMeanReversionOpportunity(
     recoveryStrength,
   });
 
-  const investmentGrade = assignInvestmentGrade(confidenceScore);
 
   const baseDeviationForTiming = Math.max(8, mediumDeviation * 0.6 + longDeviation * 0.4);
   const botSpeed =
@@ -644,6 +629,8 @@ export async function analyzeMeanReversionOpportunity(
     estimatedHoldingPeriod
   );
 
+  const volumeVelocity = metrics30d.volumeAvg > 0 ? metrics7d.volumeAvg / metrics30d.volumeAvg : 1;
+
   const holdNarrative = `Buy between ${entryRangeLow}-${entryRangeHigh}gp (current ${entryPriceNow}gp). Target ${exitPriceBase}-${exitPriceStretch}gp over ${estimatedHoldingPeriod}. Reassess if closes below ${stopLoss}gp or if volume spikes beyond ${Math.round(metrics30d.volumeAvg * 1.4)} units.`;
 
   return {
@@ -676,11 +663,10 @@ export async function analyzeMeanReversionOpportunity(
     maxDeviation,
     reversionPotential,
     confidenceScore,
-    investmentGrade,
+    volumeVelocity,
 
     volatilityRisk,
     liquidityScore,
-    estimatedHoldingPeriod,
 
     botLikelihood,
     supplyStability,
@@ -688,7 +674,7 @@ export async function analyzeMeanReversionOpportunity(
     suggestedInvestment,
     targetSellPrice,
     stopLoss,
-    reasoning,
+    strategicNarrative: reasoning,
     botDumpScore,
     capitulationSignal,
     recoverySignal,
@@ -710,20 +696,18 @@ export function rankInvestmentOpportunities(
   signals: MeanReversionSignal[]
 ): MeanReversionSignal[] {
   return signals.sort((a, b) => {
-    // Primary: Investment grade
-    const gradeValue = { 'A+': 6, 'A': 5, 'B+': 4, 'B': 3, 'C': 2, 'D': 1 };
-    const gradeA = gradeValue[a.investmentGrade];
-    const gradeB = gradeValue[b.investmentGrade];
-
-    if (gradeA !== gradeB) return gradeB - gradeA;
+    // Primary: Confidence Score
+    if (Math.abs(a.confidenceScore - b.confidenceScore) > 5) {
+      return b.confidenceScore - a.confidenceScore;
+    }
 
     // Secondary: Reversion potential
     if (Math.abs(a.reversionPotential - b.reversionPotential) > 5) {
       return b.reversionPotential - a.reversionPotential;
     }
 
-    // Tertiary: Confidence score
-    return b.confidenceScore - a.confidenceScore;
+    // Tertiary: Bot dump signature
+    return b.botDumpScore - a.botDumpScore;
   });
 }
 

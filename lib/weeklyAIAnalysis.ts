@@ -18,22 +18,22 @@ export interface AIMarketInsight {
   itemId: number;
   itemName: string;
   analysisDate: string;
-  
+
   // AI-powered insights
   priceChangeType: 'structural' | 'temporary' | 'uncertain';
   confidence: number; // 0-100
-  
+
   // Context
   gameUpdateImpact?: string; // e.g., "New boss added", "Meta shift"
   marketSentiment: 'bullish' | 'bearish' | 'neutral';
   botBanWave?: boolean; // Recent bot ban detected
-  
+
   // Predictions
   expectedRecoveryTime?: string; // e.g., "2-4 weeks"
   priceTarget?: number;
   risks: string[];
   opportunities: string[];
-  
+
   // Summary
   recommendation: 'strong_buy' | 'buy' | 'hold' | 'avoid';
   reasoning: string;
@@ -121,14 +121,14 @@ async function cacheAnalysis(insights: AIMarketInsight[], marketOverview: string
  */
 function generateBatchAnalysisPrompt(signals: MeanReversionSignal[]): string {
   const topSignals = signals.slice(0, 20); // Analyze top 20 opportunities
-  
-  const itemSummaries = topSignals.map(s => 
+
+  const itemSummaries = topSignals.map(s =>
     `${s.itemName}: Current ${s.currentPrice}gp, ` +
     `${s.maxDeviation.toFixed(1)}% below avg, ` +
     `${s.reversionPotential.toFixed(1)}% potential, ` +
     `${s.botLikelihood} bot activity`
   ).join('\n');
-  
+
   return `Analyze these OSRS items for mean-reversion investment opportunities. For each item, determine:
 1. Is the price drop STRUCTURAL (permanent change) or TEMPORARY (will recover)?
 2. Any recent game updates or meta shifts affecting this item?
@@ -170,7 +170,7 @@ async function callAIForBatchAnalysis(signals: MeanReversionSignal[]): Promise<{
   topOpportunities: number[];
 }> {
   const prompt = generateBatchAnalysisPrompt(signals);
-  
+
   try {
     const response = await fetch('/api/ai-shortlist', {
       method: 'POST',
@@ -180,18 +180,18 @@ async function callAIForBatchAnalysis(signals: MeanReversionSignal[]): Promise<{
         context: 'weekly_investment_analysis'
       })
     });
-    
+
     if (!response.ok) {
       throw new Error('AI API request failed');
     }
-    
+
     const data = await response.json();
-    
+
     // Parse AI response
-    const parsed = typeof data.response === 'string' 
+    const parsed = typeof data.response === 'string'
       ? JSON.parse(data.response)
       : data.response;
-    
+
     return {
       insights: parsed.insights || [],
       marketOverview: parsed.marketOverview || 'Analysis pending',
@@ -199,7 +199,7 @@ async function callAIForBatchAnalysis(signals: MeanReversionSignal[]): Promise<{
     };
   } catch (error) {
     console.error('AI batch analysis failed:', error);
-    
+
     // Return fallback insights
     return {
       insights: signals.slice(0, 10).map(s => createFallbackInsight(s)),
@@ -221,8 +221,8 @@ function createFallbackInsight(signal: MeanReversionSignal): AIMarketInsight {
     confidence: signal.confidenceScore,
     marketSentiment: signal.reversionPotential > 20 ? 'bullish' : 'neutral',
     risks: ['AI analysis unavailable'],
-    opportunities: [signal.reasoning],
-    recommendation: signal.investmentGrade === 'A+' || signal.investmentGrade === 'A' ? 'buy' : 'hold',
+    opportunities: [signal.strategicNarrative],
+    recommendation: signal.confidenceScore >= 70 ? 'buy' : 'hold',
     reasoning: 'Algorithmic analysis suggests mean reversion opportunity'
   };
 }
@@ -241,15 +241,15 @@ export async function getWeeklyAIAnalysis(
     console.log('Using cached AI analysis from', cached.generatedAt);
     return cached;
   }
-  
+
   console.log('Generating fresh AI analysis (will be cached for 7 days)...');
-  
+
   // Generate new analysis
   const { insights, marketOverview, topOpportunities } = await callAIForBatchAnalysis(signals);
-  
+
   // Cache for future use
   await cacheAnalysis(insights, marketOverview, topOpportunities);
-  
+
   return {
     generatedAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + CACHE_DURATION_MS).toISOString(),
@@ -288,7 +288,7 @@ export async function forceRefreshAnalysis(
   } catch (error) {
     console.error('Failed to clear AI cache:', error);
   }
-  
+
   // Generate new
   return getWeeklyAIAnalysis(signals);
 }
@@ -298,15 +298,15 @@ export async function forceRefreshAnalysis(
  */
 export function getCacheTimeRemaining(cache: WeeklyAnalysisCache | null): string {
   if (!cache) return 'No cache';
-  
+
   const expiresAt = new Date(cache.expiresAt).getTime();
   const remaining = expiresAt - Date.now();
-  
+
   if (remaining < 0) return 'Expired';
-  
+
   const days = Math.floor(remaining / (24 * 60 * 60 * 1000));
   const hours = Math.floor((remaining % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  
+
   if (days > 0) return `${days}d ${hours}h`;
   return `${hours}h`;
 }

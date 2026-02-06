@@ -7,7 +7,7 @@ export interface PricePoint {
   price: number;
 }
 
-export type FlipType = 
+export type FlipType =
   | 'mean-reversion'  // Price below historical average, expects reversion
   | 'deep-value'      // >20% undervalued, long hold (weeks/months)
   | 'high-confidence' // Stable supply, low volatility, reliable reversion
@@ -29,10 +29,10 @@ export interface FlipOpportunity {
   opportunityScore: number; // 0-100, higher = better opportunity
   historicalLow: number;
   historicalHigh: number;
-  
+
   flipType: FlipType; // Type of flip opportunity
   flipTypeConfidence: number; // How confident we are in the flip type (0-100)
-  
+
   // Enhanced metrics
   buyPrice: number; // Recommended buy price (at margin)
   sellPrice: number; // Estimated sell price
@@ -46,7 +46,7 @@ export interface FlipOpportunity {
   volumeScore: number; // Estimated trade volume: 0-100
   buyWhen: string; // Educational: when to buy
   sellWhen: string; // Educational: when to sell
-  
+
   // Analysis metrics
   momentum: number; // Price momentum score (-100 to 100)
   acceleration: number; // Price acceleration (-100 to 100)
@@ -56,19 +56,19 @@ export interface FlipOpportunity {
 
   // Volume data
   dailyVolume?: number; // Average daily volume
-  
+
   // Optional diagnostics
   volume1h?: number; // Real 1h volume from API when available
   spreadStability?: number; // 0-100, stability of spread over 7-30d
   outlierFlag?: boolean; // Recent extreme spike/dump flag
-  
+
   // Investment planning (for large budgets)
   recommendedQuantity: number; // Suggested buy quantity
   totalInvestment: number; // Total gp needed
   totalProfit: number; // Total expected profit
 
   // Optional AI context
-    aiReasoning?: string;
+  aiReasoning?: string;
 
   // Enhanced AI guidance fields
   aiEntryLow?: number;
@@ -77,7 +77,7 @@ export interface FlipOpportunity {
   aiExitStretch?: number;
   aiStopLoss?: number;
   aiHoldWeeks?: number;
-  
+
   // AI-provided price guidance (legacy)
   buyIfDropsTo?: number; // Aggressive entry point
   sellAtMin?: number; // Conservative exit (covers GE tax)
@@ -153,30 +153,30 @@ export function detectTrend(
  */
 export function calculateMomentum(prices: number[]): number {
   if (prices.length < 5) return 0;
-  
+
   const recentPrices = prices.slice(-7); // Last 7 data points
   let positiveChanges = 0;
   let negativeChanges = 0;
   let totalChange = 0;
-  
+
   for (let i = 1; i < recentPrices.length; i++) {
     const change = recentPrices[i] - recentPrices[i - 1];
     totalChange += change;
     if (change > 0) positiveChanges++;
     if (change < 0) negativeChanges++;
   }
-  
+
   // Momentum = percentage of positive changes
   const momentumRatio = (positiveChanges - negativeChanges) / (recentPrices.length - 1);
   const rawMomentum = momentumRatio * 100;
-  
+
   // Weight by magnitude of change
   const currentPrice = recentPrices[recentPrices.length - 1];
   const changePercent = ((currentPrice - recentPrices[0]) / recentPrices[0]) * 100;
-  
+
   // Combine directional momentum with magnitude
   const weightedMomentum = (rawMomentum * 0.6) + (changePercent * 0.4);
-  
+
   return Math.max(-100, Math.min(100, weightedMomentum));
 }
 
@@ -186,30 +186,30 @@ export function calculateMomentum(prices: number[]): number {
  */
 export function calculateAcceleration(prices: number[]): number {
   if (prices.length < 10) return 0;
-  
+
   const recent = prices.slice(-10);
   const older = prices.slice(-20, -10);
-  
+
   if (older.length === 0) return 0;
-  
+
   // Calculate average change rates for recent and older periods
   let recentChanges: number[] = [];
   for (let i = 1; i < recent.length; i++) {
     recentChanges.push(recent[i] - recent[i - 1]);
   }
-  
+
   let olderChanges: number[] = [];
   for (let i = 1; i < older.length; i++) {
     olderChanges.push(older[i] - older[i - 1]);
   }
-  
+
   const recentAvgChange = calculateMean(recentChanges);
   const olderAvgChange = calculateMean(olderChanges);
-  
+
   // Acceleration = how much the change rate has changed
   const acceleration = recentAvgChange - olderAvgChange;
   const avgPrice = calculateMean(prices);
-  
+
   // Normalize to -100 to 100 scale
   const normalizedAccel = (acceleration / avgPrice) * 100;
   return Math.max(-100, Math.min(100, normalizedAccel));
@@ -221,21 +221,21 @@ export function calculateAcceleration(prices: number[]): number {
  */
 export function calculateConsistency(prices: number[]): number {
   if (prices.length < 7) return 0;
-  
+
   const recent = prices.slice(-7);
   const changes: number[] = [];
-  
+
   for (let i = 1; i < recent.length; i++) {
     changes.push(Math.abs(recent[i] - recent[i - 1]));
   }
-  
+
   const avgChange = calculateMean(changes);
   const changeStdDev = calculateStdDev(changes);
-  
+
   // If changes are consistent (low std dev relative to mean), consistency is high
   if (avgChange === 0) return 0;
   const coefficientOfVariation = changeStdDev / avgChange;
-  
+
   // Convert to 0-100 scale (lower CV = higher consistency)
   const consistency = Math.max(0, 100 - (coefficientOfVariation * 50));
   return consistency;
@@ -252,16 +252,16 @@ export function analyzeSpreadQuality(
 ): number {
   const totalRange = historicalHigh - historicalLow;
   if (totalRange === 0) return 0;
-  
+
   // How much room is there to buy low and sell high?
   const priceDistance = Math.abs(currentPrice - mean);
   const maxPossibleDistance = (historicalHigh - historicalLow) / 2;
-  
+
   if (maxPossibleDistance === 0) return 0;
-  
+
   // Spread quality = how far current price is from mean, relative to historical range
   const spreadQuality = (priceDistance / maxPossibleDistance) * 100;
-  
+
   return Math.min(100, spreadQuality);
 }
 
@@ -274,7 +274,7 @@ export function calculateDeviationScore(
   stdDev: number
 ): number {
   if (stdDev === 0) return 0;
-  
+
   const zScore = (currentPrice - mean) / stdDev;
   // Normalize to -100 to 100 scale (clamped to -3 to 3 standard deviations)
   return Math.max(-100, Math.min(100, zScore * 33.33));
@@ -286,28 +286,28 @@ export function calculateDeviationScore(
  */
 function findSupportLevels(prices: number[]): number[] {
   if (prices.length < 14) return [];
-  
+
   const supports: number[] = [];
   const range = Math.max(...prices) - Math.min(...prices);
   const granularity = range / 10; // Divide into 10 segments
-  
+
   // Count how often prices bounce off each level
   const levelFrequency = new Map<number, number>();
-  
+
   for (let i = 1; i < prices.length; i++) {
     // Check if price bounced (went down then came back up)
-    if (prices[i-1] > prices[i] && prices[i] > 0) {
+    if (prices[i - 1] > prices[i] && prices[i] > 0) {
       // Low point - this could be support
       const level = Math.round(prices[i] / granularity) * granularity;
       levelFrequency.set(level, (levelFrequency.get(level) || 0) + 1);
     }
   }
-  
+
   // Return levels where bounces happened 2+ times
   levelFrequency.forEach((count, level) => {
     if (count >= 2) supports.push(level);
   });
-  
+
   return supports.sort((a, b) => a - b);
 }
 
@@ -317,28 +317,28 @@ function findSupportLevels(prices: number[]): number[] {
  */
 function findResistanceLevels(prices: number[]): number[] {
   if (prices.length < 14) return [];
-  
+
   const resistances: number[] = [];
   const range = Math.max(...prices) - Math.min(...prices);
   const granularity = range / 10;
-  
+
   // Count how often prices hit ceilings
   const levelFrequency = new Map<number, number>();
-  
+
   for (let i = 1; i < prices.length; i++) {
     // Check if price hit ceiling (went up then came back down)
-    if (prices[i-1] < prices[i]) {
+    if (prices[i - 1] < prices[i]) {
       // High point - this could be resistance
       const level = Math.round(prices[i] / granularity) * granularity;
       levelFrequency.set(level, (levelFrequency.get(level) || 0) + 1);
     }
   }
-  
+
   // Return levels where resistance happened 2+ times
   levelFrequency.forEach((count, level) => {
     if (count >= 2) resistances.push(level);
   });
-  
+
   return resistances.sort((a, b) => b - a); // Highest first
 }
 
@@ -348,7 +348,7 @@ function findResistanceLevels(prices: number[]): number[] {
  */
 function findVolumeWeightedLevel(prices: number[], direction: 'low' | 'high'): number {
   if (prices.length < 7) return calculateMean(prices);
-  
+
   if (direction === 'low') {
     // Find the cluster of prices in the bottom quartile
     const sorted = [...prices].sort((a, b) => a - b);
@@ -393,8 +393,8 @@ export function analyzeFlipOpportunity(
   const deviation = ((currentPrice - mean) / mean) * 100;
   const volatility = ((historicalHigh - historicalLow) / mean) * 100;
   const tradingRange = ((historicalHigh - historicalLow) / mean) * 100;
-  
-  // GE Tax is 2% on sale
+
+  // GE Tax is 2% on sale (rounds down to nearest whole GP)
   const GE_TAX = 0.02;
 
   // IMPROVED: Filter low-quality opportunities
@@ -422,13 +422,13 @@ export function analyzeFlipOpportunity(
     estimatedHoldTime = '2-4 days';
     buyWhen = 'Price is below average with negative momentum';
     sellWhen = 'Price recovers to average or momentum reverses';
-    
+
     // Score based on multiple factors
     opportunityScore = Math.abs(deviationScore) * 1.5;
     opportunityScore += (trend === 'bullish' ? 25 : 0);
     opportunityScore += (acceleration > 0 ? 15 : 0); // Accelerating upward = good buy signal
     opportunityScore += (consistency * 0.3); // Consistent = more predictable
-    
+
     riskLevel = trend === 'bullish' && acceleration > 0 ? 'low' : 'medium';
   } else if (deviationScore > 15 && momentum > 0 && consistency > 40) {
     // Price is high AND momentum is positive (staying high) AND consistent = STRONG SELL
@@ -438,12 +438,12 @@ export function analyzeFlipOpportunity(
     estimatedHoldTime = '1-3 days';
     buyWhen = 'Wait for price dip to buy low';
     sellWhen = 'Price is high with positive momentum';
-    
+
     opportunityScore = deviationScore * 1.3;
     opportunityScore += (trend === 'bearish' ? 15 : 0);
     opportunityScore += (acceleration < 0 ? 10 : 0); // Decelerating = sell signal
     opportunityScore += (spreadQuality * 0.4);
-    
+
     riskLevel = trend === 'bearish' ? 'high' : 'medium';
   } else if (deviationScore < -8 && consistency > 50) {
     // Moderately low price with VERY consistent patterns = MODERATE BUY
@@ -467,7 +467,7 @@ export function analyzeFlipOpportunity(
     // High volatility and good spread = SWING TRADE opportunity
     const direction = deviationScore < 0 ? 'buy' : 'sell';
     recommendation = direction;
-    
+
     if (direction === 'buy') {
       buyPrice = Math.round(currentPrice);
       sellPrice = Math.round(historicalHigh * 0.99);
@@ -481,7 +481,7 @@ export function analyzeFlipOpportunity(
       sellWhen = 'Current price is high in the volatility range';
       estimatedHoldTime = '1-3 days';
     }
-    
+
     opportunityScore = Math.abs(deviationScore) * 0.9 + (volatility * 0.5) + (spreadQuality * 0.3);
     riskLevel = 'high'; // Volatile items are riskier
   } else if (Math.abs(deviationScore) > 5) {
@@ -495,8 +495,8 @@ export function analyzeFlipOpportunity(
   buyPrice = Math.max(1, Math.min(buyPrice, currentPrice));
   sellPrice = Math.max(buyPrice + 1, sellPrice);
 
-  // Calculate profit metrics
-  const profitPerUnit = Math.max(0, Math.round(sellPrice - buyPrice - (sellPrice * GE_TAX)));
+  // Calculate profit metrics (floored tax per GP rules)
+  const profitPerUnit = Math.max(0, Math.round(sellPrice - buyPrice - Math.floor(sellPrice * GE_TAX)));
   const profitMargin = buyPrice > 0 ? ((profitPerUnit / buyPrice) * 100) : 0;
   const roi = buyPrice > 0 ? ((profitPerUnit / buyPrice) * 100) : 0;
 
@@ -639,35 +639,35 @@ export function scoreOpportunitiesByMeanReversion(
 ): FlipOpportunity[] {
   return items.map(item => {
     const current = item.currentPrice;
-    
+
     // Extract prices from history
     const prices30 = item.history30.map(p => p.price);
     const prices90 = item.history90.map(p => p.price);
     const prices365 = item.history365.map(p => p.price);
     const prices7 = prices30.slice(-7);
-    
+
     // Calculate averages
     const avg30 = calculateMean(prices30);
     const avg90 = calculateMean(prices90);
     const avg365 = calculateMean(prices365);
     const avg7 = calculateMean(prices7);
-    
+
     // Recent high (last 30 days) - what it typically goes up to
     const recentHigh = Math.max(...prices30);
     // All-time high in last year
     const highAll = Math.max(...prices365);
     // Low for reference
     const lowAll = Math.min(...prices365);
-    
+
     // Calculate discounts from different timeframes
     const discount30 = ((avg30 - current) / avg30) * 100; // Negative = below average
     const discount90 = ((avg90 - current) / avg90) * 100;
     const discount365 = ((avg365 - current) / avg365) * 100;
-    
+
     // Calculate upside potential (how much could it recover)
     const upsideToRecent = ((recentHigh - current) / current) * 100;
     const upsideToAllTime = ((highAll - current) / current) * 100;
-    
+
     // Calculate volatility
     const allPrices = prices365;
     const spreadPercent = ((Math.max(...allPrices) - Math.min(...allPrices)) / current) * 100;
@@ -696,19 +696,19 @@ export function scoreOpportunitiesByMeanReversion(
     // Spread stability proxy: lower variance in daily changes = more stable spreads
     const changePct30 = prices30.slice(1).map((p, i) => Math.abs((p - prices30[i]) / prices30[i]) * 100);
     const spreadStability = Math.max(0, 100 - (calculateStdDev(changePct30) * 4));
-    
+
     // ===== ENHANCED SCORING ALGORITHM (Multi-Factor Analysis) =====
     // Instead of just "is price below average?", we look at realistic trading patterns
-    
+
     let score = 0;
-    
+
     // FACTOR 1: Support/Resistance Detection
     // Items that repeatedly bounce at certain prices are more predictable
     const supports = findSupportLevels(prices365);
     const resistances = findResistanceLevels(prices365);
     const nearSupport = supports.some(s => Math.abs(current - s) < s * 0.03); // Within 3% of support
     const nearResistance = resistances.some(r => Math.abs(current - r) < r * 0.03); // Within 3% of resistance
-    
+
     if (nearSupport && discount30 >= 3) {
       // Item is at a support level AND below 30d average = strong buy signal
       score += 35; // Significant bonus for support-level buying
@@ -716,12 +716,12 @@ export function scoreOpportunitiesByMeanReversion(
       // Item is at resistance AND above average = strong sell signal
       score += 20;
     }
-    
+
     // FACTOR 2: Momentum + Trend Reversal (acceleration detection)
     // Look for items where price is moving away from average then reversing
     const momentumScore = calculateMomentum(prices30);
     const accelerationScore = calculateAcceleration(prices30);
-    
+
     if (discount30 >= 5 && momentumScore < -20 && accelerationScore > 10) {
       // Price is low, was falling hard, but now accelerating UP = reversal buy signal
       score += 30;
@@ -729,14 +729,14 @@ export function scoreOpportunitiesByMeanReversion(
       // Price is high, was rising hard, but now decelerating = reversal sell signal
       score += 25;
     }
-    
+
     // FACTOR 3: Volume-Weighted Price Levels
     // Items with consistent high volume at low prices are more likely to bounce
     const volumeWeightedLow = findVolumeWeightedLevel(prices30, 'low');
     const volumeWeightedHigh = findVolumeWeightedLevel(prices30, 'high');
     const distanceToVWLow = Math.abs(current - volumeWeightedLow) / volumeWeightedLow;
     const distanceToVWHigh = Math.abs(current - volumeWeightedHigh) / volumeWeightedHigh;
-    
+
     if (distanceToVWLow < 0.02 && discount30 >= 3) {
       // Current price is very close to volume-weighted low = accumulation zone
       score += 25;
@@ -745,12 +745,12 @@ export function scoreOpportunitiesByMeanReversion(
       // Current price is very close to volume-weighted high = distribution zone
       score += 20;
     }
-    
+
     // FACTOR 4: Mean Reversion Strength (how far from mean vs historical volatility)
     // Items with extreme but consistent volatility are better candidates
     const deviationFromMean = Math.abs(discount30);
     const expectedDeviation = volatilityPercent * 0.7; // Items typically deviate by ~0.7x their volatility
-    
+
     if (deviationFromMean > expectedDeviation * 0.8 && deviationFromMean < expectedDeviation * 1.5) {
       // Item is at an extreme but realistic deviation = high mean reversion probability
       score += Math.min(25, deviationFromMean * 2);
@@ -758,18 +758,18 @@ export function scoreOpportunitiesByMeanReversion(
       // Item is EXTREMELY far from average (unusual) = lower confidence but higher potential
       score += Math.min(15, deviationFromMean);
     }
-    
+
     // FACTOR 5: Price Action Patterns (identify pumps/dumps)
     // Rapid spikes followed by consolidation are good flip opportunities
     const recentPricesReversed = prices30.slice(-7).reverse(); // Most recent first
     const recentChange = ((recentPricesReversed[0] - recentPricesReversed[6]) / recentPricesReversed[6]) * 100;
     const priceSwing7d = Math.abs(recentChange);
-    
+
     if (priceSwing7d > 8 && discount30 >= 3) {
       // Item had big swing recently AND is now below average = dump recovery setup
       score += 20;
     }
-    
+
     // FACTOR 6: Liquidity Quality (higher volume = more reliable flips)
     // Only bonus if we have real volume data
     if (liquidityScore >= 60) {
@@ -779,13 +779,13 @@ export function scoreOpportunitiesByMeanReversion(
     } else if (liquidityScore < 20) {
       score -= 10; // Penalize illiquid items (hard to sell)
     }
-    
+
     // FACTOR 7: Risk/Reward Filter
     // Ensure the potential profit justifies the risk
     const profitPotential = (recentHigh - current) / current * 100;
     const riskDistance = (current - lowAll) / lowAll * 100;
     const riskRewardRatio = profitPotential / Math.max(1, riskDistance);
-    
+
     if (riskRewardRatio >= 1.5) {
       // Good risk/reward (can make 1.5x the risk as profit)
       score += 15;
@@ -793,7 +793,7 @@ export function scoreOpportunitiesByMeanReversion(
       // Poor risk/reward (risk is much higher than potential profit)
       score -= 15;
     }
-    
+
     // Confidence calculation
     // Higher confidence if item is consistently cheap and volatile
     let confidence = 0;
@@ -805,7 +805,7 @@ export function scoreOpportunitiesByMeanReversion(
     if (spreadStabilityScore >= 50) confidence += 10; // Stable spreads 7-30d
     if (volumeScoreApi >= 40) confidence += 10; // Real liquidity
     confidence = Math.min(100, confidence);
-    
+
     // Calculate trend
     const recentPrices = prices30.slice(-7);
     const recentAvg = calculateMean(recentPrices);
@@ -813,24 +813,24 @@ export function scoreOpportunitiesByMeanReversion(
     let trend: 'bullish' | 'bearish' | 'neutral' = 'neutral';
     if (recentAvg > olderAvg * 1.05) trend = 'bullish';
     else if (recentAvg < olderAvg * 0.95) trend = 'bearish';
-    
+
     // Calculate profit potential (example: buy now, sell at average of last 30 days)
     const estimatedSellPrice = avg30;
-    const taxPercent = 0.01; // GE tax is 1%
-    const profitPerUnit = estimatedSellPrice * (1 - taxPercent) - current;
+    const taxPercent = 0.02; // GE tax is 2%
+    const profitPerUnit = Math.floor(estimatedSellPrice * (1 - taxPercent)) - current;
     const profitMargin = (profitPerUnit / current) * 100;
-    
+
     // Estimate hold time based on how far below average we are
     let estimatedHoldTime = '1-3 days';
     if (discount90 >= 20) estimatedHoldTime = '1-2 weeks';
     if (discount365 >= 25) estimatedHoldTime = '2-4 weeks';
     if (upsideToAllTime >= 40) estimatedHoldTime = '2-8 weeks';
-    
+
     // FLIP TYPE CLASSIFICATION
     // Analyze characteristics to determine flip type
     let flipType: FlipType = 'mean-reversion';
     let flipTypeConfidence = 50;
-    
+
     // Bot Dump Recovery: Sharp recent drop, high volatility, strong recovery potential
     if (discount30 >= 15 && discount30 > discount90 * 1.5 && volatilityPercent > 20 && upsideToRecent >= 20) {
       flipType = 'high-confidence';
@@ -861,12 +861,12 @@ export function scoreOpportunitiesByMeanReversion(
       flipTypeConfidence = 85;
       estimatedHoldTime = '1-3 weeks';
     }
-    
+
     // Calculate recommended investment for large budgets
     // Assumes user wants to invest 1-10M per flip
     let recommendedQuantity = 0;
     let targetInvestment = 5_000_000; // 5M default
-    
+
     if (current > 0) {
       // For expensive items (>100k), invest less quantity but more total value
       if (current > 100_000) {
@@ -878,16 +878,16 @@ export function scoreOpportunitiesByMeanReversion(
       } else {
         targetInvestment = 500_000; // 500k for cheap items
       }
-      
+
       recommendedQuantity = Math.floor(targetInvestment / current);
       // Cap quantity at reasonable limits
       if (recommendedQuantity > 10_000) recommendedQuantity = 10_000;
       if (recommendedQuantity < 10) recommendedQuantity = Math.max(10, Math.floor(100_000 / current));
     }
-    
+
     const totalInvestment = recommendedQuantity * current;
     const totalProfit = recommendedQuantity * profitPerUnit;
-    
+
     const outlierSpike = current > avg90 * 1.6;
     const outlierDump = current < avg90 * 0.5;
 
@@ -933,7 +933,7 @@ export function scoreOpportunitiesByMeanReversion(
       totalInvestment,
       totalProfit,
     };
-    
+
     return opportunity;
   }).filter(opp => {
     const isVolatile = opp.flipType === 'risky-upside';

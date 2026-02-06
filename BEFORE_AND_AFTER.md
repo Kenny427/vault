@@ -132,7 +132,7 @@ ALL QUESTIONS ANSWERED ✅
 | Volatility metric | None | ✅ Percentage shown |
 | Strategy guidance | None | ✅ When to buy/sell |
 | UI/UX quality | Basic | ✅ Professional |
-| GE tax accounting | None | ✅ 1% included |
+| GE tax accounting | None | ✅ 2% included |
 | Card design | Simple | ✅ Multi-section |
 | Visual hierarchy | Weak | ✅ Strong |
 | Color coding | Minimal | ✅ Extensive |

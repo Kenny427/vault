@@ -158,7 +158,7 @@ Welcome to the complete documentation for OSRS Flipping Ultra! This index will h
 - ✅ Trend detection (Bullish/Bearish/Neutral)
 - ✅ Volatility measurement
 - ✅ Buy/Sell price recommendations
-- ✅ Profit calculations (accounting for 1% GE tax)
+- ✅ Profit calculations (accounting for 2% floored GE tax)
 - ✅ ROI and margin percentages
 - ✅ Risk level assessment
 - ✅ Confidence percentage
@@ -232,8 +232,8 @@ A: See "Hold: X-Y days" on each card, plus the strategy guide
 **Q: Can I lose money?**
 A: Yes if you: buy high, sell low, or don't wait long enough
 
-**Q: What's the 1% GE tax?**
-A: Grand Exchange charges 1% tax on sales (already calculated for you)
+**Q: What's the 2% floored GE tax?**
+A: Grand Exchange charges 2% tax on sales (already calculated for you)
 
 **Q: Should I trade high-risk items?**
 A: Only after getting comfortable with low-risk items
@@ -286,7 +286,7 @@ npm start            # Run production server
 - See IMPLEMENTATION_GUIDE.md for deep dive
 
 **"My calculations don't match"**
-- Remember: 1% GE tax is included
+- Remember: 2% floored GE tax is included
 - ROI = (Profit / Buy Price) × 100
 - Profit = Sell - Buy - (Sell × 0.01)
 

@@ -21,7 +21,7 @@ BASIC METRICS → ENHANCED METRICS
 │ NEW ADDITIONS:                                       │
 │ ✅ Buy At Price         (exactly where to buy)       │
 │ ✅ Sell At Price        (exactly where to sell)      │
-│ ✅ Profit Per Unit      (gold after 1% tax)         │
+│ ✅ Profit Per Unit      (gold after 2% tax)         │
 │ ✅ ROI %                (return percentage)          │
 │ ✅ Profit Margin %      (margin percentage)          │
 │ ✅ Risk Level           (Low/Medium/High)            │

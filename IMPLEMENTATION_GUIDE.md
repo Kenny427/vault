@@ -22,7 +22,7 @@ A **professional-grade flipping analysis tool** that transforms how players appr
 
 ✅ **Profit Calculations**
 - Buy/Sell price recommendations
-- GE tax accounting (1%)
+- GE tax accounting (2% floored)
 - Profit per unit in gold
 - ROI % and profit margin %
 

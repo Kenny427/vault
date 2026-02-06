@@ -5,7 +5,7 @@
 ### 1. Enhanced Analysis Metrics
 The `analyzeFlipOpportunity()` function now calculates:
 - **Buy/Sell Prices**: Recommended entry and exit points
-- **Profit Per Unit**: Actual gold profit after 1% GE tax
+- **Profit Per Unit**: Actual gold profit after 2% floored GE tax
 - **Profit Margin %**: Percentage profit on investment
 - **ROI %**: Return on Investment percentage
 - **Risk Level**: Low/Medium/High classification

@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
 - Position: Qty=${h.quantity}, Cost=${h.costBasisPerUnit}gp, Current=${h.currentPrice}gp, P/L=${h.currentPL.toFixed(1)}%
 - Market Data: 30d_avg=${Math.round(s.shortTerm.avgPrice)}gp, 90d_avg=${Math.round(s.mediumTerm.avgPrice)}gp, 365d_avg=${Math.round(s.longTerm.avgPrice)}gp
 - Deviation: 7d=${s.shortTerm.currentDeviation.toFixed(1)}%, 90d=${s.mediumTerm.currentDeviation.toFixed(1)}%, 365d=${s.longTerm.currentDeviation.toFixed(1)}%
-- Signals: confidence=${s.confidenceScore}%, potential=${s.reversionPotential.toFixed(1)}%, grade=${s.investmentGrade}
+- Signals: confidence=${s.confidenceScore}%, potential=${s.reversionPotential.toFixed(1)}%, grade=${(s as any).investmentGrade}
 - Risk: volatility=${s.volatilityRisk}, liquidity=${s.liquidityScore}, bot=${s.botLikelihood}
 - Target: ${s.targetSellPrice}gp (would be ${h.targetPL.toFixed(1)}% profit from cost)`;
       })

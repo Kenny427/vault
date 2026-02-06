@@ -243,7 +243,7 @@ Return JSON (include borderline cases, min conf 25%):
         let buyPrice = item.currentPrice;
         let sellPrice = item.currentPrice;
 
-        let aiReasoning = analysis.reasoning;
+        let aiReasoning = analysis.strategicNarrative;
         if (analysis.recommendation === 'buy') {
           // Buy low, estimate selling at average or higher
           buyPrice = Math.round(item.currentPrice * 0.99);
@@ -269,7 +269,7 @@ Return JSON (include borderline cases, min conf 25%):
           }
         }
 
-        const profitPerUnit = Math.max(0, Math.round(sellPrice - buyPrice - sellPrice * GE_TAX));
+        const profitPerUnit = Math.max(0, Math.round(sellPrice - buyPrice - Math.floor(sellPrice * GE_TAX)));
         const roi = buyPrice > 0 ? ((profitPerUnit / buyPrice) * 100) : 0;
 
         return {
@@ -340,7 +340,7 @@ Return JSON (include borderline cases, min conf 25%):
         const buyPrice = Math.round(item.currentPrice * 0.99);
         const targetAvg = deviation365 < -25 ? avg365 : avg90;
         const sellPrice = Math.round(targetAvg * 1.02);
-        const profitPerUnit = Math.max(0, Math.round(sellPrice - buyPrice - sellPrice * GE_TAX));
+        const profitPerUnit = Math.max(0, Math.round(sellPrice - buyPrice - Math.floor(sellPrice * GE_TAX)));
         const roi = buyPrice > 0 ? ((profitPerUnit / buyPrice) * 100) : 0;
         
         // Confidence based on discount depth
@@ -584,13 +584,11 @@ ${enrichedItems.map((item, i) => {
    - Deviation: 7d=${s.shortTerm.currentDeviation.toFixed(1)}%, 90d=${s.mediumTerm.currentDeviation.toFixed(1)}%, 365d=${s.longTerm.currentDeviation.toFixed(1)}%, max=${s.maxDeviation.toFixed(1)}%
    - Reversion Potential: ${s.reversionPotential.toFixed(1)}%
    - Confidence: ${s.confidenceScore}%
-   - Investment Grade: ${s.investmentGrade}
    - Risk: volatility=${s.volatilityRisk}, liquidity=${s.liquidityScore}, bot=${s.botLikelihood}, supplyStability=${s.supplyStability}
-   - Estimated Holding Period: ${s.estimatedHoldingPeriod}
    - Suggested Investment: ${s.suggestedInvestment}gp
    - Target Sell Price: ${s.targetSellPrice}gp
    - Stop Loss: ${s.stopLoss}gp
-   - Reasoning: ${s.reasoning}`;
+   - Reasoning: ${s.strategicNarrative}`;
   }
   return `${baseInfo}
    - Market Data: LIMITED (no historical data available)`;

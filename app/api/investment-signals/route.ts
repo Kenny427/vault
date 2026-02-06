@@ -158,8 +158,8 @@ function generatePortfolioRecommendation(signals: any[]) {
       currentPrice: signal.currentPrice,
       targetPrice: signal.targetSellPrice,
       expectedReturn: signal.reversionPotential,
-      holdingPeriod: signal.estimatedHoldingPeriod,
-      grade: signal.investmentGrade,
+      holdingPeriod: (signal as any).estimatedHoldingPeriod,
+      grade: (signal as any).investmentGrade,
       category
     }));
   });

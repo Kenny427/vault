@@ -56,19 +56,19 @@ export async function POST(request: Request) {
 
 OPPORTUNITIES:
 ${topOpps
-  .map(
-    (opp: MeanReversionSignal) => `
-━━━ ${opp.itemName} (${opp.investmentGrade} Grade) ━━━
+        .map(
+          (opp: MeanReversionSignal) => `
+━━━ ${opp.itemName} ━━━
 Current: ${opp.currentPrice}gp
 Confidence: ${opp.confidenceScore}%
 7d Avg: ${opp.shortTerm.avgPrice}gp | 30d Avg: ${opp.mediumTerm.avgPrice}gp | 365d Avg: ${opp.longTerm.avgPrice}gp
 Max Deviation: ${opp.maxDeviation.toFixed(1)}%
 Reversion Potential: ${opp.reversionPotential.toFixed(1)}%
-Est. Hold Time: ${opp.estimatedHoldingPeriod}
+Thesis: ${opp.strategicNarrative}
 Liquidity: ${opp.liquidityScore}%
 `
-  )
-  .join('\n')}
+        )
+        .join('\n')}
 
 EXECUTION PLAN REQUIREMENTS:
 For each opportunity, provide:
@@ -147,7 +147,6 @@ FORMAT AS JSON ARRAY:
     const enhancedPlans = plans.map((plan, idx) => ({
       ...plan,
       itemId: topOpps[idx]?.itemId,
-      grade: topOpps[idx]?.investmentGrade,
       suggestedInvestment: topOpps[idx]?.suggestedInvestment,
     }));
 

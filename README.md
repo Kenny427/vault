@@ -12,7 +12,7 @@ The ultimate **AI-powered Grand Exchange analysis tool** for OSRS flipping. Find
 - ✅ **Smart Recommendations**: Buy/Sell/Hold signals
 
 ### Advanced Metrics
-- 💰 **Profit Calculation**: Per-unit profit accounting for 1% GE tax
+- 💰 **Profit Calculation**: Per-unit profit accounting for 2% floored GE tax
 - 📊 **ROI %**: Return on Investment percentage
 - 📈 **Margin %**: Profit margin analysis
 - 🎯 **Risk Assessment**: Low/Medium/High risk classification
@@ -42,7 +42,7 @@ ROI = (Profit / Buy Price) × 100
 ```
 
 ### Profit/Unit
-Actual gold profit after GE tax (1%):
+Actual gold profit after GE tax (2% floored):
 ```
 Profit = Sell Price - Buy Price - (Sell Price × 0.01)
 ```
@@ -76,7 +76,7 @@ Probability that the flip will happen as predicted (0-100%):
 2. Buy the item at the recommended "Buy At" price
 3. Wait for the estimated hold time
 4. Sell when the price rises to the "Sell At" price
-5. Profit = (Sell Price - Buy Price) × Quantity - 1% GE Tax
+5. Profit = (Sell Price - Buy Price) × Quantity - 2% floored GE tax
 
 ## 🔧 Filtering & Sorting
 
@@ -176,7 +176,7 @@ A: Start with as little as 10k gold. Even small flips build up over time!
 A: Rare or recently released items may not have enough trading history. The tool simulates data for display purposes.
 
 **Q: What's the GE tax?**
-A: You pay 1% tax on the selling price when you sell items on the GE.
+A: You pay 2% tax on the selling price when you sell items on the GE.
 
 ## 📞 Support
 

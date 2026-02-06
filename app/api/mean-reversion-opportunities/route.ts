@@ -35,7 +35,6 @@ type AiOpportunityDecision = {
   id: number;
   include: boolean;
   confidenceScore: number;
-  investmentGrade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
   entryNow?: number;
   entryRangeLow?: number;
   entryRangeHigh?: number;
@@ -44,12 +43,15 @@ type AiOpportunityDecision = {
   targetSellPrice?: number;
   stopLoss?: number;
   holdWeeks?: number;
-  estimatedHoldingPeriod?: string;
   suggestedInvestment?: number;
 
   volatilityRisk: 'low' | 'medium' | 'high';
-  reasoning: string;
-  marketAnalysis?: string; // Chain of thought / Behavioral analysis
+  // Phase 3: Structured Logic
+  logic: {
+    thesis: string; // The "Why"
+    vulnerability: string; // The "Bear Case"
+    trigger: string; // The invalidation point
+  };
   riskFactors?: string[]; // Bear case / Counter-thesis
   buyIfDropsTo?: number;
   sellAtMin?: number;
@@ -169,8 +171,8 @@ export async function GET(request: Request) {
               entryPriceNow: currentPrice,
               stopLoss: currentPrice * 0.95,
               suggestedInvestment: 0,
-              estimatedHoldingPeriod: 'Unknown',
-              investmentGrade: 'D' as const,
+              volumeVelocity: 1,
+
               volatilityRisk: 'high' as const,
               liquidityScore: 0,
               supplyStability: 0,
@@ -187,7 +189,7 @@ export async function GET(request: Request) {
               entryRangeHigh: currentPrice,
               exitPriceBase: currentPrice,
               exitPriceStretch: currentPrice,
-              reasoning: 'AI evaluation requested'
+              strategicNarrative: 'AI evaluation requested'
             };
           }
 
@@ -276,44 +278,32 @@ export async function GET(request: Request) {
 
       for (const batch of batches) {
         // Compressed prompt - let AI be the expert, minimal fluff
-        const prompt = `OSRS flip strategist focused on botted mean-reversion dumps. Evaluate EVERY item below and return a JSON decision (include=false for rejects). User wants to buy now—entries must be executable immediately (within ±1% of current unless explicitly rejecting).
+        const prompt = `OSRS flip strategist focused on botted mean-reversion dumps. Evaluate EVERY item below and return a JSON decision. Account for 2% GE Tax (rounds down to nearest whole GP); profit must clear tax.
 
-Hard rules:
-- You must return one JSON entry per item listed (do not omit items). Default to include=false.
-- You may set include=true for at most 30 items in this batch; all remaining entries must still appear with include=false.
-- Auto-reject (include=false) when: confidence < 35, expected upside < 12%, liquidityScore < 25, or botDump score < 25.
-- Favor items with strong bot-dump signatures and recovery signals; reject structural downtrends.
-
-Required JSON fields per item:
-- include (boolean) — true to trade now, false to skip
-- confidenceScore (0-100) and investmentGrade (A+/A/B+/B/C/D)
-- entryNow (gp), entryRangeLow, entryRangeHigh — actionable entry window anchored to current price
-- exitBase and exitStretch — primary and stretch sell targets (gp)
-- stopLoss — defensive exit (gp)
-- holdWeeks (integer) + estimatedHoldingPeriod (string)
-- suggestedInvestment (gp) sized for personal trading
+Required JSON per item:
+- include (boolean)
+- confidenceScore (0-100)
+- logic: object ({ "thesis": "behavioral narrative", "vulnerability": "risk factor", "trigger": "invalidation price" })
+- entryNow, entryRangeLow, entryRangeHigh (gp)
+- exitBase, exitStretch (gp)
+- stopLoss (gp)
+- holdWeeks (integer)
+- suggestedInvestment (gp)
 - volatilityRisk (low|medium|high)
-- marketAnalysis — 1 sentence on behavior (e.g. "Panic-dump vs support" or "Structural decline")
-- riskFactors — Array of 2 strings listing the primary "Bear Case" or why this trade could fail
-- reasoning — 2 tight sentences referencing timeframes, bot-dump, recovery, and final conviction
-Optional (include when useful): buyIfDropsTo, sellAtMin, sellAtMax, abortIfRisesAbove, notes, holdNarrative.
 
 MARKET CONTEXT:
 ${marketContext}
 
-
-DATA (ID|Name|Cur|EntryRange|ExitRange|Stop|Dev7|Dev90|Dev365|BotDump|Conf|Liq|Supply|HoldWk|Bot|Risk|Pot%):
+DATA (ID|Name|Cur|EntryRange|ExitRange|Stop|Dev7|Dev90|Dev365|BotDump|Conf|Liq|Supply|HoldWk|Bot|Risk|Pot%|VolVel):
 
 ${batch
-
             .map((s) => {
               const entryLow = Math.round(s.entryRangeLow ?? s.entryPriceNow ?? s.currentPrice);
               const entryHigh = Math.round(s.entryRangeHigh ?? s.entryPriceNow ?? s.currentPrice);
               const exitBase = Math.round(s.exitPriceBase ?? s.targetSellPrice ?? s.currentPrice);
               const exitStretch = Math.round(s.exitPriceStretch ?? exitBase);
               const stop = Math.round(s.stopLoss ?? s.entryPriceNow ?? s.currentPrice * 0.9);
-              return `${s.itemId}|${s.itemName}|${Math.round(s.currentPrice)}|${entryLow}-${entryHigh}|${exitBase}-${exitStretch}|${stop}|${s.shortTerm.currentDeviation.toFixed(1)}|${s.mediumTerm.currentDeviation.toFixed(1)}|${s.longTerm.currentDeviation.toFixed(1)}|${s.botDumpScore.toFixed(0)}|${s.confidenceScore}|${s.liquidityScore}|${s.supplyStability}|${s.expectedRecoveryWeeks}|${s.botLikelihood}|${s.volatilityRisk}|${s.reversionPotential.toFixed(1)}\nCap:${s.capitulationSignal}\nRec:${s.recoverySignal}\nPlan:${s.holdNarrative}`;
-
+              return `${s.itemId}|${s.itemName}|${Math.round(s.currentPrice)}|${entryLow}-${entryHigh}|${exitBase}-${exitStretch}|${stop}|${s.shortTerm.currentDeviation.toFixed(1)}|${s.mediumTerm.currentDeviation.toFixed(1)}|${s.longTerm.currentDeviation.toFixed(1)}|${s.botDumpScore.toFixed(0)}|${s.confidenceScore}|${s.liquidityScore}|${s.supplyStability}|${s.expectedRecoveryWeeks}|${s.botLikelihood}|${s.volatilityRisk}|${s.reversionPotential.toFixed(1)}|${s.volumeVelocity.toFixed(2)}\nCap:${s.capitulationSignal}\nRec:${s.recoverySignal}\nPlan:${s.holdNarrative}`;
             })
             .join('\n\n')}
 
@@ -497,15 +487,14 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
 
               ...base,
               confidenceScore: clamp(decision.confidenceScore ?? base.confidenceScore, 0, 100),
-              investmentGrade: decision.investmentGrade ?? base.investmentGrade,
               targetSellPrice: exitBase,
-              estimatedHoldingPeriod: decision.estimatedHoldingPeriod ?? base.estimatedHoldingPeriod,
               suggestedInvestment:
                 decision.suggestedInvestment && decision.suggestedInvestment > 0
                   ? decision.suggestedInvestment
                   : base.suggestedInvestment,
               volatilityRisk: decision.volatilityRisk ?? base.volatilityRisk,
-              reasoning: decision.reasoning ?? base.reasoning,
+              strategicNarrative: decision.logic?.thesis ?? (decision as any).reasoning ?? base.strategicNarrative,
+              logic: decision.logic,
               sellAtMin: decision.sellAtMin ?? base.sellAtMin ?? exitBase,
               sellAtMax: decision.sellAtMax ?? base.sellAtMax ?? exitStretch,
 
@@ -519,8 +508,7 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
               stopLoss,
               expectedRecoveryWeeks: holdWeeks,
               holdNarrative: decision.holdNarrative ?? base.holdNarrative,
-              marketAnalysis: decision.marketAnalysis ?? base.marketAnalysis,
-              riskFactors: decision.riskFactors ?? base.riskFactors,
+              riskFactors: decision.logic ? [decision.logic.vulnerability] : (decision.riskFactors ?? base.riskFactors),
             };
 
             topOpportunities.push(merged);
@@ -638,7 +626,7 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
 4. Timeline + catalysts
 
 ${top3.map(s =>
-        `${s.itemId}|${s.itemName}|Cur:${s.currentPrice}|90d:${Math.round(s.mediumTerm.avgPrice)}|365d:${Math.round(s.longTerm.avgPrice)}|Dev:${s.shortTerm.currentDeviation.toFixed(1)}/${s.mediumTerm.currentDeviation.toFixed(1)}/${s.longTerm.currentDeviation.toFixed(1)}%|Tgt:${s.targetSellPrice}|Pot:${s.reversionPotential.toFixed(1)}%|${s.investmentGrade}|${s.volatilityRisk}|Liq:${s.liquidityScore}|Sup:${s.supplyStability}`
+        `${s.itemId}|${s.itemName}|Cur:${s.currentPrice}|90d:${Math.round(s.mediumTerm.avgPrice)}|Dev:${s.shortTerm.currentDeviation.toFixed(1)}/${s.mediumTerm.currentDeviation.toFixed(1)}%|Tgt:${s.targetSellPrice}|Pot:${s.reversionPotential.toFixed(1)}%|Vol:${s.volatilityRisk}|Liq:${s.liquidityScore}`
       ).join('\n')}
 
 Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
@@ -714,15 +702,15 @@ Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
       }
 
       const auditorPrompt = `You are a SKEPTICAL OSRS market auditor. Your job is to find reasons NOT to take the following trades.
-Analyze these 5 potential opportunities and identify the "hidden traps" (e.g., structural decline, new update/nerf risks, or fake volume).
+Analyze these potential opportunities and identify the "hidden traps" (e.g., structural decline, fake volume).
 
-DATA:
+DATA (Item | Confidence | Strategist Thesis):
 ${auditingCandidates.map(s =>
-        `${s.itemId}|${s.itemName}|Cur:${s.currentPrice}|Dev:${s.shortTerm.currentDeviation.toFixed(1)}/${s.mediumTerm.currentDeviation.toFixed(1)}%|Dump:${s.botDumpScore.toFixed(0)}|Conf:${s.confidenceScore}`
+        `${s.itemName} | Conf:${s.confidenceScore} | Thesis:${s.strategicNarrative}`
       ).join('\n')}
 
 Instructions:
-- For each item, provide a "decision" (approve|caution|reject) and a 1-sentence "auditorNote" explaining your skepticism.
+- For each item, provide a "decision" (approve|caution|reject) and a 1-sentence "auditorNote" which is your SKEPTICAL critique of the strategist's thesis.
 - If you reject an item, give it a 25% confidence penalty.
 - Return ONLY JSON: {"audit":[{"itemId":0,"decision":"approve","auditorNote":"..."}]}`;
 
@@ -752,7 +740,6 @@ Instructions:
 
               if (auditItem.decision === 'reject') {
                 opp.confidenceScore = Math.max(0, opp.confidenceScore - 25);
-                opp.investmentGrade = 'C';
               } else if (auditItem.decision === 'caution') {
                 opp.confidenceScore = Math.max(0, opp.confidenceScore - 10);
               }
@@ -784,13 +771,6 @@ Instructions:
         ? topOpportunities.reduce((sum, s) => sum + s.reversionPotential, 0) / topOpportunities.length
         : 0,
       totalSuggestedInvestment: topOpportunities.reduce((sum, s) => sum + s.suggestedInvestment, 0),
-      gradeDistribution: {
-        'A+': topOpportunities.filter(s => s.investmentGrade === 'A+').length,
-        'A': topOpportunities.filter(s => s.investmentGrade === 'A').length,
-        'B+': topOpportunities.filter(s => s.investmentGrade === 'B+').length,
-        'B': topOpportunities.filter(s => s.investmentGrade === 'B').length,
-        'C': topOpportunities.filter(s => s.investmentGrade === 'C').length,
-      },
       openaiCost: {
         inputTokens: totalInputTokens,
         outputTokens: totalOutputTokens,
