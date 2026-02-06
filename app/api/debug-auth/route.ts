@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { isAdmin } from '@/lib/adminAuth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
     try {
         const supabase = createServerSupabaseClient();
@@ -23,6 +25,7 @@ export async function GET(request: Request) {
             cookieNames,
             nodeEnv: process.env.NODE_ENV,
             supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing',
+            deploy_checker: "v2-forced-dynamic-test", // If you DON'T see this, it hasn't deployed
             message: adminStatus
                 ? '✅ You are an admin!'
                 : user
