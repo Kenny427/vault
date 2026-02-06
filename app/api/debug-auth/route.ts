@@ -21,6 +21,8 @@ export async function GET(request: Request) {
             expectedAdminEmail: 'kenstorholt@gmail.com',
             userError: userError ? userError.message : null,
             cookieNames,
+            nodeEnv: process.env.NODE_ENV,
+            supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Set' : 'Missing',
             message: adminStatus
                 ? '✅ You are an admin!'
                 : user
