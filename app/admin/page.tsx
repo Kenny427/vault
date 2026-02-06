@@ -1,98 +1,111 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import SearchBar from '@/components/SearchBar';
-import { ItemData } from '@/lib/api/osrs';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { isAdmin } from '@/lib/adminAuth';
+import PoolManager from '@/components/PoolManager';
+import PoolManagementPanel from '@/components/PoolManagementPanel';
+import UserManagement from '@/components/UserManagement';
 
-interface PoolItem {
-  id: number;
-  name: string;
-}
+type Tab = 'pool-manager' | 'pool-stats' | 'users';
 
-export default function AdminPoolPage() {
-  const [pool, setPool] = useState<PoolItem[]>([]);
-  const [status, setStatus] = useState('');
+export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<Tab>('pool-manager');
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('osrs-custom-pool');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) setPool(parsed);
-        } catch {
-          setPool([]);
-        }
+    const checkAccess = async () => {
+      const authorized = await isAdmin();
+      setIsAuthorized(authorized);
+
+      if (!authorized) {
+        // Redirect to home page after a brief delay
+        setTimeout(() => {
+          router.push('/');
+        }, 2000);
       }
-    }
-  }, []);
+    };
 
-  const savePool = (items: PoolItem[]) => {
-    setPool(items);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('osrs-custom-pool', JSON.stringify(items));
-    }
-  };
+    checkAccess();
+  }, [router]);
 
-  const handleAdd = (item: ItemData) => {
-    if (pool.some(p => p.id === item.id)) {
-      setStatus('Item already in pool.');
-      return;
-    }
-    const updated = [...pool, { id: item.id, name: item.name }].sort((a, b) => a.name.localeCompare(b.name));
-    savePool(updated);
-    setStatus(`Added ${item.name}.`);
-  };
+  // Loading state
+  if (isAuthorized === null) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-slate-400">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleRemove = (id: number) => {
-    const updated = pool.filter(p => p.id !== id);
-    savePool(updated);
-    setStatus('Item removed.');
-  };
+  // Unauthorized state
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <div className="text-6xl mb-4">🔒</div>
+          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+          <p className="text-slate-400 mb-4">
+            You don't have permission to access the admin panel.
+          </p>
+          <p className="text-sm text-slate-500">
+            Redirecting to home page...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  const handleClear = () => {
-    savePool([]);
-    setStatus('Custom pool cleared. Default pool will be used.');
-  };
+  const tabs = [
+    { id: 'pool-manager' as Tab, label: '🎯 Pool Manager', description: 'Manage item pool' },
+    { id: 'pool-stats' as Tab, label: '📊 Pool Stats', description: 'Filter statistics' },
+    { id: 'users' as Tab, label: '👥 User Management', description: 'Manage users' },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-semibold mb-2">Admin Pool</h1>
-        <p className="text-slate-400 mb-6">
-          Add or remove items for AI analysis. If this list is empty, the default pool is used.
-        </p>
-
-        <div className="mb-6">
-          <SearchBar onItemSelect={handleAdd} />
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Admin Panel</h1>
+          <p className="text-slate-400">
+            Manage your OSRS flipping tool: item pool, statistics, and users
+          </p>
         </div>
 
-        <div className="flex items-center gap-3 mb-4">
-          <span className="text-sm text-slate-400">Items in pool: {pool.length}</span>
-          <button
-            onClick={handleClear}
-            className="px-3 py-1.5 text-sm bg-slate-800 hover:bg-slate-700 rounded"
-          >
-            Clear Custom Pool
-          </button>
-          {status && <span className="text-sm text-emerald-400">{status}</span>}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {pool.map(item => (
-            <div key={item.id} className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded px-4 py-3">
-              <div>
-                <div className="font-medium">{item.name}</div>
-                <div className="text-xs text-slate-500">ID: {item.id}</div>
-              </div>
+        {/* Tab Navigation */}
+        <div className="mb-6 border-b border-slate-700">
+          <div className="flex gap-1">
+            {tabs.map((tab) => (
               <button
-                onClick={() => handleRemove(item.id)}
-                className="text-sm text-red-300 hover:text-red-200"
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-3 font-medium transition-colors relative ${activeTab === tab.id
+                  ? 'text-blue-400 bg-slate-900'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
+                  }`}
               >
-                Remove
+                <div className="flex flex-col items-start">
+                  <span className="text-sm">{tab.label}</span>
+                  <span className="text-xs opacity-70">{tab.description}</span>
+                </div>
+                {activeTab === tab.id && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500"></div>
+                )}
               </button>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="bg-slate-900 rounded-lg p-6 border border-slate-700">
+          {activeTab === 'pool-manager' && <PoolManager />}
+          {activeTab === 'pool-stats' && <PoolManagementPanel />}
+          {activeTab === 'users' && <UserManagement />}
         </div>
       </div>
     </div>

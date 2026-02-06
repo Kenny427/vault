@@ -30,7 +30,7 @@ type MenuTab = 'admin' | 'pool-management';
  * Convert MeanReversionSignal to FlipOpportunity for UI display
  */
 function convertMeanReversionToFlipOpportunity(signal: any): FlipOpportunity {
-    const geTax = 0.02;
+  const geTax = 0.02;
   const entryPrice = Math.round(signal.entryPriceNow ?? signal.currentPrice);
   const entryRangeLow = Math.round(signal.entryRangeLow ?? entryPrice);
   const entryRangeHigh = Math.round(signal.entryRangeHigh ?? entryPrice);
@@ -74,9 +74,9 @@ function convertMeanReversionToFlipOpportunity(signal: any): FlipOpportunity {
     historicalLow: signal.entryRangeLow ?? signal.currentPrice,
     historicalHigh: exitStretch,
     flipType: signal.confidenceScore >= 85 ? 'high-confidence' :
-             signal.confidenceScore >= 65 ? 'deep-value' :
-             signal.confidenceScore >= 40 ? 'mean-reversion' :
-             'risky-upside',
+      signal.confidenceScore >= 65 ? 'deep-value' :
+        signal.confidenceScore >= 40 ? 'mean-reversion' :
+          'risky-upside',
     flipTypeConfidence: signal.confidenceScore,
     buyPrice: entryPrice,
     sellPrice: exitBase,
@@ -99,7 +99,7 @@ function convertMeanReversionToFlipOpportunity(signal: any): FlipOpportunity {
     recommendedQuantity,
     totalInvestment,
     totalProfit,
-        aiReasoning: signal.reasoning,
+    aiReasoning: signal.reasoning,
     aiEntryLow: entryRangeLow,
     aiEntryHigh: entryRangeHigh,
     aiExitBase: exitBase,
@@ -136,10 +136,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [scanProgress, setScanProgress] = useState(0);
-    const [scanMessage, setScanMessage] = useState('Awaiting command');
+  const [scanMessage, setScanMessage] = useState('Awaiting command');
   const [scanTip, setScanTip] = useState('');
-  const [analysisCost, setAnalysisCost] = useState<{ 
-    costUSD: number; 
+  const [analysisCost, setAnalysisCost] = useState<{
+    costUSD: number;
     totalTokens: number;
     inputTokens?: number;
     outputTokens?: number;
@@ -157,7 +157,7 @@ export default function Dashboard() {
   const [showRefreshWarning, setShowRefreshWarning] = useState(false);
   const [detailedAnalyses, setDetailedAnalyses] = useState<{ itemId: number; itemName: string; detailedAnalysis: string }[]>([]);
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
-    const [filteredItems, setFilteredItems] = useState<{ itemId: number; itemName: string; reason: string }[]>([]);
+  const [filteredItems, setFilteredItems] = useState<{ itemId: number; itemName: string; reason: string }[]>([]);
   const [showFilteredItems, setShowFilteredItems] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -203,7 +203,7 @@ export default function Dashboard() {
       return;
     }
 
-        setLoading(true);
+    setLoading(true);
     setError('');
     setScanMessage('Collecting market data (Step 1/3)');
     setScanProgress(8);
@@ -215,7 +215,7 @@ export default function Dashboard() {
       // Call mean-reversion opportunities endpoint (analyze all items in pool)
       setScanMessage('Fetching market data...');
       setScanProgress(1);
-      
+
       // Rotating tips to keep users engaged
       const tips = [
         'Analyzing price volatility patterns...',
@@ -231,32 +231,32 @@ export default function Dashboard() {
       ];
       let tipIndex = 0;
       setScanTip(tips[0]);
-      
+
       // Rotate tips every 5 seconds
       tipInterval = setInterval(() => {
         tipIndex = (tipIndex + 1) % tips.length;
         setScanTip(tips[tipIndex]);
       }, 5000);
-      
+
       // Linear progress: 1% → 100% over 160 seconds (2min 40sec)
       let progress = 1;
       progressInterval = setInterval(() => {
         progress += 100 / 160; // Increment to reach 100% in 160 seconds
         setScanProgress(Math.min(progress, 99)); // Don't hit 100 until truly done
       }, 1000);
-      
+
       // Update messages on fixed timers
       const step2Timer = setTimeout(() => {
         setScanMessage('Processing AI analysis...');
       }, 60000); // After 1 min
-      
+
       const step3Timer = setTimeout(() => {
         setScanMessage('Finalizing results...');
       }, 120000); // After 2 min
-      
+
       const responsePromise = fetch('/api/mean-reversion-opportunities');
       const response = await responsePromise;
-      
+
       if (!response.ok) {
         if (progressInterval) clearInterval(progressInterval);
         if (tipInterval) clearInterval(tipInterval);
@@ -268,24 +268,24 @@ export default function Dashboard() {
       }
 
       const data = await response.json();
-      
+
       // Clear all timers
       if (progressInterval) clearInterval(progressInterval);
       if (tipInterval) clearInterval(tipInterval);
       clearTimeout(step2Timer);
       clearTimeout(step3Timer);
-      
+
       setScanProgress(95);
       setScanMessage('Finalising alpha feed (Step 3/3)');
       setScanTip('Sorting by opportunity score...');
-      
+
       if (!data.success || !data.opportunities) {
 
         console.error('API Response:', data);
         throw new Error('Invalid response from analysis API');
       }
 
-            if (data.summary) {
+      if (data.summary) {
         setAnalysisStats({
           aiAnalyzedCount: data.summary.aiAnalyzedCount || 0,
           aiApprovedCount: data.summary.aiApprovedCount || 0,
@@ -293,7 +293,7 @@ export default function Dashboard() {
           aiMissingCount: data.summary.aiMissingCount || 0,
         });
         setTotalAnalyzed(data.summary.totalAnalyzed || 0);
-        
+
         // Track API cost
         if (data.summary.openaiCost) {
           setAnalysisCost({
@@ -320,7 +320,7 @@ export default function Dashboard() {
       // Track filtered stats for analysis
       if (data.filterStats && Array.isArray(data.filterStats)) {
         const statsMap = JSON.parse(localStorage.getItem('osrs-filtered-stats') || '{}');
-        
+
         data.filterStats.forEach((filter: any) => {
           const key = `${filter.itemId}`;
           if (!statsMap[key]) {
@@ -336,31 +336,31 @@ export default function Dashboard() {
           statsMap[key].lastReason = filter.reason;
           statsMap[key].lastFilteredAt = filter.timestamp;
         });
-        
+
         localStorage.setItem('osrs-filtered-stats', JSON.stringify(statsMap));
       }
 
       // Convert MeanReversionSignals to FlipOpportunities for UI
       const opportunities = data.opportunities.map(convertMeanReversionToFlipOpportunity);
-      
+
       setScanProgress(95);
       setScanTip('Finalizing results...');
       await new Promise(resolve => setTimeout(resolve, 200));
-      
+
       // Sort by opportunity score (confidence)
       const sorted = opportunities.sort(
         (a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore
       );
-      
+
       setOpportunities(sorted);
       setLastRefresh(new Date());
       setScanProgress(100);
       setScanMessage('Analysis complete');
       setScanTip('');
-      
+
       console.log(`✅ Found ${sorted.length} mean-reversion opportunities`);
       console.log(`📊 Mean-reversion analysis complete`);
-      
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('osrs-last-refresh', new Date().toISOString());
         localStorage.setItem('osrs-cached-opps', JSON.stringify(sorted));
@@ -369,7 +369,7 @@ export default function Dashboard() {
       // Clean up any running intervals and timers
       if (progressInterval) clearInterval(progressInterval);
       if (tipInterval) clearInterval(tipInterval);
-      
+
       setError(err.message || 'Failed to analyze opportunities');
       console.error('Mean-reversion analysis error:', err);
       setScanProgress(0);
@@ -389,7 +389,7 @@ export default function Dashboard() {
     loadingRef.current = loading;
   }, [loading]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (loading) {
       return;
     }
@@ -405,7 +405,7 @@ export default function Dashboard() {
 
   // Check price alerts periodically
   const checkAlerts = usePriceAlertsStore(state => state.checkAlerts);
-  
+
   // Initialize DINK webhook listener on mount
   useEffect(() => {
     const cleanup = initDinkWebhookListener();
@@ -453,15 +453,15 @@ export default function Dashboard() {
 
 
   // Filter opportunities based on settings
-    let filteredOpportunities = opportunities.filter(opp => {
+  let filteredOpportunities = opportunities.filter(opp => {
     if (opp.opportunityScore < minOpportunityScore) return false;
     // Only filter by recommendation if it's been set (AI pass sets this)
     if (opp.recommendation && opp.recommendation !== 'buy') return false;
-    
+
     // Flip type filter
 
     if (flipTypeFilter !== 'all' && opp.flipType !== flipTypeFilter) return false;
-    
+
     return true;
   });
 
@@ -483,7 +483,7 @@ export default function Dashboard() {
 
 
 
-     const displayOpportunities = filteredOpportunities;
+  const displayOpportunities = filteredOpportunities;
 
   return (
     <div className="min-h-screen bg-slate-950">
@@ -533,25 +533,23 @@ export default function Dashboard() {
               setActiveMenuTab(null);
               setShowMenu(false);
             }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'portfolio' && !activeMenuTab
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'portfolio' && !activeMenuTab
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
-            }`}
+              }`}
           >
             💼 Portfolio
           </button>
-                    <button
+          <button
             onClick={() => {
               setActiveTab('opportunities');
               setActiveMenuTab(null);
               setShowMenu(false);
             }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'opportunities' && !activeMenuTab
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'opportunities' && !activeMenuTab
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
-            }`}
+              }`}
           >
             ⚡ Alpha Feed
           </button>
@@ -562,11 +560,10 @@ export default function Dashboard() {
               setActiveMenuTab(null);
               setShowMenu(false);
             }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'performance' && !activeMenuTab
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'performance' && !activeMenuTab
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
-            }`}
+              }`}
           >
             📈 Performance
           </button>
@@ -576,11 +573,10 @@ export default function Dashboard() {
               setActiveMenuTab(null);
               setShowMenu(false);
             }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'alerts' && !activeMenuTab
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'alerts' && !activeMenuTab
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
-            }`}
+              }`}
           >
             🔔 Price Alerts
           </button>
@@ -590,11 +586,10 @@ export default function Dashboard() {
               setActiveMenuTab(null);
               setShowMenu(false);
             }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'favorites' && !activeMenuTab
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'favorites' && !activeMenuTab
                 ? 'text-osrs-accent border-b-2 border-osrs-accent'
                 : 'text-slate-400 hover:text-slate-300'
-            }`}
+              }`}
           >
             ⭐ Favorites
           </button>
@@ -603,39 +598,19 @@ export default function Dashboard() {
           <div className="relative ml-auto">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className={`px-4 py-3 font-semibold transition-all rounded-lg ${
-                showMenu
+              className={`px-4 py-3 font-semibold transition-all rounded-lg ${showMenu
                   ? 'text-osrs-accent bg-slate-700/50'
                   : 'text-slate-400 hover:text-slate-300'
-              }`}
+                }`}
               title="More options"
             >
               ⚙️
             </button>
             {showMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50">
-                <button
-                  onClick={() => {
-                    setActiveMenuTab('admin');
-                    setShowMenu(false);
-                  }}
-                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${
-                    activeMenuTab === 'admin' ? 'text-osrs-accent' : 'text-slate-300'
-                  }`}
-                >
-                  ⚙️ Pool Manager
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveMenuTab('pool-management');
-                    setShowMenu(false);
-                  }}
-                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${
-                    activeMenuTab === 'pool-management' ? 'text-osrs-accent' : 'text-slate-300'
-                  }`}
-                >
-                  📊 Pool Stats
-                </button>
+                <div className="px-4 py-3 text-slate-500 text-sm text-center">
+                  No additional options
+                </div>
               </div>
             )}
           </div>
@@ -655,7 +630,7 @@ export default function Dashboard() {
                   ⚠️ Refreshed {Math.floor((Date.now() - (lastRefresh?.getTime() || 0)) / 1000)}s ago. Wait 30s between refreshes to avoid unnecessary costs.
                 </div>
               )}
-              
+
               <div className="flex items-center justify-between gap-6">
                 <div className="flex-1">
                   <div className="text-sm text-blue-200 mb-2">
@@ -673,25 +648,25 @@ export default function Dashboard() {
                       </div>
                     )}
                     {!loading && lastRefresh && (
-                        <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
+                      <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
                     )}
                     {!loading && !lastRefresh && <span>Ready to analyze</span>}
                   </div>
-                                                            {!loading && analysisStats && (
-                      <div className="text-xs text-blue-200/80">
-                        Analysis: {analysisStats.preFilteredCount} signals captured → {analysisStats.aiAnalyzedCount} AI evaluated → {analysisStats.aiApprovedCount} approved{typeof analysisStats.aiMissingCount === 'number' && analysisStats.aiMissingCount > 0 ? ` (${analysisStats.aiMissingCount} missing)` : ''}
+                  {!loading && analysisStats && (
+                    <div className="text-xs text-blue-200/80">
+                      Analysis: {analysisStats.preFilteredCount} signals captured → {analysisStats.aiAnalyzedCount} AI evaluated → {analysisStats.aiApprovedCount} approved{typeof analysisStats.aiMissingCount === 'number' && analysisStats.aiMissingCount > 0 ? ` (${analysisStats.aiMissingCount} missing)` : ''}
+                    </div>
+                  )}
+
+                  {!loading && analysisCost && (
+                    <div className="text-xs text-blue-300/80 mt-1 space-y-0.5">
+                      <div>💰 Cost: ${analysisCost.costUSD.toFixed(4)} ({analysisCost.totalTokens.toLocaleString()} tokens)</div>
+                      <div className="text-blue-400/70">
+                        Input: {analysisCost.inputTokens?.toLocaleString()} tokens (${analysisCost.breakdown?.inputCostUSD.toFixed(4)}) |
+                        Output: {analysisCost.outputTokens?.toLocaleString()} tokens (${analysisCost.breakdown?.outputCostUSD.toFixed(4)})
                       </div>
-                    )}
-                    
-                    {!loading && analysisCost && (
-                      <div className="text-xs text-blue-300/80 mt-1 space-y-0.5">
-                        <div>💰 Cost: ${analysisCost.costUSD.toFixed(4)} ({analysisCost.totalTokens.toLocaleString()} tokens)</div>
-                        <div className="text-blue-400/70">
-                          Input: {analysisCost.inputTokens?.toLocaleString()} tokens (${analysisCost.breakdown?.inputCostUSD.toFixed(4)}) | 
-                          Output: {analysisCost.outputTokens?.toLocaleString()} tokens (${analysisCost.breakdown?.outputCostUSD.toFixed(4)})
-                        </div>
-                      </div>
-                    )}
+                    </div>
+                  )}
 
 
                   {loading && (
@@ -738,113 +713,113 @@ export default function Dashboard() {
               )}
             </div>
 
-        {/* Settings & Filters */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-bold text-slate-100 mb-4">📊 Filter</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-slate-300 block mb-2">
-                Minimum Score: {minOpportunityScore}%
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={minOpportunityScore}
-                onChange={(e) => setMinOpportunityScore(Number(e.target.value))}
-                className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-osrs-accent"
-              />
-              <p className="text-xs text-slate-400 mt-1">
-                {minOpportunityScore >= 80 ? '🟢 Only top-tier opportunities' : minOpportunityScore >= 50 ? '🟡 Balanced selection' : '🔴 Include riskier items'}
-              </p>
-            </div>
+            {/* Settings & Filters */}
+            <div className="bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700 rounded-lg p-6 mb-8">
+              <h2 className="text-xl font-bold text-slate-100 mb-4">📊 Filter</h2>
 
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-slate-300 block mb-2">
-                Sort By
-              </label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:border-osrs-accent"
-              >
-                <option value="confidence">Score (High to Low)</option>
-                <option value="roi">Potential Gain %</option>
-                <option value="profit">Profit Per Unit</option>
-                <option value="score">Opportunity Score</option>
-              </select>
-            </div>
-
-            <div className="flex items-end">
-                        <div className="w-full bg-slate-800 border border-slate-700 rounded p-3 text-center">
-                <p className="text-xs text-slate-400 mb-1">Signals Found</p>
-                <p className="text-2xl font-bold text-osrs-accent">{filteredOpportunities.length}</p>
-                <p className="text-xs text-slate-400">
-                  of {totalAnalyzed ?? opportunities.length} analyzed
-                </p>
-              </div>
-
-            </div>
-          </div>
-        </div>
-
-        {/* Opportunities Grid */}
-        <div className="space-y-8">
-          {displayOpportunities.length > 0 && (
-                        <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
-              <h3 className="text-sm font-semibold text-slate-200 mb-2">🧠 AI Alpha Breakdown</h3>
-              <ul className="space-y-2 text-sm text-slate-300">
-                {displayOpportunities.slice(0, 3).map((opp, idx) => (
-
-                  <li key={opp.itemId} className="flex gap-2">
-                    <span className="text-osrs-accent">#{idx + 1}</span>
-                    <span className="font-semibold text-slate-100">{opp.itemName}:</span>
-                    <span>{opp.aiReasoning || 'High-quality mean-reversion setup with solid liquidity and controlled risk.'}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {displayOpportunities.length > 0 && (
-                        <div>
-              <h2 className="text-2xl font-bold text-slate-100 mb-1 flex items-center gap-2">
-                <span className="w-8 h-8 bg-orange-900 text-orange-400 rounded flex items-center justify-center text-lg">
-                  📊
-                </span>
-                {`Alpha Feed (${displayOpportunities.length})`}
-              </h2>
-              <p className="text-slate-400 text-sm mb-4">Live mean-reversion flips cleared by the AI gate</p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {displayOpportunities.map((opp: FlipOpportunity) => (
-                  <FlipCard
-                    key={opp.itemId}
-                    opportunity={opp}
-                    onViewDetails={() => {
-                      router.push(`/item/${opp.itemId}`);
-                    }}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-slate-300 block mb-2">
+                    Minimum Score: {minOpportunityScore}%
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={minOpportunityScore}
+                    onChange={(e) => setMinOpportunityScore(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-osrs-accent"
                   />
-                ))}
+                  <p className="text-xs text-slate-400 mt-1">
+                    {minOpportunityScore >= 80 ? '🟢 Only top-tier opportunities' : minOpportunityScore >= 50 ? '🟡 Balanced selection' : '🔴 Include riskier items'}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-slate-300 block mb-2">
+                    Sort By
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded text-slate-100 text-sm focus:outline-none focus:border-osrs-accent"
+                  >
+                    <option value="confidence">Score (High to Low)</option>
+                    <option value="roi">Potential Gain %</option>
+                    <option value="profit">Profit Per Unit</option>
+                    <option value="score">Opportunity Score</option>
+                  </select>
+                </div>
+
+                <div className="flex items-end">
+                  <div className="w-full bg-slate-800 border border-slate-700 rounded p-3 text-center">
+                    <p className="text-xs text-slate-400 mb-1">Signals Found</p>
+                    <p className="text-2xl font-bold text-osrs-accent">{filteredOpportunities.length}</p>
+                    <p className="text-xs text-slate-400">
+                      of {totalAnalyzed ?? opportunities.length} analyzed
+                    </p>
+                  </div>
+
+                </div>
               </div>
             </div>
-          )}
 
-          {displayOpportunities.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-slate-400 text-lg mb-2">
-                🎯 Auto-loaded popular items
-              </p>
-              <p className="text-slate-500 text-sm mb-4">
-                Popular OSRS trading items are being analyzed. Use the search bar to add more items to analyze.
-              </p>
-              <p className="text-slate-600 text-xs">
-                Tip: Click the star ★ on any card to add it to your favorites for quick access.
-              </p>
+            {/* Opportunities Grid */}
+            <div className="space-y-8">
+              {displayOpportunities.length > 0 && (
+                <div className="bg-slate-900/60 border border-slate-700 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-slate-200 mb-2">🧠 AI Alpha Breakdown</h3>
+                  <ul className="space-y-2 text-sm text-slate-300">
+                    {displayOpportunities.slice(0, 3).map((opp, idx) => (
+
+                      <li key={opp.itemId} className="flex gap-2">
+                        <span className="text-osrs-accent">#{idx + 1}</span>
+                        <span className="font-semibold text-slate-100">{opp.itemName}:</span>
+                        <span>{opp.aiReasoning || 'High-quality mean-reversion setup with solid liquidity and controlled risk.'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {displayOpportunities.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-100 mb-1 flex items-center gap-2">
+                    <span className="w-8 h-8 bg-orange-900 text-orange-400 rounded flex items-center justify-center text-lg">
+                      📊
+                    </span>
+                    {`Alpha Feed (${displayOpportunities.length})`}
+                  </h2>
+                  <p className="text-slate-400 text-sm mb-4">Live mean-reversion flips cleared by the AI gate</p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {displayOpportunities.map((opp: FlipOpportunity) => (
+                      <FlipCard
+                        key={opp.itemId}
+                        opportunity={opp}
+                        onViewDetails={() => {
+                          router.push(`/item/${opp.itemId}`);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {displayOpportunities.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-slate-400 text-lg mb-2">
+                    🎯 Auto-loaded popular items
+                  </p>
+                  <p className="text-slate-500 text-sm mb-4">
+                    Popular OSRS trading items are being analyzed. Use the search bar to add more items to analyze.
+                  </p>
+                  <p className="text-slate-600 text-xs">
+                    Tip: Click the star ★ on any card to add it to your favorites for quick access.
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        </>
+          </>
         )}
 
         {/* Favorites Tab Content */}
@@ -863,11 +838,7 @@ export default function Dashboard() {
         {/* Price Alerts Tab Content */}
         {activeTab === 'alerts' && !activeMenuTab && <PriceAlerts />}
 
-        {/* Menu Tab: Pool Manager */}
-        {activeMenuTab === 'admin' && <PoolManager />}
 
-        {/* Menu Tab: Pool Stats */}
-        {activeMenuTab === 'pool-management' && <PoolManagementPanel />}
       </main>
 
       {/* Detailed Analysis Modal */}
