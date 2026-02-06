@@ -303,7 +303,7 @@ ${batch
               const exitBase = Math.round(s.exitPriceBase ?? s.targetSellPrice ?? s.currentPrice);
               const exitStretch = Math.round(s.exitPriceStretch ?? exitBase);
               const stop = Math.round(s.stopLoss ?? s.entryPriceNow ?? s.currentPrice * 0.9);
-              return `${s.itemId}|${s.itemName}|${Math.round(s.currentPrice)}|${entryLow}-${entryHigh}|${exitBase}-${exitStretch}|${stop}|${s.shortTerm.currentDeviation.toFixed(1)}|${s.mediumTerm.currentDeviation.toFixed(1)}|${s.longTerm.currentDeviation.toFixed(1)}|${s.botDumpScore.toFixed(0)}|${s.confidenceScore}|${s.liquidityScore}|${s.supplyStability}|${s.expectedRecoveryWeeks}|${s.botLikelihood}|${s.volatilityRisk}|${s.reversionPotential.toFixed(1)}|${s.volumeVelocity.toFixed(2)}\nCap:${s.capitulationSignal}\nRec:${s.recoverySignal}\nPlan:${s.holdNarrative}`;
+              return `${s.itemId}|${s.itemName}|${Math.round(s.currentPrice)}|${entryLow}-${entryHigh}|${exitBase}-${exitStretch}|${stop}|${s.shortTerm.currentDeviation.toFixed(1)}|${s.mediumTerm.currentDeviation.toFixed(1)}|${s.longTerm.currentDeviation.toFixed(1)}|${s.botDumpScore.toFixed(0)}|${s.confidenceScore}|${s.liquidityScore}|${s.supplyStability}|${s.expectedRecoveryWeeks}|${s.botLikelihood}|${s.volatilityRisk}|${s.reversionPotential.toFixed(1)}|${(s.volumeVelocity ?? 1).toFixed(2)}\nCap:${s.capitulationSignal}\nRec:${s.recoverySignal}\nPlan:${s.holdNarrative}`;
             })
             .join('\n\n')}
 
@@ -508,7 +508,6 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
               stopLoss,
               expectedRecoveryWeeks: holdWeeks,
               holdNarrative: decision.holdNarrative ?? base.holdNarrative,
-              riskFactors: decision.logic ? [decision.logic.vulnerability] : (decision.riskFactors ?? base.riskFactors),
             };
 
             topOpportunities.push(merged);

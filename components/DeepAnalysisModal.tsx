@@ -380,7 +380,7 @@ export default function DeepAnalysisModal({ itemId, itemName, onClose }: DeepAna
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-emerald-400 font-bold">💡 THESIS</span>
-                      <span className="text-xs text-slate-500">(The "Why")</span>
+                      <span className="text-xs text-slate-500">(The &quot;Why&quot;)</span>
                     </div>
                     <p className="text-slate-300 text-sm leading-relaxed pl-6">
                       {signal.logic.thesis}
@@ -423,7 +423,7 @@ export default function DeepAnalysisModal({ itemId, itemName, onClose }: DeepAna
               {signal.auditorNotes && (
                 <div className="bg-yellow-900/10 border border-yellow-500/30 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-yellow-400 font-bold">🔍 Auditor's Critique</span>
+                    <span className="text-yellow-400 font-bold">🔍 Auditor&apos;s Critique</span>
                   </div>
                   <p className="text-slate-300 text-sm leading-relaxed">
                     {signal.auditorNotes}
