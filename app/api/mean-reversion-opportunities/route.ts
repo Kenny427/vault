@@ -74,24 +74,47 @@ export async function GET(request: Request) {
     const API_BATCH_SIZE = 5;
     const itemChunks = chunkArray(itemsToAnalyze, API_BATCH_SIZE);
 
-    console.log(`[API] Analyzing ${itemsToAnalyze.length} items in ${itemChunks.length} API batches...`);
-
     for (let batchIdx = 0; batchIdx < itemChunks.length; batchIdx++) {
       const chunk = itemChunks[batchIdx];
       const batchPromises = chunk.map(async (item: any) => {
         try {
           const priceData = await getItemHistoryWithVolumes(item.id, 365 * 24 * 60 * 60);
-          if (!priceData || priceData.length < 5) return null;
-          return await analyzeMeanReversionOpportunity(item.id, item.name, priceData);
-        } catch (error) { return null; }
+
+          if (!priceData) {
+            filteredOutItems.push({ itemId: item.id, itemName: item.name, reason: 'Wiki API returned null history' });
+            return null;
+          }
+
+          if (priceData.length < 5) {
+            filteredOutItems.push({ itemId: item.id, itemName: item.name, reason: `Insufficient history (${priceData.length} days)` });
+            return null;
+          }
+
+          const result = await analyzeMeanReversionOpportunity(item.id, item.name, priceData);
+          if (!result) {
+            filteredOutItems.push({ itemId: item.id, itemName: item.name, reason: 'Analysis logic failed' });
+            return null;
+          }
+
+          return result;
+        } catch (error) {
+          filteredOutItems.push({ itemId: item.id, itemName: item.name, reason: error instanceof Error ? error.message : 'Unknown exception' });
+          return null;
+        }
       });
+
       const results = await Promise.all(batchPromises);
       analysisResults.push(...results.filter((s): s is MeanReversionSignal => s !== null));
       await new Promise(r => setTimeout(r, 100)); // Rate limit safety
     }
 
     const completedSignals = analysisResults;
-    console.log(`[API] Capture complete: ${completedSignals.length} signals ready for AI.`);
+
+    console.log(`[API] Step 1 Summary: ${completedSignals.length}/${initialPoolSize} signals captured. ${filteredOutItems.length} filtered at Step 1.`);
+
+    if (filteredOutItems.length > 0) {
+      console.log(`[API] Dropped items (first 10): ${filteredOutItems.slice(0, 10).map(i => i.itemName).join(', ')}${filteredOutItems.length > 10 ? '...' : ''}`);
+    }
 
     // Step 2: Parallel AI Analysis with Concurrency Limit
     const uniqueOpportunities = new Map<number, MeanReversionSignal>();
@@ -184,8 +207,9 @@ Items: ${batch.map(s => `ID:${s.itemId} | ${s.itemName} | P:${Math.round(s.curre
       aiAnalyzedCount,
       aiApprovedCount,
       aiMissingCount: completedSignals.length - aiAnalyzedCount,
-      preFilteredCount: filteredOutItems.length,
+      preFilteredCount: completedSignals.length, // CAPTURED = Successful algorithmic analysis
       preThresholdCount: beforeThresholdCount,
+      filteredAtStep1: filteredOutItems.length,
       filteredByThreshold: beforeThresholdCount - afterThresholdCount,
       openaiCost: {
         totalTokens: totalTokens,
