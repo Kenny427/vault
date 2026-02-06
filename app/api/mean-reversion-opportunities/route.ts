@@ -117,106 +117,94 @@ export async function GET(request: Request) {
     }
 
     // Fetch price data and analyze each item (AI will decide final inclusion)
+    // Batch processing to avoid API rate limiting (OSRS Wiki API)
+    const analysisResults: MeanReversionSignal[] = [];
     const filteredOutItems: { itemId: number; itemName: string; reason: string }[] = [];
 
-    const analysisPromises = priorityItems.map(async (item) => {
-      try {
+    // Process in smaller serial batches for API stability
+    const API_BATCH_SIZE = 5;
+    const itemChunks = chunkArray(priorityItems, API_BATCH_SIZE);
 
-        // Fetch 1 year of price history with volume data
-        const priceData = await getItemHistoryWithVolumes(item.id, 365 * 24 * 60 * 60);
+    console.log(`🚀 Starting analysis in ${itemChunks.length} batches of ${API_BATCH_SIZE}...`);
 
-        if (!priceData) {
-          const reason = 'No price history available from OSRS API';
-          filteredOutItems.push({ itemId: item.id, itemName: item.name, reason });
-          if (verboseAnalysisLogging) {
-            console.log(`⚠️ Item ${item.id} (${item.name}): ${reason}`);
-          }
-          return null;
-        }
-
-        if (verboseAnalysisLogging) {
-          console.log(`📈 Item ${item.id} (${item.name}): Retrieved ${priceData.length} data points`);
-        }
-
-        if (priceData.length < 5) {
-          const reason = `Insufficient data points (${priceData.length}/5 minimum)`;
-          filteredOutItems.push({ itemId: item.id, itemName: item.name, reason });
-          if (verboseAnalysisLogging) {
-            console.log(`   ⚠️ ${reason}`);
-          }
-          return null;
-        }
-
-        // Analyze for mean reversion metrics (AI makes final decision)
-        const signal = await analyzeMeanReversionOpportunity(
-          item.id,
-          item.name,
-          priceData
-        );
-
-        // Even if mean reversion analysis returns null, create a basic signal
-        // Let AI decide if the item should be included or not
-        if (!signal) {
-          // Create a minimal signal for AI to evaluate
-          const avgPrice = priceData.reduce((sum, p) => sum + (p.avgHighPrice + p.avgLowPrice) / 2, 0) / priceData.length;
-          const currentPrice = (priceData[priceData.length - 1].avgHighPrice + priceData[priceData.length - 1].avgLowPrice) / 2;
-
-          const minimalSignal: MeanReversionSignal = {
-            itemId: item.id,
-            itemName: item.name,
-            currentPrice,
-            maxDeviation: 0,
-            reversionPotential: 0,
-            confidenceScore: 0,
-            targetSellPrice: currentPrice,
-            entryPriceNow: currentPrice,
-            stopLoss: currentPrice * 0.95,
-            suggestedInvestment: 0,
-            estimatedHoldingPeriod: 'Unknown',
-            investmentGrade: 'D' as const,
-            volatilityRisk: 'high' as const,
-            liquidityScore: 0,
-            supplyStability: 0,
-            botLikelihood: (item.botLikelihood === 'very_high' ? 'very high' : item.botLikelihood || 'medium') as 'very high' | 'high' | 'medium' | 'low',
-            shortTerm: { period: '7d' as const, avgPrice, currentDeviation: 0, volatility: 0, volumeAvg: 0 },
-            mediumTerm: { period: '90d' as const, avgPrice, currentDeviation: 0, volatility: 0, volumeAvg: 0 },
-            longTerm: { period: '365d' as const, avgPrice, currentDeviation: 0, volatility: 0, volumeAvg: 0 },
-            botDumpScore: 0,
-            capitulationSignal: 'Insufficient pattern',
-            recoverySignal: 'Insufficient pattern',
-            expectedRecoveryWeeks: 0,
-            holdNarrative: 'Insufficient pattern for mean reversion',
-            entryRangeLow: currentPrice,
-            entryRangeHigh: currentPrice,
-            exitPriceBase: currentPrice,
-            exitPriceStretch: currentPrice,
-            reasoning: 'No mean reversion pattern - AI will evaluate'
-          };
-
-          if (verboseAnalysisLogging) {
-            console.log(`⚠️ ${item.name}: No mean reversion pattern, sending minimal signal to AI`);
-          }
-
-          return minimalSignal;
-        }
-
-        if (signal && verboseAnalysisLogging) {
-          console.log(`✓ ${item.name}: confidence=${signal.confidenceScore}%, potential=${signal.reversionPotential.toFixed(1)}%, grade=${signal.investmentGrade}`);
-        }
-
-
-        return signal;
-      } catch (error) {
-        const reason = `Error during analysis: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        filteredOutItems.push({ itemId: item.id, itemName: item.name, reason });
-        console.error(`❌ Failed to analyze item ${item.id} (${item.name}):`, error);
-        return null;
+    for (let batchIdx = 0; batchIdx < itemChunks.length; batchIdx++) {
+      const chunk = itemChunks[batchIdx];
+      if (verboseAnalysisLogging) {
+        console.log(`📦 Processing API batch ${batchIdx + 1}/${itemChunks.length}...`);
       }
-    });
 
-    // Wait for all analyses to complete
-    const allSignals = await Promise.all(analysisPromises);
-    let completedSignals = allSignals.filter((s): s is MeanReversionSignal => s !== null);
+      const batchPromises = chunk.map(async (item) => {
+        try {
+          // Fetch 365 days of price history with volume data
+          const priceData = await getItemHistoryWithVolumes(item.id, 365 * 24 * 60 * 60);
+
+          if (!priceData) {
+            filteredOutItems.push({ itemId: item.id, itemName: item.name, reason: 'No price history' });
+            return null;
+          }
+
+          if (priceData.length < 5) {
+            filteredOutItems.push({ itemId: item.id, itemName: item.name, reason: `Insufficient data (${priceData.length})` });
+            return null;
+          }
+
+          // Analyze for mean reversion metrics
+          const signal = await analyzeMeanReversionOpportunity(item.id, item.name, priceData);
+
+          if (!signal) {
+            // Create minimal signal for AI evaluation
+            const avgPrice = priceData.reduce((sum, p) => sum + (p.avgHighPrice + p.avgLowPrice) / 2, 0) / priceData.length;
+            const currentPrice = (priceData[priceData.length - 1].avgHighPrice + priceData[priceData.length - 1].avgLowPrice) / 2;
+
+            return {
+              itemId: item.id,
+              itemName: item.name,
+              currentPrice,
+              maxDeviation: 0,
+              reversionPotential: 0,
+              confidenceScore: 0,
+              targetSellPrice: currentPrice,
+              entryPriceNow: currentPrice,
+              stopLoss: currentPrice * 0.95,
+              suggestedInvestment: 0,
+              estimatedHoldingPeriod: 'Unknown',
+              investmentGrade: 'D' as const,
+              volatilityRisk: 'high' as const,
+              liquidityScore: 0,
+              supplyStability: 0,
+              botLikelihood: (item.botLikelihood === 'very_high' ? 'very high' : item.botLikelihood || 'medium') as any,
+              shortTerm: { period: '7d' as const, avgPrice, currentDeviation: 0, volatility: 0, volumeAvg: 0 },
+              mediumTerm: { period: '90d' as const, avgPrice, currentDeviation: 0, volatility: 0, volumeAvg: 0 },
+              longTerm: { period: '365d' as const, avgPrice, currentDeviation: 0, volatility: 0, volumeAvg: 0 },
+              botDumpScore: 0,
+              capitulationSignal: 'Insufficient pattern',
+              recoverySignal: 'Insufficient pattern',
+              expectedRecoveryWeeks: 0,
+              holdNarrative: 'Insufficient pattern',
+              entryRangeLow: currentPrice,
+              entryRangeHigh: currentPrice,
+              exitPriceBase: currentPrice,
+              exitPriceStretch: currentPrice,
+              reasoning: 'AI evaluation requested'
+            };
+          }
+
+          return signal;
+        } catch (error) {
+          console.error(`❌ Batch error for ${item.name}:`, error);
+          return null;
+        }
+      });
+
+      const chunkResults = await Promise.all(batchPromises);
+      analysisResults.push(...chunkResults.filter((s): s is MeanReversionSignal => s !== null));
+
+      // Mandatory cooldown to prevent 429s
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    let completedSignals = analysisResults;
+
 
     // Log filtering summary
     console.log(`\n📊 FILTERING SUMMARY:`);
@@ -248,6 +236,8 @@ export async function GET(request: Request) {
     let totalOutputTokens = 0;
     let totalCostUSD = 0;
 
+
+    const trackingPromises: Promise<any>[] = [];
 
     if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
       if (verboseAnalysisLogging) {
@@ -387,17 +377,19 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
             const includeDecision = decision.include === undefined ? true : decision.include;
             if (!includeDecision) {
               // Track item performance: AI rejected this item
-              supabase.rpc('update_item_performance', {
-                p_item_id: base.itemId,
-                p_item_name: base.itemName,
-                p_approved: false,
-                p_roi_potential: 0,
-                p_confidence: decision.confidenceScore ?? base.confidenceScore
-              }).then(({ error }: { error: any }) => {
-                if (error) {
-                  console.error(`❌ Failed to track rejected item ${base.itemName}:`, error);
-                }
-              });
+              trackingPromises.push(
+                supabase.rpc('update_item_performance', {
+                  p_item_id: base.itemId,
+                  p_item_name: base.itemName,
+                  p_approved: false,
+                  p_roi_potential: 0,
+                  p_confidence: decision.confidenceScore ?? base.confidenceScore
+                }).then(({ error }: { error: any }) => {
+                  if (error) {
+                    console.error(`❌ Failed to track rejected item ${base.itemName}:`, error);
+                  }
+                })
+              );
               return;
             }
 
@@ -433,11 +425,19 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
                 );
               }
 
-              filteredItems.push({
-                itemId: base.itemId,
-                itemName: base.itemName,
-                reason: `Server gate: upside ${reversionPotential.toFixed(1)}%, conf ${base.confidenceScore}, liq ${base.liquidityScore}, dump ${base.botDumpScore}`,
-              });
+              trackingPromises.push(
+                supabase.rpc('update_item_performance', {
+                  p_item_id: base.itemId,
+                  p_item_name: base.itemName,
+                  p_approved: false,
+                  p_roi_potential: reversionPotential,
+                  p_confidence: base.confidenceScore
+                }).then(({ error }: { error: any }) => {
+                  if (error) {
+                    console.error(`❌ Failed to track gate rejected item ${base.itemName}:`, error);
+                  }
+                })
+              );
               return;
             }
 
@@ -445,17 +445,19 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
             aiApprovedCount += 1;
 
             // Track item performance: AI approved this item
-            supabase.rpc('update_item_performance', {
-              p_item_id: base.itemId,
-              p_item_name: base.itemName,
-              p_approved: true,
-              p_roi_potential: reversionPotential,
-              p_confidence: decision.confidenceScore ?? base.confidenceScore
-            }).then(({ error }: { error: any }) => {
-              if (error) {
-                console.error(`❌ Failed to track approved item ${base.itemName}:`, error);
-              }
-            });
+            trackingPromises.push(
+              supabase.rpc('update_item_performance', {
+                p_item_id: base.itemId,
+                p_item_name: base.itemName,
+                p_approved: true,
+                p_roi_potential: reversionPotential,
+                p_confidence: decision.confidenceScore ?? base.confidenceScore
+              }).then(({ error }: { error: any }) => {
+                if (error) {
+                  console.error(`❌ Failed to track approved item ${base.itemName}:`, error);
+                }
+              })
+            );
 
             const merged: MeanReversionSignal = {
 
@@ -499,6 +501,19 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
               );
             }
             missingInBatch.forEach((item) => {
+              trackingPromises.push(
+                supabase.rpc('update_item_performance', {
+                  p_item_id: item.itemId,
+                  p_item_name: item.itemName,
+                  p_approved: false,
+                  p_roi_potential: 0,
+                  p_confidence: item.confidenceScore || 0
+                }).then(({ error }: { error: any }) => {
+                  if (error) {
+                    console.error(`❌ Failed to track omitted item ${item.itemName}:`, error);
+                  }
+                })
+              );
 
               filteredItems.push({
                 itemId: item.itemId,
@@ -705,6 +720,16 @@ Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
       console.log(`   Total: ${totalTokens.toLocaleString()} tokens = $${totalCostUSD.toFixed(4)}`);
       console.log(`   Model: gpt-4o-mini`);
       console.log(`===========================\n`);
+    }
+
+    // Await all performance tracking updates before returning
+    if (trackingPromises.length > 0) {
+      if (verboseAnalysisLogging) {
+        console.log(`💾 Awaiting ${trackingPromises.length} performance tracking updates...`);
+      }
+      await Promise.all(trackingPromises).catch(err => {
+        console.error('Error awaiting tracking promises:', err);
+      });
     }
 
     return NextResponse.json({
