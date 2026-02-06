@@ -93,11 +93,7 @@ export async function GET(request: Request) {
 
           const result = await analyzeMeanReversionOpportunity(item.id, item.name, priceData);
           if (!result) {
-            const dev = calculateMaxDeviation(priceData);
-            const reason = dev < 1
-              ? `No significant price dip (${dev.toFixed(1)}% vs avg)`
-              : 'Analysis logic failed (complex edge case)';
-            filteredOutItems.push({ itemId: item.id, itemName: item.name, reason });
+            filteredOutItems.push({ itemId: item.id, itemName: item.name, reason: 'Analysis logic failed (unknown error)' });
             return null;
           }
 
