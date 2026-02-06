@@ -6,7 +6,6 @@ import SearchBar from './SearchBar';
 import FlipCard from './FlipCard';
 import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
-import FloatingChat from './FloatingChat';
 import PoolManager from './PoolManager';
 import PoolManagementPanel from './PoolManagementPanel';
 import PerformanceDashboard from './PerformanceDashboard';
@@ -772,9 +771,6 @@ export default function Dashboard() {
         onClose={() => setShowFilteredItems(false)}
         filteredItems={filteredItems}
       />
-
-      {/* Floating AI Chat Widget */}
-      <FloatingChat />
 
       {/* Keyboard Shortcuts Handler */}
       <KeyboardShortcuts />

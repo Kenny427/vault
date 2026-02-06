@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
-import { useChat } from '@/lib/chatContext';
 import SetAlertModal from './SetAlertModal';
 
 interface FlipCardProps {
@@ -14,7 +13,6 @@ interface FlipCardProps {
 
 export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) {
   const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
-  const { openChat } = useChat();
   const isInFavorites = favorites.some(item => item.id === opportunity.itemId);
   
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
@@ -205,16 +203,7 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
 
 
       {/* Quick Actions */}
-      <div className="p-3 border-t border-slate-700 bg-slate-900/30 grid grid-cols-3 gap-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            openChat(`Should I flip ${opportunity.itemName} (ID: ${opportunity.itemId})? Current: ${opportunity.currentPrice}gp, 30d avg: ${opportunity.averagePrice30}gp`);
-          }}
-          className="py-2 px-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded transition-colors"
-        >
-          💬 Ask AI
-        </button>
+      <div className="p-3 border-t border-slate-700 bg-slate-900/30 grid grid-cols-2 gap-2">
         <button
           onClick={(e) => {
             e.stopPropagation();
