@@ -1,4 +1,5 @@
 import { usePendingTransactionsStore } from './pendingTransactionsStore';
+import { supabase } from './supabase';
 
 // Singleton guard to prevent multiple initializations
 let isInitialized = false;
@@ -48,6 +49,18 @@ export function initDinkWebhookListener() {
 
   const pollServer = async () => {
     try {
+      // Get current user's all RSN accounts from Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+
+      const { data: rsnAccounts } = await supabase
+        .from('user_rsn_accounts')
+        .select('rsn')
+        .eq('user_id', session.user.id);
+
+      const userRsns = new Set((rsnAccounts || []).map((item: any) => item.rsn.toLowerCase()));
+      if (userRsns.size === 0) return;
+
       const response = await fetch('/api/webhooks/dink');
       if (!response.ok) return;
       const data = await response.json();
@@ -60,6 +73,8 @@ export function initDinkWebhookListener() {
       const handledIds = new Set(store.handledIds);
 
       parsed.forEach((tx: any) => {
+        // Only add transactions matching user's RSN accounts (case-insensitive)
+        if (!userRsns.has(tx.username?.toLowerCase())) return;
         if (!tx?.id || existingIds.has(tx.id) || handledIds.has(tx.id)) return;
         if (tx.type !== 'BUY' && tx.type !== 'SELL') return;
 

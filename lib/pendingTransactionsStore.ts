@@ -31,7 +31,7 @@ interface PendingTransactionsStore {
 
 export const usePendingTransactionsStore = create<PendingTransactionsStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       transactions: [],
       handledIds: [],
 

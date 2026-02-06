@@ -24,7 +24,7 @@ export async function migrateLocalStorageToSupabase() {
     }
 
     // Create user profile (ignore if already exists)
-    const { error: profileError } = await supabase
+    await supabase
       .from('user_profiles')
       .insert([{ id: userId }])
       .select();

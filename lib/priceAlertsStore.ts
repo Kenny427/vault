@@ -153,10 +153,3 @@ export const usePriceAlertsStore = create<PriceAlertsState>()(
     }
   )
 );
-      },
-    }),
-    {
-      name: 'price-alerts-storage',
-    }
-  )
-);
