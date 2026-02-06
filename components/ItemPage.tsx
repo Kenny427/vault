@@ -155,7 +155,7 @@ export default function ItemPage() {
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => router.push('/')}
+            onClick={() => window.location.href = '/'}
             className="text-sm text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
           >
             ← Back to dashboard
