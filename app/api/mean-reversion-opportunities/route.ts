@@ -438,15 +438,17 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
     }
 
 
-    // Apply minimum thresholds after AI
+        // Apply minimum thresholds after AI
         const beforeThresholdCount = topOpportunities.length;
     topOpportunities = topOpportunities.filter(
       (s) => s.confidenceScore >= minConfidence && s.reversionPotential >= minPotential
     );
+        const afterThresholdCount = topOpportunities.length;
     
     // Include filter stats in response for frontend tracking
 
     const filterStats = filteredItems.map(item => ({
+
       itemId: item.itemId,
       itemName: item.itemName,
       reason: item.reason,
@@ -523,13 +525,16 @@ Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
             totalAnalyzed: priorityItems.length,
       viableOpportunities: topOpportunities.length,
       aiAnalyzedCount,
-      aiApprovedCount,
+            aiApprovedCount,
       aiMissingCount,
       preFilteredCount: completedSignals.length,
+      preThresholdCount: beforeThresholdCount,
+      filteredByThreshold: beforeThresholdCount - afterThresholdCount,
 
       avgConfidence: topOpportunities.length > 0
         ? topOpportunities.reduce((sum, s) => sum + s.confidenceScore, 0) / topOpportunities.length
         : 0,
+
       avgPotential: topOpportunities.length > 0
         ? topOpportunities.reduce((sum, s) => sum + s.reversionPotential, 0) / topOpportunities.length
         : 0,
