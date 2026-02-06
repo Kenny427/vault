@@ -4,19 +4,27 @@ import { isAdmin } from '@/lib/adminAuth';
 
 export async function GET(request: Request) {
     try {
-        const supabase = createServerSupabaseClient(request);
-        const { data: { session } } = await supabase.auth.getSession();
-        const adminStatus = await isAdmin(request);
+        const supabase = createServerSupabaseClient();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const adminStatus = await isAdmin();
+        const cookieHeader = request.headers.get('cookie') || 'No cookies found';
+
+        // Extract cookie names for diagnosis
+        const cookieNames = cookieHeader !== 'No cookies found'
+            ? cookieHeader.split(';').map(c => c.split('=')[0].trim())
+            : [];
 
         return NextResponse.json({
-            isLoggedIn: !!session,
-            userEmail: session?.user?.email || null,
+            isLoggedIn: !!user,
+            userEmail: user?.email || null,
             isAdmin: adminStatus,
             expectedAdminEmail: 'kenstorholt@gmail.com',
+            userError: userError ? userError.message : null,
+            cookieNames,
             message: adminStatus
                 ? '✅ You are an admin!'
-                : session
-                    ? `❌ Not admin. Your email: ${session.user?.email}, Expected: kenstorholt@gmail.com`
+                : user
+                    ? `❌ Not admin. Your email: ${user.email}, Expected: kenstorholt@gmail.com`
                     : '❌ Not logged in'
         });
     } catch (error) {

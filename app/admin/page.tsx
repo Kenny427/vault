@@ -30,8 +30,8 @@ export default function AdminPage() {
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const userEmail = session?.user?.email;
+      const { data: { user } } = await supabase.auth.getUser();
+      const userEmail = user?.email;
 
       const authorized = userEmail?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
       setIsAuthorized(authorized);

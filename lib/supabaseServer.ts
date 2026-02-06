@@ -1,33 +1,12 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 /**
- * Create a Supabase client for API routes (Pages Router)
- * Reads cookies from the request object
+ * Create a Supabase client for Server Components and Route Handlers
+ * Uses next/headers to automatically handle cookies
  */
-export function createServerSupabaseClient(request: Request) {
-    const cookieHeader = request.headers.get('cookie') || ''
-
-    // Parse cookies from header with error handling
-    const parseCookies = (cookieString: string): Record<string, string> => {
-        return cookieString
-            .split(';')
-            .map(c => c.trim())
-            .reduce((acc, cookie) => {
-                const [key, value] = cookie.split('=')
-                if (key && value) {
-                    try {
-                        // Try to decode, but use raw value if it fails
-                        acc[key] = decodeURIComponent(value)
-                    } catch (e) {
-                        // If decoding fails (malformed URI), use the raw value
-                        acc[key] = value
-                    }
-                }
-                return acc
-            }, {} as Record<string, string>)
-    }
-
-    const cookies = parseCookies(cookieHeader)
+export function createServerSupabaseClient() {
+    const cookieStore = cookies()
 
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,13 +14,25 @@ export function createServerSupabaseClient(request: Request) {
         {
             cookies: {
                 get(name: string) {
-                    return cookies[name]
+                    return cookieStore.get(name)?.value
                 },
-                set() {
-                    // Not needed for read-only operations in API routes
+                set(name: string, value: string, options: CookieOptions) {
+                    try {
+                        cookieStore.set({ name, value, ...options })
+                    } catch (error) {
+                        // The `set` method was called from a Server Component.
+                        // This can be ignored if you have middleware refreshing
+                        // user sessions.
+                    }
                 },
-                remove() {
-                    // Not needed for read-only operations in API routes
+                remove(name: string, options: CookieOptions) {
+                    try {
+                        cookieStore.set({ name, value: '', ...options })
+                    } catch (error) {
+                        // The `remove` method was called from a Server Component.
+                        // This can be ignored if you have middleware refreshing
+                        // user sessions.
+                    }
                 },
             },
         }

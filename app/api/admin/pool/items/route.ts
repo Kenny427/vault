@@ -3,9 +3,9 @@ import { isAdmin } from '@/lib/adminAuth';
 import { getCustomPoolItems, addPoolItem, updatePoolItem, deletePoolItem } from '@/lib/poolManagement';
 import { supabase } from '@/lib/supabase';
 
-export async function GET(request: Request) {
+export async function GET() {
     try {
-        const authorized = await isAdmin(request);
+        const authorized = await isAdmin();
         if (!authorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const authorized = await isAdmin(request);
+        const authorized = await isAdmin();
         if (!authorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
     try {
-        const authorized = await isAdmin(request);
+        const authorized = await isAdmin();
         if (!authorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
@@ -91,7 +91,7 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
     try {
-        const authorized = await isAdmin(request);
+        const authorized = await isAdmin();
         if (!authorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }

@@ -5,7 +5,7 @@ import { getAnalyticsOverview } from '@/lib/adminAnalytics';
 export async function GET(request: Request) {
     try {
         // Check if user is admin
-        const authorized = await isAdmin(request);
+        const authorized = await isAdmin();
 
         if (!authorized) {
             return NextResponse.json(

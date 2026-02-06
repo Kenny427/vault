@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/adminAuth';
 import { getDatabaseHealth } from '@/lib/poolManagement';
 
-export async function GET(request: Request) {
+export async function GET() {
     try {
-        const authorized = await isAdmin(request);
+        const authorized = await isAdmin();
         if (!authorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }

@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/adminAuth';
 import { getItemPerformance, getPoolRecommendations } from '@/lib/poolManagement';
 
-export async function GET(req: Request) {
+export async function GET() {
     try {
-        const authorized = await isAdmin(req);
+        const authorized = await isAdmin();
         if (!authorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }

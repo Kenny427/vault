@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { getAllUsers, getAggregatedStats } from '@/lib/supabaseAdminServices';
 import { isAdmin } from '@/lib/adminAuth';
 
-export async function GET(request: Request) {
+export async function GET() {
     try {
         // Check if user is admin
-        const authorized = await isAdmin(request);
+        const authorized = await isAdmin();
 
         if (!authorized) {
             return NextResponse.json(
