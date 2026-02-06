@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/authContext";
 import { ChatProvider } from "@/lib/chatContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { MigrationTrigger } from "@/components/MigrationTrigger";
 
 export const metadata: Metadata = {
   title: "Vault",
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body className="bg-slate-950 text-slate-100">
         <ErrorBoundary>
           <AuthProvider>
+            <MigrationTrigger />
             <ChatProvider>
               {children}
             </ChatProvider>
