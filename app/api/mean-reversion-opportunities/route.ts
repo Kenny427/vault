@@ -414,7 +414,7 @@ REMEMBER: Return ALL ${batch.length} items in your response. Hold time (holdWeek
           if (Array.isArray(parsed.items)) {
             const returnedIds = new Set<number>();
 
-            parsed.items.forEach((decision: AiOpportunityDecision, index: number) => {
+            parsed.items.forEach((decision: AiOpportunityDecision) => {
               if (typeof decision.id !== 'number') return;
               returnedIds.add(decision.id);
 
