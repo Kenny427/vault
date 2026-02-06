@@ -136,6 +136,7 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [scanProgress, setScanProgress] = useState(0);
     const [scanMessage, setScanMessage] = useState('Awaiting command');
+  const [scanTip, setScanTip] = useState('');
   const [analysisStats, setAnalysisStats] = useState<{
     aiAnalyzedCount: number;
     aiApprovedCount: number;
@@ -198,24 +199,77 @@ export default function Dashboard() {
     setScanMessage('Collecting market data (Step 1/3)');
     setScanProgress(8);
 
+    let progressInterval: NodeJS.Timeout | null = null;
+    let parseInterval: NodeJS.Timeout | null = null;
+    let tipInterval: NodeJS.Timeout | null = null;
+
     try {
       // Call mean-reversion opportunities endpoint (analyze all items in pool)
-      setScanMessage('Gathering market data (Step 1/3)');
+      setScanMessage('Fetching market data...');
+      setScanProgress(1);
+      
+      // Rotating tips to keep users engaged
+      const tips = [
+        'Analyzing price volatility patterns...',
+        'Calculating mean reversion signals...',
+        'Evaluating volume trends...',
+        'Checking historical price movements...',
+        'Identifying undervalued opportunities...',
+        'Scanning 110+ popular trading items...',
+        'Measuring market momentum...',
+        'Detecting price anomalies...',
+        'Filtering low-confidence signals...',
+        'Ranking by opportunity score...',
+      ];
+      let tipIndex = 0;
+      setScanTip(tips[0]);
+      
+      // Rotate tips every 5 seconds
+      tipInterval = setInterval(() => {
+        tipIndex = (tipIndex + 1) % tips.length;
+        setScanTip(tips[tipIndex]);
+      }, 5000);
+      
+      // Linear progress: 1% → 100% over 160 seconds (2min 40sec)
+      let progress = 1;
+      progressInterval = setInterval(() => {
+        progress += 100 / 160; // Increment to reach 100% in 160 seconds
+        setScanProgress(Math.min(progress, 99)); // Don't hit 100 until truly done
+      }, 1000);
+      
+      // Update messages on fixed timers
+      const step2Timer = setTimeout(() => {
+        setScanMessage('Processing AI analysis...');
+      }, 60000); // After 1 min
+      
+      const step3Timer = setTimeout(() => {
+        setScanMessage('Finalizing results...');
+      }, 120000); // After 2 min
+      
       const responsePromise = fetch('/api/mean-reversion-opportunities');
-      setScanProgress(20);
-      setScanMessage('Synthesising AI shortlist (Step 2/3)');
       const response = await responsePromise;
-      setScanProgress(60);
       
       if (!response.ok) {
+        if (progressInterval) clearInterval(progressInterval);
+        if (tipInterval) clearInterval(tipInterval);
+        clearTimeout(step2Timer);
+        clearTimeout(step3Timer);
 
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to analyze mean-reversion opportunities');
       }
 
-            const data = await response.json();
+      const data = await response.json();
+      
+      // Clear all timers
+      if (progressInterval) clearInterval(progressInterval);
+      if (tipInterval) clearInterval(tipInterval);
+      clearTimeout(step2Timer);
+      clearTimeout(step3Timer);
+      
+      setScanProgress(95);
       setScanMessage('Finalising alpha feed (Step 3/3)');
-      setScanProgress(80);
+      setScanTip('Sorting by opportunity score...');
       
       if (!data.success || !data.opportunities) {
 
@@ -270,6 +324,10 @@ export default function Dashboard() {
       // Convert MeanReversionSignals to FlipOpportunities for UI
       const opportunities = data.opportunities.map(convertMeanReversionToFlipOpportunity);
       
+      setScanProgress(95);
+      setScanTip('Finalizing results...');
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
       // Sort by opportunity score (confidence)
       const sorted = opportunities.sort(
         (a: FlipOpportunity, b: FlipOpportunity) => b.opportunityScore - a.opportunityScore
@@ -279,6 +337,7 @@ export default function Dashboard() {
       setLastRefresh(new Date());
       setScanProgress(100);
       setScanMessage('Analysis complete');
+      setScanTip('');
       
       console.log(`✅ Found ${sorted.length} mean-reversion opportunities`);
       console.log(`📊 Mean-reversion analysis complete`);
@@ -288,8 +347,14 @@ export default function Dashboard() {
         localStorage.setItem('osrs-cached-opps', JSON.stringify(sorted));
       }
     } catch (err: any) {
+      // Clean up any running intervals and timers
+      if (progressInterval) clearInterval(progressInterval);
+      if (tipInterval) clearInterval(tipInterval);
+      
       setError(err.message || 'Failed to analyze opportunities');
       console.error('Mean-reversion analysis error:', err);
+      setScanProgress(0);
+      setScanTip('');
     } finally {
       setLoading(false);
     }
@@ -566,10 +631,22 @@ export default function Dashboard() {
                 </div>
               )}
               
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-6">
                 <div className="flex-1">
                   <div className="text-sm text-blue-200 mb-2">
-                    {loading && <span>🤖 {scanMessage}</span>}
+                    {loading && (
+                      <div>
+                        <div className="inline-flex items-center gap-2 mb-1">
+                          <span className="inline-block animate-bounce">🤖</span>
+                          <span>{scanMessage}</span>
+                        </div>
+                        {scanTip && (
+                          <div className="text-xs text-blue-300/70 italic ml-7">
+                            {scanTip}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     {!loading && lastRefresh && (
                         <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
                     )}
@@ -583,9 +660,9 @@ export default function Dashboard() {
 
 
                   {loading && (
-                    <div className="w-full bg-blue-900 rounded-full h-2 overflow-hidden">
+                    <div className="w-full bg-blue-900 rounded-full h-2.5 overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-green-400 to-blue-400 h-full transition-all duration-300 ease-out"
+                        className="bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 h-full transition-all duration-300 ease-out animate-pulse"
                         style={{
                           width: `${scanProgress}%`,
                         }}

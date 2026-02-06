@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useQuery } from '@tanstack/react-query';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
+import { getItemDetails, resolveIconUrl } from '@/lib/api/osrs';
 import SetAlertModal from './SetAlertModal';
 import ItemNotesModal from './ItemNotesModal';
 
@@ -18,6 +20,15 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
   
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+
+  // Fetch item details for icon
+  const { data: itemDetails } = useQuery({
+    queryKey: ['item-details', opportunity.itemId],
+    queryFn: () => getItemDetails(opportunity.itemId),
+    staleTime: 60 * 60 * 1000, // 1 hour
+  });
+
+  const iconUrl = resolveIconUrl(itemDetails?.icon);
 
   const formatNumber = (value: number) => {
     const abs = Math.abs(value);
@@ -58,11 +69,21 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
       {/* Header - Item Name & Favorite */}
       <div className="p-4 border-b border-slate-700 bg-slate-900/50">
         <div className="flex justify-between items-start mb-3">
-          <div className="flex-1">
-            <h3 className="font-bold text-slate-100 text-lg line-clamp-2">
-              {opportunity.itemName}
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">ID: {opportunity.itemId}</p>
+          <div className="flex items-center gap-3 flex-1">
+            {/* Item Icon */}
+            <div className="w-10 h-10 bg-slate-800 border border-slate-700 rounded flex items-center justify-center flex-shrink-0">
+              {iconUrl ? (
+                <img src={iconUrl} alt={opportunity.itemName} className="w-8 h-8" />
+              ) : (
+                <span className="text-lg">🪙</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-slate-100 text-lg line-clamp-2">
+                {opportunity.itemName}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">ID: {opportunity.itemId}</p>
+            </div>
           </div>
           <button
             onClick={(e) => {
