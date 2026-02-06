@@ -137,7 +137,13 @@ export default function Dashboard() {
   const [scanProgress, setScanProgress] = useState(0);
     const [scanMessage, setScanMessage] = useState('Awaiting command');
   const [scanTip, setScanTip] = useState('');
-  const [analysisCost, setAnalysisCost] = useState<{ costUSD: number; totalTokens: number } | null>(null);
+  const [analysisCost, setAnalysisCost] = useState<{ 
+    costUSD: number; 
+    totalTokens: number;
+    inputTokens?: number;
+    outputTokens?: number;
+    breakdown?: { inputCostUSD: number; outputCostUSD: number };
+  } | null>(null);
   const [analysisStats, setAnalysisStats] = useState<{
     aiAnalyzedCount: number;
     aiApprovedCount: number;
@@ -290,7 +296,10 @@ export default function Dashboard() {
         if (data.summary.openaiCost) {
           setAnalysisCost({
             costUSD: data.summary.openaiCost.costUSD,
-            totalTokens: data.summary.openaiCost.totalTokens
+            totalTokens: data.summary.openaiCost.totalTokens,
+            inputTokens: data.summary.openaiCost.inputTokens,
+            outputTokens: data.summary.openaiCost.outputTokens,
+            breakdown: data.summary.openaiCost.breakdown
           });
         }
       }
@@ -667,8 +676,12 @@ export default function Dashboard() {
                     )}
                     
                     {!loading && analysisCost && (
-                      <div className="text-xs text-blue-300/80 mt-1">
-                        💰 Cost: ${analysisCost.costUSD.toFixed(4)} ({analysisCost.totalTokens.toLocaleString()} tokens)
+                      <div className="text-xs text-blue-300/80 mt-1 space-y-0.5">
+                        <div>💰 Cost: ${analysisCost.costUSD.toFixed(4)} ({analysisCost.totalTokens.toLocaleString()} tokens)</div>
+                        <div className="text-blue-400/70">
+                          Input: {analysisCost.inputTokens?.toLocaleString()} tokens (${analysisCost.breakdown?.inputCostUSD.toFixed(4)}) | 
+                          Output: {analysisCost.outputTokens?.toLocaleString()} tokens (${analysisCost.breakdown?.outputCostUSD.toFixed(4)})
+                        </div>
                       </div>
                     )}
 

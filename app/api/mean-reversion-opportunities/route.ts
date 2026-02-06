@@ -580,12 +580,25 @@ Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
         inputTokens: totalInputTokens,
         outputTokens: totalOutputTokens,
         totalTokens: totalTokens,
-        costUSD: parseFloat(totalCostUSD.toFixed(4))
+        costUSD: parseFloat(totalCostUSD.toFixed(4)),
+        breakdown: {
+          model: 'gpt-4o-mini ($0.00015/1K input, $0.0006/1K output)',
+          inputCostUSD: parseFloat(((totalInputTokens / 1000) * 0.00015).toFixed(4)),
+          outputCostUSD: parseFloat(((totalOutputTokens / 1000) * 0.0006).toFixed(4)),
+          estimatedTokensPerRefresh: totalTokens
+        }
       }
     };
     
     if (totalCostUSD > 0) {
-      console.log(`💰 Total OpenAI cost for this refresh: $${totalCostUSD.toFixed(4)} (${totalInputTokens} input + ${totalOutputTokens} output tokens)`);
+      const inputCost = (totalInputTokens / 1000) * 0.00015;
+      const outputCost = (totalOutputTokens / 1000) * 0.0006;
+      console.log(`\n💰 === TOTAL COST BREAKDOWN ===`);
+      console.log(`   Input tokens: ${totalInputTokens.toLocaleString()} × $0.00015/1K = $${inputCost.toFixed(4)}`);
+      console.log(`   Output tokens: ${totalOutputTokens.toLocaleString()} × $0.0006/1K = $${outputCost.toFixed(4)}`);
+      console.log(`   Total: ${totalTokens.toLocaleString()} tokens = $${totalCostUSD.toFixed(4)}`);
+      console.log(`   Model: gpt-4o-mini`);
+      console.log(`===========================\n`);
     }
     
     return NextResponse.json({
