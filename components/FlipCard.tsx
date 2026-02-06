@@ -17,7 +17,7 @@ interface FlipCardProps {
 export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) {
   const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
   const isInFavorites = favorites.some(item => item.id === opportunity.itemId);
-  
+
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
 
@@ -54,17 +54,24 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 70) return 'text-green-400 bg-green-900/20 border-green-700';
-    if (score >= 50) return 'text-yellow-400 bg-yellow-900/20 border-yellow-700';
-    if (score >= 30) return 'text-orange-400 bg-orange-900/20 border-orange-700';
-    return 'text-red-400 bg-red-900/20 border-red-700';
+  const getScoreGradient = (score: number) => {
+    if (score >= 70) return 'from-green-400 to-emerald-500';
+    if (score >= 50) return 'from-yellow-400 to-orange-500';
+    if (score >= 30) return 'from-orange-400 to-red-500';
+    return 'from-red-400 to-rose-600';
+  };
+
+  const getScoreBorder = (score: number) => {
+    if (score >= 70) return 'border-green-500/30';
+    if (score >= 50) return 'border-yellow-500/30';
+    if (score >= 30) return 'border-orange-500/30';
+    return 'border-red-500/30';
   };
 
   return (
-    <div 
+    <div
       onClick={onViewDetails}
-      className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-lg overflow-hidden hover:border-osrs-accent transition-all cursor-pointer hover:shadow-lg hover:shadow-osrs-accent/20 hover:-translate-y-1"
+      className={`bg-gradient-to-br from-slate-800 to-slate-900 border ${getScoreBorder(opportunity.opportunityScore)} rounded-lg overflow-hidden hover:border-osrs-accent transition-all cursor-pointer hover:shadow-lg hover:shadow-osrs-accent/20 hover:-translate-y-1`}
     >
       {/* Header - Item Name & Favorite */}
       <div className="p-4 border-b border-slate-700 bg-slate-900/50">
@@ -90,23 +97,28 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
               e.stopPropagation();
               toggleFavorite(e);
             }}
-            className={`ml-2 px-3 py-1 rounded text-sm font-bold transition-all ${
-              isInFavorites
-                ? 'bg-osrs-accent text-slate-900'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-            }`}
+            className={`ml-2 px-3 py-1 rounded text-sm font-bold transition-all ${isInFavorites
+              ? 'bg-osrs-accent text-slate-900'
+              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
           >
             {isInFavorites ? '★' : '☆'}
           </button>
         </div>
 
         {/* Score Badge & Hold Time - Primary Metrics */}
-        <div className="flex gap-3 flex-wrap">
-          <div className={`px-3 py-1 rounded font-bold border ${getScoreColor(opportunity.opportunityScore)}`}>
-            Score: {opportunity.opportunityScore.toFixed(0)}/100
+        <div className="flex items-center gap-4 text-xs font-semibold tracking-wide">
+          <div className="flex items-center gap-1.5 py-1 px-2 rounded-md bg-slate-800/40 border border-slate-700/50 shadow-sm">
+            <span className="text-slate-400">SCORE</span>
+            <span className={`text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r ${getScoreGradient(opportunity.opportunityScore)}`}>
+              {opportunity.opportunityScore.toFixed(0)}
+            </span>
           </div>
-          <div className="px-3 py-1 rounded font-bold border border-blue-700 bg-blue-900/20 text-blue-300">
-            Hold: {opportunity.estimatedHoldTime || '30-60d'}
+          <div className="flex items-center gap-1.5 py-1 px-2 rounded-md bg-slate-800/40 border border-slate-700/50 shadow-sm">
+            <span className="text-slate-400 uppercase">Horizon</span>
+            <span className="text-sm font-bold text-slate-100 italic">
+              {opportunity.estimatedHoldTime || (opportunity.aiHoldWeeks ? `${opportunity.aiHoldWeeks}w` : '7-14d')}
+            </span>
           </div>
         </div>
       </div>
@@ -171,7 +183,7 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
       )}
 
       {/* Price Guidance */}
-            {(opportunity.aiEntryLow || opportunity.aiEntryHigh || opportunity.aiExitBase || opportunity.aiExitStretch || opportunity.aiStopLoss) && (
+      {(opportunity.aiEntryLow || opportunity.aiEntryHigh || opportunity.aiExitBase || opportunity.aiExitStretch || opportunity.aiStopLoss) && (
         <div className="px-4 py-3 bg-slate-900/30 border-t border-slate-700">
           <p className="text-xs font-bold text-slate-400 mb-2">PRICE GUIDANCE</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
@@ -203,8 +215,8 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
             )}
             {opportunity.aiHoldWeeks && (
               <div>
-                <p className="text-slate-500">Planned hold</p>
-                <p className="text-slate-300 font-bold">{opportunity.aiHoldWeeks} weeks</p>
+                <p className="text-slate-500 text-[10px] uppercase tracking-wider">Horizon</p>
+                <p className="text-slate-100 font-bold italic">{opportunity.aiHoldWeeks} weeks</p>
               </div>
             )}
             {opportunity.sellAtMin && !opportunity.aiExitBase && (

@@ -101,14 +101,14 @@ export async function GET(request: Request) {
     }
 
     // Fetch item pool from Supabase database
-    let itemsToAnalyze;
+    let itemsToAnalyze: any[] = [];
     try {
       const dbPool = await getCustomPoolItems();
       if (dbPool && dbPool.length > 0) {
         // Map database pool items to analysis format
         itemsToAnalyze = dbPool
-          .filter(item => item.enabled !== false) // Only include enabled items
-          .map(item => ({
+          .filter((item: any) => item.enabled !== false) // Only include enabled items
+          .map((item: any) => ({
             id: item.item_id,
             name: item.item_name,
             category: (item.category || 'resources') as any,
@@ -136,11 +136,11 @@ export async function GET(request: Request) {
     }
 
     if (categoryFilter) {
-      itemsToAnalyze = itemsToAnalyze.filter(i => i.category === categoryFilter);
+      itemsToAnalyze = itemsToAnalyze.filter((i: any) => i.category === categoryFilter);
     }
 
     if (botFilter) {
-      itemsToAnalyze = itemsToAnalyze.filter(i => i.botLikelihood === botFilter);
+      itemsToAnalyze = itemsToAnalyze.filter((i: any) => i.botLikelihood === botFilter);
     }
 
     // Analyze all items in the pool (including lower-tier items)
@@ -168,7 +168,7 @@ export async function GET(request: Request) {
         console.log(`ðŸ“¦ Processing API batch ${batchIdx + 1}/${itemChunks.length}...`);
       }
 
-      const batchPromises = chunk.map(async (item) => {
+      const batchPromises = chunk.map(async (item: any) => {
         try {
           // Fetch 365 days of price history with volume data
           const priceData = await getItemHistoryWithVolumes(item.id, 365 * 24 * 60 * 60);
@@ -317,15 +317,16 @@ CRITICAL INSTRUCTIONS:
 2. Each item has different supply/demand patterns - your analysis MUST reflect these differences
 3. Avoid generic templates - be specific about THIS item's situation
 4. Account for 2% GE Tax (rounds down to nearest whole GP)
+5. **STRICT HORIZON**: Every opportunity MUST have a \`holdWeeks\` value between 1 and 4. Do NOT suggest any flips requiring more than 4 weeks to play out.
 
 For each item, provide:
 - WHY is this item undervalued RIGHT NOW? (Be specific - mention deviations, bot activity, market events)
 - WHAT makes this item's pattern unique compared to others in the batch?
 - WHAT are the specific risks for THIS item (not generic risks)?
 
-EXAMPLES OF GOOD REASONING:
-✅ "Rune arrows down 46.1% vs blended avg. Recent bot purge created supply shock. Historical pattern shows 2-3 week recovery post-ban. 83.8% upside to 90d avg."
-✅ "Karambwan at 534gp vs 90d avg 980gp (45% discount). ToB/CoX demand stable but bot supply spiked. Support held at 520gp 3x in past 6mo. Low-risk entry."
+EXAMPLES OF GOOD REASONING (SHORT-TERM):
+✅ "Rune arrows down 46.1% vs blended avg. Recent bot purge created supply shock. Historical pattern shows 7-10 day recovery post-ban. 83.8% upside to 90d avg."
+✅ "Karambwan at 534gp vs 90d avg 980gp (45% discount). ToB/CoX demand stable but bot supply spiked. Support held at 520gp. Expecting 2-week mean reversion."
 
 EXAMPLES OF BAD (GENERIC) REASONING:
 ❌ "Trading below average. Capitulation detected. Recovery expected."
@@ -337,7 +338,7 @@ ${marketContext}
 ITEMS TO ANALYZE (${batch.length} total - YOU MUST RETURN ALL ${batch.length}):
 
 ${batch
-            .map((s) => {
+            .map((s: any) => {
               const entryLow = Math.round(s.entryRangeLow ?? s.entryPriceNow ?? s.currentPrice);
               const entryHigh = Math.round(s.entryRangeHigh ?? s.entryPriceNow ?? s.currentPrice);
               const exitBase = Math.round(s.exitPriceBase ?? s.targetSellPrice ?? s.currentPrice);
@@ -347,7 +348,7 @@ ${batch
 Current: ${Math.round(s.currentPrice)}gp | Entry: ${entryLow}-${entryHigh}gp | Exit: ${exitBase}-${exitStretch}gp | Stop: ${stop}gp
 Deviations: 7d=${s.shortTerm.currentDeviation.toFixed(1)}% | 90d=${s.mediumTerm.currentDeviation.toFixed(1)}% | 365d=${s.longTerm.currentDeviation.toFixed(1)}%
 Bot Dump Score: ${s.botDumpScore.toFixed(0)} | Confidence: ${s.confidenceScore} | Liquidity: ${s.liquidityScore} | Supply Stability: ${s.supplyStability}
-Bot Likelihood: ${s.botLikelihood} | Risk: ${s.volatilityRisk} | Potential: ${s.reversionPotential.toFixed(1)}% | Hold: ${s.expectedRecoveryWeeks}wk
+Bot Likelihood: ${s.botLikelihood} | Risk: ${s.volatilityRisk} | Potential: ${s.reversionPotential.toFixed(1)}%
 Capitulation: ${s.capitulationSignal}
 Recovery: ${s.recoverySignal}
 Plan: ${s.holdNarrative}`;
@@ -356,7 +357,7 @@ Plan: ${s.holdNarrative}`;
 
 Return ONLY valid JSON: {"items":[{"id":number,"include":boolean,"confidenceScore":number,"reasoning":"unique 2-3 sentence analysis","entryNow":number,"entryRangeLow":number,"entryRangeHigh":number,"exitBase":number,"exitStretch":number,"stopLoss":number,"holdWeeks":number,"suggestedInvestment":number,"volatilityRisk":"low|medium|high","logic":{"thesis":"why undervalued","vulnerability":"specific risk","trigger":"invalidation price"}}]}
 
-REMEMBER: Return ALL ${batch.length} items in your response.`;
+REMEMBER: Return ALL ${batch.length} items in your response. Hold time (holdWeeks) MUST be 1, 2, 3, or 4.`;
 
 
         const aiResponse = await client.chat.completions.create({

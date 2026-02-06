@@ -1,7 +1,20 @@
 import { supabase } from '@/lib/supabase';
 import { createAdminSupabaseClient } from '@/lib/supabaseAdmin';
 
-const adminSupabase = createAdminSupabaseClient();
+// Lazy-load admin client to avoid module-load crashes
+let adminSupabaseInstance: any = null;
+function getAdminSupabase() {
+    if (!adminSupabaseInstance) {
+        adminSupabaseInstance = createAdminSupabaseClient();
+    }
+    return adminSupabaseInstance;
+}
+
+const adminSupabase = new Proxy({} as any, {
+    get: (_target, prop) => {
+        return getAdminSupabase()[prop];
+    },
+});
 
 // ============================================
 // POOL MANAGEMENT
