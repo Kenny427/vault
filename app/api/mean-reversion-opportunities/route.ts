@@ -49,6 +49,8 @@ type AiOpportunityDecision = {
 
   volatilityRisk: 'low' | 'medium' | 'high';
   reasoning: string;
+  marketAnalysis?: string; // Chain of thought / Behavioral analysis
+  riskFactors?: string[]; // Bear case / Counter-thesis
   buyIfDropsTo?: number;
   sellAtMin?: number;
   sellAtMax?: number;
@@ -236,6 +238,32 @@ export async function GET(request: Request) {
     let totalOutputTokens = 0;
     let totalCostUSD = 0;
 
+    // --- PHASE 1: GLOBAL MARKET CONTEXT ---
+    const globalPanicItems = completedSignals.filter(s => s.reversionPotential > 10).length;
+    const globalPanicIndex = Math.round((globalPanicItems / Math.max(1, completedSignals.length)) * 100);
+    const avgConfidence = completedSignals.length > 0
+      ? completedSignals.reduce((sum, s) => sum + s.confidenceScore, 0) / completedSignals.length
+      : 0;
+
+    // Sector-specific trends
+    const categories = Array.from(new Set(priorityItems.map(i => i.category || 'Uncategorized')));
+    const sectorTrends = categories.map(cat => {
+      const catItems = completedSignals.filter(s => {
+        const pItem = priorityItems.find(pi => pi.id === s.itemId);
+        return (pItem?.category || 'Uncategorized') === cat;
+      });
+      if (catItems.length === 0) return null;
+      const catPanic = catItems.filter(s => s.reversionPotential > 10).length;
+      return `${cat}: ${Math.round((catPanic / catItems.length) * 100)}% dumping`;
+    }).filter(Boolean).join(', ');
+
+    const marketContext = `GLOBAL MARKET HEALTH:
+- Panic Index: ${globalPanicIndex}% (higher means sector-wide crash, lower means isolated dumps)
+- Avg Confidence: ${avgConfidence.toFixed(1)}%
+- Sector Trends: ${sectorTrends}`;
+
+    console.log(`🌍 Market Context Calculated: Panic Index ${globalPanicIndex}%`);
+    // --- END CONTEXT ---
 
     const trackingPromises: Promise<any>[] = [];
 
@@ -265,8 +293,14 @@ Required JSON fields per item:
 - holdWeeks (integer) + estimatedHoldingPeriod (string)
 - suggestedInvestment (gp) sized for personal trading
 - volatilityRisk (low|medium|high)
-- reasoning — 2 tight sentences referencing timeframes, bot-dump, recovery, risks
+- marketAnalysis — 1 sentence on behavior (e.g. "Panic-dump vs support" or "Structural decline")
+- riskFactors — Array of 2 strings listing the primary "Bear Case" or why this trade could fail
+- reasoning — 2 tight sentences referencing timeframes, bot-dump, recovery, and final conviction
 Optional (include when useful): buyIfDropsTo, sellAtMin, sellAtMax, abortIfRisesAbove, notes, holdNarrative.
+
+MARKET CONTEXT:
+${marketContext}
+
 
 DATA (ID|Name|Cur|EntryRange|ExitRange|Stop|Dev7|Dev90|Dev365|BotDump|Conf|Liq|Supply|HoldWk|Bot|Risk|Pot%):
 
@@ -485,6 +519,8 @@ Return ONLY valid JSON in the form {"items":[{...}]} (no markdown, no comments, 
               stopLoss,
               expectedRecoveryWeeks: holdWeeks,
               holdNarrative: decision.holdNarrative ?? base.holdNarrative,
+              marketAnalysis: decision.marketAnalysis ?? base.marketAnalysis,
+              riskFactors: decision.riskFactors ?? base.riskFactors,
             };
 
             topOpportunities.push(merged);
@@ -669,6 +705,64 @@ Return JSON array: [{"itemId":0,"detailedAnalysis":"3-4 sentences"}]`;
       } catch (e) {
         console.error('Failed to parse detailed reasoning:', e);
       }
+
+      // --- PHASE 2: THE CRITIC (AUDITOR PASS) ---
+      // We take the top opportunities (even beyond top 3) and subject them to a final validity check
+      const auditingCandidates = topOpportunities.slice(0, 5);
+      if (verboseAnalysisLogging) {
+        console.log(`🧐 Starting Auditor Pass on top ${auditingCandidates.length} items...`);
+      }
+
+      const auditorPrompt = `You are a SKEPTICAL OSRS market auditor. Your job is to find reasons NOT to take the following trades.
+Analyze these 5 potential opportunities and identify the "hidden traps" (e.g., structural decline, new update/nerf risks, or fake volume).
+
+DATA:
+${auditingCandidates.map(s =>
+        `${s.itemId}|${s.itemName}|Cur:${s.currentPrice}|Dev:${s.shortTerm.currentDeviation.toFixed(1)}/${s.mediumTerm.currentDeviation.toFixed(1)}%|Dump:${s.botDumpScore.toFixed(0)}|Conf:${s.confidenceScore}`
+      ).join('\n')}
+
+Instructions:
+- For each item, provide a "decision" (approve|caution|reject) and a 1-sentence "auditorNote" explaining your skepticism.
+- If you reject an item, give it a 25% confidence penalty.
+- Return ONLY JSON: {"audit":[{"itemId":0,"decision":"approve","auditorNote":"..."}]}`;
+
+      const auditorResponse = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        max_tokens: 500,
+        messages: [{ role: 'user', content: auditorPrompt }],
+        response_format: { type: 'json_object' }
+      });
+
+      const auditorUsage = auditorResponse.usage;
+      if (auditorUsage) {
+        const cost = (auditorUsage.prompt_tokens / 1000) * 0.00015 + (auditorUsage.completion_tokens / 1000) * 0.0006;
+        totalCostUSD += cost;
+        totalTokens += auditorUsage.total_tokens;
+      }
+
+      try {
+        const auditText = auditorResponse.choices[0]?.message.content || '{}';
+        const parsedAudit = JSON.parse(auditText);
+        if (Array.isArray(parsedAudit.audit)) {
+          parsedAudit.audit.forEach((auditItem: any) => {
+            const opp = topOpportunities.find(o => o.itemId === auditItem.itemId);
+            if (opp) {
+              opp.auditorDecision = auditItem.decision;
+              opp.auditorNotes = auditItem.auditorNote;
+
+              if (auditItem.decision === 'reject') {
+                opp.confidenceScore = Math.max(0, opp.confidenceScore - 25);
+                opp.investmentGrade = 'C';
+              } else if (auditItem.decision === 'caution') {
+                opp.confidenceScore = Math.max(0, opp.confidenceScore - 10);
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Failed to parse auditor response:', err);
+      }
+      // --- END PHASE 2 ---
     }
 
     // Calculate summary statistics
