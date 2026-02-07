@@ -49,6 +49,12 @@ interface PortfolioAIReview {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   suggestedAction: string;
   exitPrice?: number;
+  priceGuidance?: {
+    primaryExit: number;
+    stretchTarget: number;
+    stopLoss: number;
+    rationale: string;
+  };
 }
 
 interface PortfolioSummaryAI {

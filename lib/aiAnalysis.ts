@@ -465,6 +465,12 @@ export interface PortfolioAIReview {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   suggestedAction: string;
   exitPrice?: number;
+  priceGuidance?: {
+    primaryExit: number;
+    stretchTarget: number;
+    stopLoss: number;
+    rationale: string;
+  };
 }
 
 export interface PortfolioSummaryAI {
@@ -640,10 +646,13 @@ ${enrichedItems.map((item, i) => {
    
    ═══ SIGNALS & TARGETS ═══
    - Confidence: ${s.confidenceScore}% | Grade: ${s.investmentGrade} | Reversion Potential: ${s.reversionPotential.toFixed(1)}%
-   - Target: ${s.targetSellPrice}gp (+${upsideToTarget}% from current)
-   - Stop-Loss: ${s.stopLoss}gp (-${downToStopLoss}% from current)
    - Bot Activity: ${s.botLikelihood} | Liquidity: ${s.liquidityScore}/100 | Vol Risk: ${s.volatilityRisk}
-   - Strategic View: ${s.strategicNarrative}`.substring(0, 1200);
+   
+   ═══ PRICE TARGETS (from YOUR ${item.buyPrice}gp entry) ═══
+   - Primary Exit: ${s.exitPriceBase || s.targetSellPrice}gp (+${(((s.exitPriceBase || s.targetSellPrice) - item.currentPrice) / item.currentPrice * 100).toFixed(1)}% from current, +${(((s.exitPriceBase || s.targetSellPrice) - item.buyPrice) / item.buyPrice * 100).toFixed(1)}% from entry)
+   - Stretch Target: ${s.exitPriceStretch || Math.round((s.exitPriceBase || s.targetSellPrice) * 1.05)}gp (+${(((s.exitPriceStretch || (s.targetSellPrice * 1.05)) - item.currentPrice) / item.currentPrice * 100).toFixed(1)}% from current)
+   - Stop-Loss (Protective): ${s.stopLoss}gp (-${(((item.currentPrice - s.stopLoss) / item.currentPrice) * 100).toFixed(1)}% from current, THIS IS YOUR ABORT PRICE)
+   - Strategic View: ${s.strategicNarrative}`.substring(0, 1400);
   }
   return `${baseInfo}
    
@@ -663,7 +672,12 @@ For EACH position, provide POSITION-AWARE analysis:
    - Base on THEIR position, not on whether to buy now
    - Consider their profit/loss vs thesis validity
 6. **Risk Level**: LOW | MEDIUM | HIGH | CRITICAL
-7. **Action Plan**: Specific exit price and conditions
+7. **Price Guidance** - Use the SPECIFIC targets provided:
+   - Primary Exit: Conservative target (exitPriceBase) - recommend taking profit here
+   - Stretch Target: Optimistic upside (exitPriceStretch) - if market momentum strong
+   - Stop-Loss: PROTECTIVE exit below entry - if thesis fails, EXIT IMMEDIATELY at this price
+   - CRITICAL: Stop-loss should ALWAYS be BELOW entry price, NOT above target!
+8. **Action Plan**: Specific exit strategy using the price targets above
 
 For items with LIMITED data: Conservative recommendations, acknowledge uncertainty.
 
@@ -695,10 +709,16 @@ Return valid JSON only:
       "currentPrice": ${portfolioItems[0].currentPrice},
       "unrealizedPL": ${enrichedItems[0].unrealizedPL},
       "recommendation": "HOLD|SELL_NOW|SELL_SOON|WATCH_CLOSELY|GOOD_POSITION",
-      "reasoning": "Brief explanation",
+      "reasoning": "Position-aware explanation using entry quality, profit %, and market data",
       "riskLevel": "LOW|MEDIUM|HIGH|CRITICAL",
-      "suggestedAction": "Specific action",
-      "exitPrice": 12345
+      "priceGuidance": {
+        "primaryExit": 1200,
+        "stretchTarget": 1260,
+        "stopLoss": 950,
+        "rationale": "Take profit at primary exit (conservative), stretch if momentum continues, stop-loss protects capital"
+      },
+      "suggestedAction": "Specific action plan with exit strategy",
+      "exitPrice": 1200
     }
   ]
 }`;
