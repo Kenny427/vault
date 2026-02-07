@@ -11,6 +11,7 @@ import PriceAlerts from './PriceAlerts';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
 import FilteredItemsModal from './FilteredItemsModal';
 import SettingsModal from './SettingsModal';
+import AlphaFeedInfoModal from './AlphaFeedInfoModal';
 import KeyboardShortcuts from './KeyboardShortcuts';
 import { FlipOpportunity, FlipType } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
@@ -226,6 +227,7 @@ export default function Dashboard() {
     aiConfidence: number;
   }>>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAlphaFeedInfo, setShowAlphaFeedInfo] = useState(false);
 
   const [lastRefresh, setLastRefresh] = useState<Date | null>(() => {
     if (typeof window !== 'undefined') {
@@ -304,10 +306,27 @@ export default function Dashboard() {
         setScanTip(tips[tipIndex]);
       }, 5000);
 
-      // Linear progress: 1% → 100% over 160 seconds (2min 40sec)
-      let progress = 1;
+      // Smart phase-based progress tracking
+      // Phase 1 (0-20%): Data collection - ~15-20 seconds
+      // Phase 2 (20-90%): AI analysis - ~30-60 seconds (main work)
+      // Phase 3 (90-100%): Finalization - ~5 seconds
+      let elapsedSeconds = 0;
+      
       progressInterval = setInterval(() => {
-        progress += 100 / 160; // Increment to reach 100% in 160 seconds
+        elapsedSeconds++;
+        let progress = 1;
+        
+        if (elapsedSeconds <= 20) {
+          // Phase 1: Fast initial progress (0-20% in 20 seconds)
+          progress = (elapsedSeconds / 20) * 20;
+        } else if (elapsedSeconds <= 45) {
+          // Phase 2: Slower AI analysis (20-90% in 25 seconds)
+          progress = 20 + ((elapsedSeconds - 20) / 25) * 70;
+        } else {
+          // Phase 3: Fast finalization (90-99% in remaining time)
+          progress = 90 + ((elapsedSeconds - 45) / 5) * 9;
+        }
+        
         setScanProgress(Math.min(progress, 99)); // Don't hit 100 until truly done
       }, 1000);
 
@@ -698,7 +717,19 @@ export default function Dashboard() {
                 : 'text-slate-400 hover:text-slate-300'
               }`}
           >
-            ⚡ Alpha Feed
+            <span className="flex items-center gap-2">
+              ⚡ Alpha Feed
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowAlphaFeedInfo(true);
+                }}
+                className="w-5 h-5 rounded-full bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs flex items-center justify-center transition-colors"
+                title="Learn how Alpha Feed analysis works"
+              >
+                ?
+              </button>
+            </span>
           </button>
 
           <button
@@ -965,6 +996,12 @@ export default function Dashboard() {
 
       {/* Settings Modal */}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+
+      {/* Alpha Feed Info Modal */}
+      <AlphaFeedInfoModal
+        isOpen={showAlphaFeedInfo}
+        onClose={() => setShowAlphaFeedInfo(false)}
+      />
 
       {/* Keyboard Shortcuts Handler */}
       <KeyboardShortcuts />
