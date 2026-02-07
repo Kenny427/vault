@@ -566,49 +566,119 @@ export async function analyzePortfolioWithAI(
   const itemsWithData = enrichedItems.filter(item => item.hasData);
   console.log(`✅ Enriched ${itemsWithData.length}/${portfolioItems.length} items with market data`);
 
-  const prompt = `You are an elite OSRS portfolio analyst with access to 365 days of REAL market data, mean-reversion analysis, and advanced trading signals for each holding.
+  // Calculate portfolio-level metrics
+  const totalValue = enrichedItems.reduce((sum, item) => sum + item.currentPrice * item.quantity, 0);
+  const totalCost = enrichedItems.reduce((sum, item) => sum + item.buyPrice * item.quantity, 0);
+  const portfolioPL = ((totalValue - totalCost) / totalCost) * 100;
+  
+  // Calculate concentration risk
+  const largestPosition = Math.max(...enrichedItems.map(item => (item.currentPrice * item.quantity) / totalValue * 100));
+  const concentrationRisk = largestPosition > 40 ? 'HIGH' : largestPosition > 25 ? 'MEDIUM' : 'LOW';
 
-PORTFOLIO (${portfolioItems.length} items):
+  // Assess market phase
+  const avgDeviation = itemsWithData.reduce((sum, item) => 
+    sum + (item.signal?.mediumTerm?.currentDeviation || 0), 0) / Math.max(itemsWithData.length, 1);
+  const marketPhase = avgDeviation < -10 ? 'BEAR (prices below averages)' : 
+                      avgDeviation > 10 ? 'BULL (prices above averages)' : 
+                      'NEUTRAL';
+
+  // Find oldest holding
+  const holdings = enrichedItems.map(item => ({
+    itemName: item.itemName,
+    daysHeld: Math.floor((Date.now() - new Date(item.datePurchased).getTime()) / (1000 * 60 * 60 * 24))
+  }));
+  const oldestHolding = holdings.reduce((max, h) => h.daysHeld > max.daysHeld ? h : max, holdings[0]);
+
+  const prompt = `You are an elite OSRS portfolio analyst with 365 days of REAL market data for each holding.
+
+CRITICAL: These are EXISTING POSITIONS. Analyze based on THEIR entry prices and profit progress, not hypothetical new entries.
+
+PORTFOLIO OVERVIEW:
+- Total Holdings: ${portfolioItems.length} items
+- Total Value: ${Math.round(totalValue).toLocaleString()}gp
+- Total Cost: ${Math.round(totalCost).toLocaleString()}gp  
+- Portfolio P/L: ${portfolioPL >= 0 ? '+' : ''}${portfolioPL.toFixed(1)}%
+- Concentration Risk: ${concentrationRisk} (largest position: ${largestPosition.toFixed(1)}%)
+- Market Phase: ${marketPhase}
+- Oldest Position: ${oldestHolding.itemName} (${oldestHolding.daysHeld} days held)
+
+INDIVIDUAL POSITIONS:
 ${enrichedItems.map((item, i) => {
-  const baseInfo = `${i + 1}. ${item.itemName}
-   - Position: Qty=${item.quantity.toLocaleString()}, Buy=${item.buyPrice.toLocaleString()}gp, Current=${item.currentPrice.toLocaleString()}gp
-   - Unrealized P/L: ${item.unrealizedPL >= 0 ? '+' : ''}${Math.round(item.unrealizedPL).toLocaleString()}gp (${item.percentChange.toFixed(1)}%)
-   - Held Since: ${new Date(item.datePurchased).toLocaleDateString()}`;
+  const daysHeld = Math.floor((Date.now() - new Date(item.datePurchased).getTime()) / (1000 * 60 * 60 * 24));
+  const positionSize = item.currentPrice * item.quantity;
+  const positionPercent = (positionSize / totalValue * 100).toFixed(1);
+  const baseInfo = `${i + 1}. ${item.itemName} [ID:${item.itemId}]
+   ═══ POSITION ═══
+   - Size: ${item.quantity.toLocaleString()} units @ ${item.buyPrice.toLocaleString()}gp = ${Math.round(positionSize).toLocaleString()}gp (${positionPercent}% of portfolio)
+   - Current Price: ${item.currentPrice.toLocaleString()}gp
+   - Unrealized P/L: ${item.unrealizedPL >= 0 ? '+' : ''}${Math.round(item.unrealizedPL).toLocaleString()}gp (${item.percentChange >= 0 ? '+' : ''}${item.percentChange.toFixed(1)}%)
+   - Held: ${daysHeld} days (since ${new Date(item.datePurchased).toLocaleDateString()})`;
   if (item.hasData && item.signal) {
     const s = item.signal;
+    // Calculate position-specific metrics
+    const reversionFromEntry = ((s.targetSellPrice - item.buyPrice) / item.buyPrice * 100).toFixed(1);
+    const reversionProgress = item.buyPrice < s.targetSellPrice ? 
+      ((item.currentPrice - item.buyPrice) / (s.targetSellPrice - item.buyPrice) * 100).toFixed(0) : '100';
+    const entryQuality = item.buyPrice < s.longTerm.avgPrice * 0.90 ? 'EXCELLENT' :
+                         item.buyPrice < s.longTerm.avgPrice * 0.95 ? 'GOOD' :
+                         item.buyPrice < s.longTerm.avgPrice * 1.0 ? 'FAIR' : 'POOR';
+    const upsideToTarget = ((s.targetSellPrice - item.currentPrice) / item.currentPrice * 100).toFixed(1);
+    const downToStopLoss = ((item.currentPrice - s.stopLoss) / item.currentPrice * 100).toFixed(1);
+    
     return `${baseInfo}
-   - Market Data:
-      7d_avg=${Math.round(s.shortTerm.avgPrice)}gp, 30d_avg=${Math.round(s.shortTerm.avgPrice)}gp, 90d_avg=${Math.round(s.mediumTerm.avgPrice)}gp, 180d_avg=?, 365d_avg=${Math.round(s.longTerm.avgPrice)}gp
-      7d_vol=${s.shortTerm.volatility.toFixed(1)}, 30d_vol=?, 90d_vol=${s.mediumTerm.volatility.toFixed(1)}, 365d_vol=${s.longTerm.volatility.toFixed(1)}
-      7d_volAvg=${s.shortTerm.volumeAvg.toFixed(1)}, 90d_volAvg=${s.mediumTerm.volumeAvg.toFixed(1)}, 365d_volAvg=${s.longTerm.volumeAvg.toFixed(1)}
-   - Deviation: 7d=${s.shortTerm.currentDeviation.toFixed(1)}%, 90d=${s.mediumTerm.currentDeviation.toFixed(1)}%, 365d=${s.longTerm.currentDeviation.toFixed(1)}%, max=${s.maxDeviation.toFixed(1)}%
-   - Reversion Potential: ${s.reversionPotential.toFixed(1)}%
-   - Confidence: ${s.confidenceScore}%
-   - Risk: volatility=${s.volatilityRisk}, liquidity=${s.liquidityScore}, bot=${s.botLikelihood}, supplyStability=${s.supplyStability}
-   - Suggested Investment: ${s.suggestedInvestment}gp
-   - Target Sell Price: ${s.targetSellPrice}gp
-   - Stop Loss: ${s.stopLoss}gp
-   - Reasoning: ${s.strategicNarrative}`;
+   
+   ═══ POSITION ANALYSIS ═══
+   - Entry Quality: ${entryQuality} (bought ${item.buyPrice < s.longTerm.avgPrice ? 'BELOW' : 'ABOVE'} 365d avg of ${Math.round(s.longTerm.avgPrice)}gp)
+   - Reversion Progress: ${reversionProgress}% complete (target is ${reversionFromEntry}% gain from entry)
+   - Risk/Reward: ${upsideToTarget}% upside to target vs ${downToStopLoss}% down to stop-loss
+   
+   ═══ MARKET INTELLIGENCE (365 days) ═══
+   - Price Levels: 7d avg=${Math.round(s.shortTerm.avgPrice)}gp | 90d avg=${Math.round(s.mediumTerm.avgPrice)}gp | 365d avg=${Math.round(s.longTerm.avgPrice)}gp
+   - Deviations: 7d=${s.shortTerm.currentDeviation.toFixed(1)}% | 90d=${s.mediumTerm.currentDeviation.toFixed(1)}% | 365d=${s.longTerm.currentDeviation.toFixed(1)}%
+   - Volatility: 7d=${s.shortTerm.volatility.toFixed(0)} | 90d=${s.mediumTerm.volatility.toFixed(0)} | 365d=${s.longTerm.volatility.toFixed(0)}
+   - Volume: 7d=${Math.round(s.shortTerm.volumeAvg)} | 90d=${Math.round(s.mediumTerm.volumeAvg)} | 365d=${Math.round(s.longTerm.volumeAvg)}
+   
+   ═══ SIGNALS & TARGETS ═══
+   - Confidence: ${s.confidenceScore}% | Grade: ${s.investmentGrade} | Reversion Potential: ${s.reversionPotential.toFixed(1)}%
+   - Target: ${s.targetSellPrice}gp (+${upsideToTarget}% from current)
+   - Stop-Loss: ${s.stopLoss}gp (-${downToStopLoss}% from current)
+   - Bot Activity: ${s.botLikelihood} | Liquidity: ${s.liquidityScore}/100 | Vol Risk: ${s.volatilityRisk}
+   - Strategic View: ${s.strategicNarrative}`.substring(0, 1200);
   }
   return `${baseInfo}
-   - Market Data: LIMITED (no historical data available)`;
+   
+   ═══ MARKET DATA ═══
+   - Status: LIMITED (insufficient historical data for analysis)
+   - Recommendation: Use caution, monitor closely`;
 }).join('\n\n')}
 
-Analyze each item using ALL the data above (price/volume/volatility stats, deviations, risk, liquidity, bot, trend signals, historical min/max, recent trend, holding period, realized P/L, etc). Predict future price action and give the most actionable, data-driven advice possible.
+ANALYSIS FRAMEWORK:
 
-For EACH item, provide:
-1. Recommendation: HOLD, SELL_NOW, SELL_SOON, WATCH_CLOSELY, or GOOD_POSITION
-2. Risk Level: LOW, MEDIUM, HIGH, or CRITICAL
-3. Reasoning: Use the market data - current vs averages, deviation signals, confidence, trends, and any other relevant signals
-4. Suggested Action: Exit price based on mean-reversion target or specific conditions
+For EACH position, provide POSITION-AWARE analysis:
+1. **Entry Assessment**: Was their entry price good? (vs historical averages)
+2. **Progress Check**: How much of the expected reversion has occurred? (reversion progress %)
+3. **Risk/Reward**: Remaining upside to target vs downside to stop-loss
+4. **Timing**: How long have they been holding? Impatience risk? Market phase impact?
+5. **Recommendation**: HOLD | SELL_NOW | SELL_SOON | WATCH_CLOSELY | GOOD_POSITION
+   - Base on THEIR position, not on whether to buy now
+   - Consider their profit/loss vs thesis validity
+6. **Risk Level**: LOW | MEDIUM | HIGH | CRITICAL
+7. **Action Plan**: Specific exit price and conditions
 
-For items with LIMITED data, make conservative recommendations.
+For items with LIMITED data: Conservative recommendations, acknowledge uncertainty.
 
-For the overall portfolio:
-- Overall Risk Level (based on aggregate signals)
-- Diversification Score (0-100)
-- Top 3 Recommendations (data-driven)
-- Critical Warnings (based on negative trends, high risk signals)
+PORTFOLIO-LEVEL ANALYSIS:
+1. **Overall Risk**: Aggregate risk across positions (consider concentration, correlation, market phase)
+2. **Diversification Score** (0-100): Consider if items are correlated, concentration in ${concentrationRisk} positions
+3. **Top 3 Actionable Recommendations**: Portfolio-wide advice (rebalance? Take profits? Add positions?)
+4. **Critical Warnings**: Any failing theses, stop-losses near, bad entries, timing issues
+
+CONFIDENCE CALIBRATION:
+- 85-100%: All signals align perfectly, clear data, strong conviction
+- 70-84%: Strong signals with minor concerns
+- 50-69%: Mixed signals, moderate confidence
+- 30-49%: Weak signals, conflicting data, use caution
+- <30%: High uncertainty, insufficient data, very speculative
 
 Return valid JSON only:
 {
@@ -635,13 +705,29 @@ Return valid JSON only:
 
   try {
     const completion = await aiClient.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
+      model: 'gpt-4o',
+      temperature: 0.5,
+      messages: [
+        { 
+          role: 'system', 
+          content: 'You are an expert OSRS portfolio analyst specializing in mean-reversion position management. Analyze EXISTING positions based on entry prices, profit progress, and position-specific risk/reward. Provide actionable, data-driven advice.' 
+        },
+        { role: 'user', content: prompt }
+      ],
       response_format: { type: 'json_object' },
     });
 
     const result = JSON.parse(completion.choices[0].message.content || '{}');
+
+    // Log token usage for cost tracking
+    const usage = completion.usage;
+    if (usage) {
+      const inputCost = (usage.prompt_tokens / 1000) * 0.0025;
+      const outputCost = (usage.completion_tokens / 1000) * 0.01;
+      const totalCost = inputCost + outputCost;
+      console.log(`💰 Portfolio Review: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${usage.total_tokens} tokens | Cost: $${totalCost.toFixed(4)}`);
+    }
+
     return result as PortfolioSummaryAI;
   } catch (error) {
     console.error('Portfolio AI analysis failed:', error);

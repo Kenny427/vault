@@ -131,54 +131,98 @@ export async function POST(req: NextRequest) {
       })
       .join('\n\n');
 
-    const prompt = `You are an elite OSRS portfolio advisor with access to REAL market data and mean-reversion analysis for each holding.
+    // Calculate portfolio-level metrics for context
+    const totalValue = validHoldings.reduce((sum, h: any) => sum + h.currentPrice * h.quantity, 0);
+    const totalCost = validHoldings.reduce((sum, h: any) => sum + h.costBasisPerUnit * h.quantity, 0);
+    const portfolioPL = ((totalValue - totalCost) / totalCost) * 100;
 
-HOLDINGS WITH MARKET DATA:
+    // Assess market phase based on average deviations
+    const avgDeviation90d = validHoldings.reduce((sum, h: any) => sum + h.signal.mediumTerm.currentDeviation, 0) / validHoldings.length;
+    const marketPhase = avgDeviation90d < -10 ? 'bear' : avgDeviation90d > 10 ? 'bull' : 'neutral';
+
+    const prompt = `You are an elite OSRS portfolio advisor analyzing EXISTING POSITIONS with 365 days of REAL market data.
+
+IMPORTANT: These are items the user ALREADY OWNS. Use POSITION-AWARE ANALYSIS:
+- Consider their entry price (costBasisPerUnit) vs current price
+- Assess reversion progress FOR THEIR POSITION (not hypothetical new entry)
+- Calculate profit/risk from THEIR cost basis
+- Provide position management advice (take profit, hold for target, cut loss)
+
+PORTFOLIO CONTEXT:
+- Total Value: ${Math.round(totalValue).toLocaleString()}gp
+- Total Cost: ${Math.round(totalCost).toLocaleString()}gp
+- Portfolio P/L: ${portfolioPL.toFixed(1)}%
+- Market Phase: ${marketPhase.toUpperCase()}
+- Holdings Analyzed: ${validHoldings.length}
+
+POSITIONS WITH MARKET DATA:
 ${holdingsSummary}
 
-For each item, determine the BEST action based on:
+DECISION FRAMEWORK (Position Management):
 
 1. **SELL_ASAP** if:
-   - Strong downtrend detected (negative deviation across timeframes)
-   - Low confidence score (<40%) or declining signals
-   - Already profitable and showing reversal signs
-   - Cut losses if underwater with weak recovery signals
+   - Original thesis has failed (price declining vs their entry, negative deviation worsening)
+   - Stop-loss triggered or near stop-loss levels
+   - Strong downtrend detected (negative deviation across ALL timeframes)
+   - Take profit now if 20%+ gain and showing reversal/resistance
 
 2. **SELL_SOON** if:
-   - Near target price or showing resistance
-   - Good profit secured (>15% from cost)
-   - Moderate confidence but approaching peak
+   - Position is profitable (>10% from their cost) AND near mean-reversion target
+   - Reversion 80%+ complete for their position
+   - Good profit secured and momentum slowing
+   - Risk/reward unfavorable (small upside vs downside risk)
 
 3. **HOLD** if:
-   - Strong mean-reversion signal (high confidence, good potential)
-   - Currently undervalued vs historical averages
-   - High investment grade (A/A+/B+)
-   - Target price not yet reached
+   - Position profitable but target not yet reached (reversion <80% complete)
+   - Strong mean-reversion signal still active (high confidence >60%)
+   - Currently undervalued vs historical averages with room to run
+   - Good investment grade (A/A+/B+) and patience warranted
 
 4. **HOLD_FOR_REBOUND** if:
-   - Currently underwater but strong recovery potential
-   - High confidence score (>60%) despite being below cost
-   - Mean-reversion signals indicate bounce coming
+   - Position underwater BUT thesis still valid (high confidence >60%)
+   - Mean-reversion signals show strong recovery potential
+   - Recent downmove is temporary dip in overall uptrend
+   - Stop-loss NOT triggered, acceptable risk/reward
 
-CRITICAL: Use the mean-reversion target prices as your basis. These are calculated from 365 days of real price history.
+CRITICAL ANALYSIS REQUIREMENTS:
+1. Calculate reversion completion % for THEIR position: (currentPrice - costBasis) / (targetSellPrice - costBasis) * 100
+2. Assess if their entry was good (did they buy below average?)
+3. Consider holding period (longer hold = more impatience risk)
+4. Use targetSellPrice as baseline, but adjust for THEIR specific entry
+5. Factor in market phase (${marketPhase} market affects timing)
+
+CONFIDENCE CALIBRATION:
+- 85-100%: All signals align, clear action, strong data
+- 70-84%: Strong signals with minor concerns
+- 50-69%: Mixed signals, moderate confidence  
+- 30-49%: Weak signals or conflicting data
+- Below 30%: High uncertainty, insufficient data
 
 For each holding return JSON:
 {
   "itemId": 123,
   "itemName": "Item Name",
   "action": "sell_asap|sell_soon|hold|hold_for_rebound",
-  "confidence": 85,
-  "expectedPrice": <use the targetSellPrice from signals, adjust only if you have strong reason>,
+  "confidence": 75,
+  "expectedPrice": <targetSellPrice from signals, adjusted for position context>,
   "timeframe": "3-7 days|1-2 weeks|2-4 weeks|1-3 months",
-  "reasoning": "Detailed explanation using the market data: current position vs averages, deviation signals, why this action, expected outcome"
+  "reasoning": "Position-aware analysis: Entry quality, profit so far, reversion progress %, remaining upside vs risk, why this action now, market phase context",
+  "reversionProgress": 65,
+  "entryQuality": "excellent|good|fair|poor",
+  "riskReward": "favorable|neutral|unfavorable"
 }
 
-Return JSON array. Base decisions on REAL DATA provided, not assumptions.`;
+Return JSON array. Base ALL decisions on THEIR specific position + REAL market data.`;
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      max_tokens: 2000,
+      model: 'gpt-4o',
+      temperature: 0.4,
+      max_tokens: 2500,
       messages: [
+        {
+          role: 'system',
+          content: 'You are an expert OSRS trading analyst specializing in mean-reversion position management. Provide data-driven, actionable advice for existing portfolio holdings. Focus on position-specific profit/loss analysis relative to entry prices.'
+        },
         {
           role: 'user',
           content: prompt,
@@ -226,9 +270,7 @@ Return JSON array. Base decisions on REAL DATA provided, not assumptions.`;
       };
     });
 
-    // Calculate summary stats
-    const totalValue = data.holdings.reduce((sum, h) => sum + h.currentPrice * h.quantity, 0);
-    const totalCost = data.holdings.reduce((sum, h) => sum + h.costBasisPerUnit * h.quantity, 0);
+    // Calculate summary stats (reuse totalValue and totalCost from above)
     const totalProfit = totalValue - totalCost;
     const profitPercent = ((totalProfit / totalCost) * 100).toFixed(1);
 
