@@ -81,8 +81,9 @@ export default function Portfolio() {
         try {
           const { data, timestamp } = JSON.parse(cached);
           const now = Date.now();
-          const thirtyMinutes = 30 * 60 * 1000;
-          if (now - timestamp < thirtyMinutes) {
+          const twentyFourHours = 24 * 60 * 60 * 1000;
+          // Keep cached data for 24 hours (same as rate limit)
+          if (now - timestamp < twentyFourHours) {
             return data;
           }
         } catch (e) {
@@ -98,15 +99,18 @@ export default function Portfolio() {
       if (cached) {
         try {
           const { timestamp } = JSON.parse(cached);
-          const now = Date.now();
-          const thirtyMinutes = 30 * 60 * 1000;
-          if (now - timestamp < thirtyMinutes) {
-            return timestamp;
-          }
+          return timestamp;
         } catch (e) {
           // Invalid cache, ignore
         }
       }
+    }
+    return null;
+  });
+  const [lastTargetCalcTimestamp, setLastTargetCalcTimestamp] = useState<number | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('portfolioTargetPricesTimestamp');
+      return saved ? parseInt(saved, 10) : null;
     }
     return null;
   });
@@ -127,6 +131,12 @@ export default function Portfolio() {
       localStorage.setItem('portfolioTargetPrices', JSON.stringify(targetPrices));
     }
   }, [targetPrices]);
+
+  useEffect(() => {
+    if (lastTargetCalcTimestamp && typeof window !== 'undefined') {
+      localStorage.setItem('portfolioTargetPricesTimestamp', lastTargetCalcTimestamp.toString());
+    }
+  }, [lastTargetCalcTimestamp]);
 
   useEffect(() => {
     if (aiReview && lastAnalysisTimestamp && typeof window !== 'undefined') {
@@ -182,6 +192,16 @@ export default function Portfolio() {
   const handleAIReview = async () => {
     if (items.length === 0) return;
     
+    // Check 24-hour rate limit
+    if (lastAnalysisTimestamp) {
+      const hoursSinceLastRun = (Date.now() - lastAnalysisTimestamp) / (1000 * 60 * 60);
+      if (hoursSinceLastRun < 24) {
+        const hoursRemaining = Math.ceil(24 - hoursSinceLastRun);
+        alert(`⏰ Portfolio analysis can only be run once per 24 hours. Please wait ${hoursRemaining} more hour(s).`);
+        return;
+      }
+    }
+    
     setIsAnalyzing(true);
     setLoadingMessage('Analyzing your portfolio...');
     try {
@@ -229,6 +249,16 @@ export default function Portfolio() {
   const handleCalculateTargets = async () => {
     if (items.length === 0) return;
     
+    // Check 24-hour rate limit
+    if (lastTargetCalcTimestamp) {
+      const hoursSinceLastRun = (Date.now() - lastTargetCalcTimestamp) / (1000 * 60 * 60);
+      if (hoursSinceLastRun < 24) {
+        const hoursRemaining = Math.ceil(24 - hoursSinceLastRun);
+        alert(`⏰ Target price calculation can only be run once per 24 hours. Please wait ${hoursRemaining} more hour(s).`);
+        return;
+      }
+    }
+    
     setIsCalculatingTargets(true);
     setLoadingMessage('Calculating smart target prices...');
     try {
@@ -273,6 +303,7 @@ export default function Portfolio() {
       });
       
       setTargetPrices(targets);
+      setLastTargetCalcTimestamp(Date.now());
       setLoadingMessage('');
       console.log(`✅ Set target prices for ${Object.keys(targets).length} items`);
       alert(`✅ AI calculated smart target prices for ${Object.keys(targets).length} items! These will persist across refreshes.`);
@@ -551,11 +582,18 @@ export default function Portfolio() {
                     <p className="text-sm text-slate-400">
                       AI analyzes all holdings to assess risk, diversification, and provides recommendations
                     </p>
-                    {lastAnalysisTimestamp && (
-                      <p className="text-xs text-green-400 mt-2">
-                        ✓ Last analyzed {new Date(lastAnalysisTimestamp).toLocaleString()} ({Math.floor((Date.now() - lastAnalysisTimestamp) / 60000)} min ago)
-                      </p>
-                    )}
+                    {lastAnalysisTimestamp && (() => {
+                      const hoursSince = (Date.now() - lastAnalysisTimestamp) / (1000 * 60 * 60);
+                      const canRunAgain = hoursSince >= 24;
+                      return (
+                        <p className={`text-xs mt-2 ${canRunAgain ? 'text-green-400' : 'text-yellow-400'}`}>
+                          ✓ Last analyzed {new Date(lastAnalysisTimestamp).toLocaleString()}
+                          {!canRunAgain && (
+                            <> • Next available in {Math.ceil(24 - hoursSince)} hour(s)</>
+                          )}
+                        </p>
+                      );
+                    })()}
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -575,7 +613,7 @@ export default function Portfolio() {
                       setShowAIMenu(false);
                       handleAIReview();
                     }}
-                    disabled={isAnalyzing}
+                    disabled={isAnalyzing || (!!lastAnalysisTimestamp && (Date.now() - lastAnalysisTimestamp) / (1000 * 60 * 60) < 24)}
                     className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
                   >
                     {isAnalyzing ? '⏳ Analyzing...' : '🚀 Run New Analysis'}
@@ -596,11 +634,19 @@ export default function Portfolio() {
                     <p className="text-sm text-slate-400">
                       AI determines optimal exit prices for each holding based on market conditions, trends, and mean-reversion signals
                     </p>
-                    {Object.keys(targetPrices).length > 0 && (
-                      <p className="text-xs text-green-400 mt-2">
-                        ✓ Calculated targets for {Object.keys(targetPrices).length} items
-                      </p>
-                    )}
+                    {lastTargetCalcTimestamp && (() => {
+                      const hoursSince = (Date.now() - lastTargetCalcTimestamp) / (1000 * 60 * 60);
+                      const canRunAgain = hoursSince >= 24;
+                      const targetCount = Object.keys(targetPrices).length;
+                      return (
+                        <p className={`text-xs mt-2 ${canRunAgain ? 'text-green-400' : 'text-yellow-400'}`}>
+                          ✓ Last calculated {new Date(lastTargetCalcTimestamp).toLocaleString()}{targetCount > 0 && ` (${targetCount} items)`}
+                          {!canRunAgain && (
+                            <> • Next available in {Math.ceil(24 - hoursSince)} hour(s)</>
+                          )}
+                        </p>
+                      );
+                    })()}
                   </div>
                 </div>
                 <button
@@ -608,7 +654,7 @@ export default function Portfolio() {
                     setShowAIMenu(false);
                     handleCalculateTargets();
                   }}
-                  disabled={isCalculatingTargets}
+                  disabled={isCalculatingTargets || (!!lastTargetCalcTimestamp && (Date.now() - lastTargetCalcTimestamp) / (1000 * 60 * 60) < 24)}
                   className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
                 >
                   {isCalculatingTargets ? '⏳ Calculating Targets...' : '🎯 Calculate Smart Targets'}
