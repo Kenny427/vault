@@ -1,7 +1,20 @@
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { createAdminSupabaseClient } from '@/lib/supabaseAdmin';
 
-const adminSupabase = createAdminSupabaseClient();
+// Lazy initialization - don't create client until first use
+let _adminSupabase: ReturnType<typeof createAdminSupabaseClient> | null = null;
+
+function getAdminSupabase() {
+    if (!_adminSupabase) {
+        _adminSupabase = createAdminSupabaseClient();
+        
+        // Log initialization in development/production for debugging
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔧 Admin Supabase client initialized for analytics');
+        }
+    }
+    return _adminSupabase;
+}
 
 /**
  * AI Model Costs (per 1k tokens)
@@ -50,6 +63,14 @@ export interface AnalyticsEvent {
  */
 export async function trackEvent(event: AnalyticsEvent) {
     try {
+        const adminSupabase = getAdminSupabase();
+        
+        // Verify we have the service role key
+        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY not set - analytics will fail due to RLS');
+            return; // Exit early if no service role key
+        }
+        
         // Use admin client to bypass RLS - analytics are system writes, not user writes
         const { error } = await adminSupabase
             .from('system_analytics')
@@ -62,8 +83,21 @@ export async function trackEvent(event: AnalyticsEvent) {
             });
 
         if (error) {
-            console.error('⚠️ Analytics tracking failed:', error.message);
+            console.error('⚠️ Analytics tracking failed:', {
+                code: error.code,
+                message: error.message,
+                hint: error.hint,
+                details: error.details
+            });
             // Don't throw - analytics are non-critical
+        } else {
+            // Success logging in development only
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ Analytics tracked:', event.eventType, {
+                    cost: event.costUsd,
+                    tokens: event.tokensUsed
+                });
+            }
         }
     } catch (error) {
         // Silently log but don't break the main flow
@@ -76,6 +110,7 @@ export async function trackEvent(event: AnalyticsEvent) {
  */
 export async function getAnalyticsOverview(days: number = 30) {
     try {
+        const adminSupabase = getAdminSupabase();
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
 
@@ -151,6 +186,7 @@ export async function getAnalyticsOverview(days: number = 30) {
  */
 export async function getPopularItems() {
     try {
+        const adminSupabase = getAdminSupabase();
         // Most favorited items
         const { data: favorites } = await adminSupabase
             .from('favorites')
@@ -344,6 +380,7 @@ export async function logError(error: ErrorLog) {
  */
 export async function getRecentErrors(limit: number = 50) {
     try {
+        const adminSupabase = getAdminSupabase();
         const { data, error } = await adminSupabase
             .from('error_logs')
             .select('*')
