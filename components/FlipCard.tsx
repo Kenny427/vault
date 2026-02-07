@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FlipOpportunity } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
-import { getItemDetails, resolveIconUrl } from '@/lib/api/osrs';
+import { getItemDetails, resolveIconUrl, fetchItemMapping } from '@/lib/api/osrs';
 import SetAlertModal from './SetAlertModal';
 import ItemNotesModal from './ItemNotesModal';
 
@@ -26,6 +26,16 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
     queryKey: ['item-details', opportunity.itemId],
     queryFn: () => getItemDetails(opportunity.itemId),
     staleTime: 60 * 60 * 1000, // 1 hour
+  });
+
+  // Fetch buy limit from mapping API
+  const { data: buyLimitData } = useQuery({
+    queryKey: ['buy-limit', opportunity.itemId],
+    queryFn: async () => {
+      const mapping = await fetchItemMapping();
+      return mapping.find(item => item.id === opportunity.itemId)?.limit || null;
+    },
+    staleTime: 24 * 60 * 60 * 1000, // 24 hours (buy limits don't change often)
   });
 
   const iconUrl = resolveIconUrl(itemDetails?.icon);
@@ -106,8 +116,8 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
           </button>
         </div>
 
-        {/* Score Badge & Hold Time - Primary Metrics */}
-        <div className="flex items-center gap-4 text-xs font-semibold tracking-wide">
+        {/* Score Badge, Hold Time & Buy Limit - Primary Metrics */}
+        <div className="flex items-center gap-3 text-xs font-semibold tracking-wide flex-wrap">
           <div className="flex items-center gap-1.5 py-1 px-2 rounded-md bg-slate-800/40 border border-slate-700/50 shadow-sm">
             <span className="text-slate-400">SCORE</span>
             <span className={`text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r ${getScoreGradient(opportunity.opportunityScore)}`}>
@@ -120,6 +130,14 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
               {opportunity.estimatedHoldTime || (opportunity.aiHoldWeeks ? `${opportunity.aiHoldWeeks}w` : '7-14d')}
             </span>
           </div>
+          {buyLimitData && (
+            <div className="flex items-center gap-1.5 py-1 px-2 rounded-md bg-emerald-900/30 border border-emerald-700/50 shadow-sm">
+              <span className="text-emerald-400">📦 BUY LIMIT</span>
+              <span className="text-sm font-bold text-emerald-300">
+                {buyLimitData.toLocaleString()}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

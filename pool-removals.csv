@@ -1,0 +1,361 @@
+ID,Name,Price,Tier,Action
+4695,"Mist rune",99,trash,REMOVE
+6024,"Willow leaves",99,trash,REMOVE
+9338,"Emerald bolts",99,trash,REMOVE
+434,"Clay",98,trash,REMOVE
+4697,"Smoke rune",98,trash,REMOVE
+564,"Cosmic rune",97,trash,REMOVE
+64,"Maple shortbow (u)",96,trash,REMOVE
+1716,"Unblessed symbol",96,trash,REMOVE
+1951,"Redberries",96,trash,REMOVE
+5525,"Tiara",96,trash,REMOVE
+561,"Nature rune",95,trash,REMOVE
+1627,"Uncut jade",95,trash,REMOVE
+1775,"Molten glass",95,trash,REMOVE
+4823,"Adamantite nails",95,trash,REMOVE
+361,"Tuna",94,trash,REMOVE
+892,"Rune arrow",93,trash,KEPT
+2430,"Restore potion(4)",91,trash,REMOVE
+1625,"Uncut opal",90,trash,REMOVE
+3010,"Energy potion(3)",90,trash,REMOVE
+31010,"Headless atlatl dart",90,trash,REMOVE
+4698,"Mud rune",89,trash,REMOVE
+2309,"Bread",87,trash,REMOVE
+1987,"Grapes",86,trash,KEPT
+1777,"Bow string",85,trash,KEPT
+2116,"Pineapple chunks",85,trash,REMOVE
+2142,"Cooked meat",85,trash,REMOVE
+5986,"Sweetcorn",85,trash,REMOVE
+6034,"Supercompost",85,trash,REMOVE
+359,"Raw tuna",83,trash,REMOVE
+5312,"Acorn",83,trash,REMOVE
+5980,"Calquat fruit",82,trash,REMOVE
+24595,"Blighted karambwan",81,trash,REMOVE
+4822,"Mithril nails",80,trash,REMOVE
+21622,"Volcanic ash",80,trash,REMOVE
+113,"Strength potion(4)",79,trash,REMOVE
+345,"Raw herring",79,trash,REMOVE
+440,"Iron ore",79,trash,REMOVE
+821,"Steel dart tip",79,trash,REMOVE
+1917,"Beer",79,trash,REMOVE
+2864,"Ogre arrow shaft",79,trash,REMOVE
+3422,"Olive oil(4)",78,trash,REMOVE
+890,"Adamant arrow",76,trash,REMOVE
+9736,"Goat horn dust",76,trash,REMOVE
+241,"Dragon scale dust",75,trash,REMOVE
+562,"Chaos rune",75,trash,REMOVE
+869,"Black knife",75,trash,REMOVE
+58,"Willow longbow (u)",72,trash,REMOVE
+335,"Raw trout",72,trash,REMOVE
+47,"Barb bolttips",70,trash,REMOVE
+2349,"Bronze bar",70,trash,REMOVE
+9075,"Astral rune",70,trash,REMOVE
+24615,"Blighted teleport spell sack",70,trash,REMOVE
+31004,"Atlatl dart shaft",70,trash,REMOVE
+5626,"Adamant arrow(p++)",69,trash,REMOVE
+9378,"Steel bolts (unf)",69,trash,REMOVE
+7329,"Red firelighter",68,trash,REMOVE
+24613,"Blighted entangle sack",68,trash,REMOVE
+2003,"Stew",65,trash,REMOVE
+816,"Adamant dart(p)",64,trash,REMOVE
+5003,"Cave eel",64,trash,REMOVE
+1955,"Cooking apple",63,trash,REMOVE
+31045,"Bale of flax",63,trash,REMOVE
+11875,"Broad bolts",61,trash,REMOVE
+331,"Raw salmon",60,trash,REMOVE
+1759,"Ball of wool",60,trash,REMOVE
+11876,"Unfinished broad bolts",60,trash,REMOVE
+329,"Salmon",59,trash,REMOVE
+1975,"Chocolate dust",59,trash,REMOVE
+319,"Anchovies",58,trash,REMOVE
+2118,"Pineapple ring",58,trash,REMOVE
+11326,"Caviar",58,trash,REMOVE
+127,"Restore potion(3)",57,trash,REMOVE
+5297,"Irit seed",57,trash,REMOVE
+5970,"Curry leaf",57,trash,REMOVE
+7331,"Blue firelighter",57,trash,REMOVE
+9188,"Topaz bolt tips",57,trash,REMOVE
+10327,"White firelighter",57,trash,REMOVE
+1985,"Cheese",55,trash,REMOVE
+3138,"Potato cactus",55,trash,REMOVE
+592,"Ashes",54,trash,REMOVE
+845,"Oak longbow",52,trash,REMOVE
+1927,"Bucket of milk",52,trash,REMOVE
+115,"Strength potion(3)",51,trash,REMOVE
+5311,"Wildblood seed",50,trash,REMOVE
+7076,"Uncooked egg",50,trash,REMOVE
+9190,"Emerald bolt tips",50,trash,REMOVE
+9337,"Sapphire bolts",50,trash,REMOVE
+22818,"Fish chunks",50,trash,REMOVE
+567,"Unpowered orb",49,trash,REMOVE
+5321,"Watermelon seed",34,trash,REMOVE
+22795,"Dragonfruit pie",490,low,REMOVE
+31912,"Adamant cannonball",488,low,REMOVE
+1656,"Sapphire necklace",487,low,REMOVE
+8008,"Lumbridge teleport (tablet)",486,low,REMOVE
+10810,"Arctic pine logs",481,low,REMOVE
+1637,"Sapphire ring",477,low,REMOVE
+29116,"Raw sunlight antelope",477,low,REMOVE
+205,"Grimy harralander",475,low,REMOVE
+855,"Yew longbow",472,low,KEPT
+231,"Snape grass",466,low,REMOVE
+2317,"Uncooked apple pie",465,low,REMOVE
+1675,"Sapphire amulet (u)",453,low,REMOVE
+31970,"Teak repair kit",452,low,REMOVE
+8778,"Oak plank",449,low,REMOVE
+19580,"Rune javelin tips",445,low,REMOVE
+2297,"Anchovy pizza",442,low,REMOVE
+9244,"Dragonstone bolts (e)",440,low,KEPT
+20849,"Dragon thrownaxe",431,low,REMOVE
+25853,"Amethyst dart tip",429,low,KEPT
+29174,"Moonlight antelope fur",423,low,REMOVE
+11072,"Sapphire bracelet",420,low,REMOVE
+31111,"Demon tear",420,low,KEPT
+32312,"Giant krill",420,low,REMOVE
+199,"Grimy guam leaf",417,low,REMOVE
+21483,"Ultracompost",405,low,REMOVE
+1444,"Water talisman",400,low,REMOVE
+91,"Guam potion (unf)",399,low,REMOVE
+247,"Jangerberries",399,low,REMOVE
+6030,"Magic leaves",399,low,REMOVE
+21318,"Amethyst javelin",398,low,REMOVE
+2862,"Achey tree logs",397,low,REMOVE
+857,"Yew shortbow",390,low,REMOVE
+5386,"Apples(5)",390,low,REMOVE
+9340,"Diamond bolts",383,low,REMOVE
+9739,"Combat potion(4)",379,low,REMOVE
+21754,"Rock thrownhammer",375,low,REMOVE
+31716,"Lead ore",375,low,REMOVE
+5416,"Bananas(5)",368,low,REMOVE
+1897,"Chocolate cake",363,low,REMOVE
+3142,"Raw karambwan",363,low,KEPT
+566,"Soul rune",360,low,KEPT
+2011,"Curry",360,low,REMOVE
+30771,"Aether catalyst",355,low,REMOVE
+1523,"Lockpick",350,low,REMOVE
+3801,"Keg of beer",350,low,REMOVE
+5931,"Jute fibre",350,low,REMOVE
+2315,"Pie shell",349,low,REMOVE
+532,"Big bones",341,low,REMOVE
+1623,"Uncut sapphire",338,low,KEPT
+2970,"Mort myre fungus",337,low,KEPT
+4460,"Cup of hot water",328,low,REMOVE
+1607,"Sapphire",325,low,KEPT
+2289,"Plain pizza",320,low,REMOVE
+6018,"Poison ivy berries",320,low,REMOVE
+239,"White berries",318,low,REMOVE
+867,"Adamant knife",317,low,REMOVE
+851,"Maple longbow",312,low,REMOVE
+9339,"Ruby bolts",309,low,REMOVE
+249,"Guam leaf",307,low,REMOVE
+7946,"Monkfish",306,low,REMOVE
+225,"Limpwurt root",305,low,REMOVE
+1339,"Steel warhammer",300,low,REMOVE
+28899,"Wyrmling bones",300,low,REMOVE
+4798,"Adamant brutal",299,low,REMOVE
+21880,"Wrath rune",292,low,KEPT
+1891,"Cake",288,low,REMOVE
+6332,"Mahogany logs",287,low,KEPT
+19578,"Adamant javelin tips",286,low,REMOVE
+1611,"Jade",284,low,REMOVE
+235,"Unicorn horn dust",278,low,REMOVE
+29895,"Frozen tear",277,low,KEPT
+30848,"Crushed infernal shale",275,low,REMOVE
+66,"Yew longbow (u)",273,low,KEPT
+3420,"Limestone brick",270,low,REMOVE
+9741,"Combat potion(3)",265,low,REMOVE
+11957,"Extended antifire(1)",260,low,REMOVE
+24607,"Blighted ancient ice sack",260,low,REMOVE
+44,"Rune arrowtips",259,low,REMOVE
+11069,"Gold bracelet",259,low,REMOVE
+95,"Tarromin potion (unf)",256,low,REMOVE
+2866,"Ogre arrow",256,low,REMOVE
+30800,"Demonic tallow",255,low,REMOVE
+21316,"Amethyst broad bolts",254,low,KEPT
+251,"Marrentill",250,low,REMOVE
+1609,"Opal",250,low,REMOVE
+6028,"Maple leaves",250,low,REMOVE
+13475,"Ensouled giant head",245,low,REMOVE
+1741,"Leather",244,low,REMOVE
+1743,"Hard leather",244,low,REMOVE
+6055,"Weeds",244,low,REMOVE
+7944,"Raw monkfish",241,low,KEPT
+4793,"Mithril brutal",235,low,REMOVE
+237,"Unicorn horn",232,low,REMOVE
+32360,"Yellow fin",232,low,REMOVE
+6705,"Potato with cheese",231,low,REMOVE
+2,"Steel cannonball",230,low,REMOVE
+868,"Rune knife",230,low,REMOVE
+10937,"Nail beast nails",230,low,REMOVE
+31967,"Oak repair kit",230,low,REMOVE
+565,"Blood rune",229,low,KEPT
+5667,"Rune knife(p++)",229,low,REMOVE
+1115,"Iron platebody",225,low,REMOVE
+7188,"Fish pie",225,low,REMOVE
+21350,"Amethyst arrowtips",225,low,KEPT
+25849,"Amethyst dart",223,low,KEPT
+68,"Yew shortbow (u)",222,low,REMOVE
+201,"Grimy marrentill",222,low,REMOVE
+7056,"Egg potato",222,low,REMOVE
+5935,"Coconut milk",220,low,REMOVE
+373,"Swordfish",213,low,REMOVE
+3040,"Magic potion(4)",212,low,REMOVE
+11992,"Lava scale",210,low,REMOVE
+9243,"Diamond bolts (e)",209,low,KEPT
+21488,"Mahogany seed",208,low,REMOVE
+805,"Rune thrownaxe",207,low,REMOVE
+93,"Marrentill potion (unf)",206,low,REMOVE
+28878,"Moonlight antler bolts",204,low,REMOVE
+253,"Tarromin",200,low,REMOVE
+371,"Raw swordfish",200,low,REMOVE
+2108,"Orange",200,low,REMOVE
+21504,"Giant seaweed",200,low,REMOVE
+9143,"Adamant bolts",199,low,KEPT
+9380,"Adamant bolts(unf)",199,low,KEPT
+823,"Adamant dart tip",198,low,REMOVE
+5302,"Lantadyme seed",198,low,REMOVE
+28924,"Sunfire splinters",198,low,REMOVE
+349,"Raw pike",194,low,REMOVE
+2446,"Antipoison(4)",194,low,REMOVE
+9242,"Ruby bolts (e)",194,low,KEPT
+9336,"Topaz bolts",192,low,REMOVE
+811,"Rune dart",191,low,KEPT
+453,"Coal",190,low,KEPT
+351,"Pike",189,low,REMOVE
+847,"Willow longbow",189,low,REMOVE
+223,"Red spiders",187,low,REMOVE
+1739,"Cowhide",185,low,REMOVE
+4740,"Bolt rack",185,low,REMOVE
+10127,"Dashing kebbit fur",185,low,REMOVE
+32317,"Raw haddock",185,low,REMOVE
+3042,"Magic potion(3)",184,low,REMOVE
+12934,"Zulrah",182,low,REMOVE
+853,"Maple shortbow",181,low,REMOVE
+21326,"Amethyst arrow",181,low,KEPT
+9192,"Diamond bolt tips",180,low,KEPT
+29458,"Adamant seeds",180,low,REMOVE
+10158,"Kebbit bolts",179,low,REMOVE
+28991,"Atlatl dart",179,low,REMOVE
+21338,"Amethyst bolt tips",178,low,KEPT
+866,"Mithril knife",177,low,REMOVE
+817,"Rune dart(p)",175,low,REMOVE
+24589,"Blighted manta ray",174,low,REMOVE
+32907,"Ironwood logs",174,low,REMOVE
+2351,"Iron bar",173,low,REMOVE
+21820,"Revenant ether",173,low,REMOVE
+29110,"Raw pyre fox",172,low,REMOVE
+9381,"Runite bolts (unf)",169,low,KEPT
+203,"Grimy tarromin",166,low,REMOVE
+2283,"Pizza base",161,low,REMOVE
+377,"Raw lobster",160,low,REMOVE
+1953,"Pastry dough",159,low,REMOVE
+3008,"Energy potion(4)",159,low,REMOVE
+4012,"Monkey nuts",158,low,REMOVE
+5504,"Strawberry",158,low,REMOVE
+31910,"Mithril cannonball",157,low,REMOVE
+347,"Herring",155,low,REMOVE
+9144,"Runite bolts",155,low,KEPT
+9042,"Stone seal",151,low,REMOVE
+28896,"Rum",151,low,REMOVE
+29125,"Raw kyatt",151,low,REMOVE
+2323,"Apple pie",150,low,REMOVE
+5313,"Willow seed",150,low,REMOVE
+560,"Death rune",149,low,KEPT
+25769,"Vile ashes",148,low,REMOVE
+30900,"Shark lure",146,low,REMOVE
+28872,"Sunlight antler bolts",145,low,REMOVE
+1438,"Air talisman",144,low,REMOVE
+379,"Lobster",143,low,REMOVE
+32309,"Raw giant krill",142,low,REMOVE
+1692,"Gold amulet",139,low,REMOVE
+1933,"Pot of flour",138,low,REMOVE
+830,"Rune javelin",136,low,REMOVE
+2015,"Vodka",135,low,REMOVE
+1673,"Gold amulet (u)",134,low,REMOVE
+2865,"Flighted ogre arrow",134,low,REMOVE
+1515,"Yew logs",133,low,KEPT
+960,"Plank",132,low,REMOVE
+22595,"Efh salt",130,low,REMOVE
+7178,"Garden pie",129,low,REMOVE
+444,"Gold ore",127,low,KEPT
+1654,"Gold necklace",127,low,REMOVE
+1761,"Soft clay",125,low,REMOVE
+6333,"Teak logs",123,low,KEPT
+21490,"Seaweed spore",122,low,REMOVE
+22597,"Urt salt",122,low,REMOVE
+563,"Law rune",119,low,KEPT
+28161,"Secateurs attachment",119,low,REMOVE
+447,"Mithril ore",118,low,REMOVE
+822,"Mithril dart tip",117,low,REMOVE
+4694,"Steam rune",115,low,REMOVE
+24621,"Blighted vengeance sack",115,low,REMOVE
+2355,"Silver bar",114,low,REMOVE
+3239,"Bark",113,low,REMOVE
+365,"Bass",112,low,REMOVE
+24592,"Blighted anglerfish",112,low,REMOVE
+1635,"Gold ring",111,low,REMOVE
+2114,"Pineapple",110,low,REMOVE
+22593,"Te salt",110,low,REMOVE
+31708,"Crab paste",110,low,REMOVE
+62,"Maple longbow (u)",109,low,REMOVE
+1823,"Waterskin(4)",109,low,REMOVE
+30998,"Atlatl dart tips",109,low,REMOVE
+2357,"Gold bar",106,low,REMOVE
+9141,"Steel bolts",106,low,REMOVE
+43,"Adamant arrowtips",105,low,REMOVE
+2007,"Spice",104,low,REMOVE
+13431,"Sandworms",103,low,REMOVE
+22257,"Maple shield",103,low,REMOVE
+28929,"Sunfire rune",103,low,REMOVE
+9379,"Mithril bolts (unf)",102,low,REMOVE
+9191,"Ruby bolt tips",101,low,REMOVE
+849,"Willow shortbow",100,low,REMOVE
+31665,"Pillar potion (unf)",4495,junk,REMOVE
+31668,"Umbral potion (unf)",4388,junk,REMOVE
+111,"Torstol potion (unf)",4200,junk,REMOVE
+11250,"Nature impling jar",3949,junk,REMOVE
+23387,"Watson teleport",3895,junk,REMOVE
+25778,"Infernal ashes",3200,junk,REMOVE
+5301,"Cadantine seed",3173,junk,REMOVE
+12408,"Piscatoris teleport",3019,junk,REMOVE
+19629,"Barrows teleport (tablet)",2995,junk,REMOVE
+19623,"West ardougne teleport (tablet)",2483,junk,REMOVE
+22204,"Redwood bird house",2388,junk,REMOVE
+31545,"Cotton seed",2372,junk,REMOVE
+12405,"Lunar isle teleport",2301,junk,REMOVE
+12409,"Tai bwo wannai teleport",2226,junk,REMOVE
+22201,"Magic bird house",2179,junk,REMOVE
+19619,"Salve graveyard teleport (tablet)",2127,junk,REMOVE
+12775,"Annakarl teleport (tablet)",1988,junk,REMOVE
+12410,"Iorwerth camp teleport",1828,junk,REMOVE
+19617,"Mind altar teleport (tablet)",1805,junk,REMOVE
+24336,"Target teleport",1612,junk,REMOVE
+19615,"Draynor manor teleport (tablet)",1597,junk,REMOVE
+5288,"Papaya tree seed",1503,junk,REMOVE
+5299,"Kwuarm seed",1471,junk,REMOVE
+25775,"Abyssal ashes",1450,junk,REMOVE
+31543,"Hemp seed",1450,junk,REMOVE
+19613,"Arceuus library teleport (tablet)",1380,junk,REMOVE
+22198,"Yew bird house",1253,junk,REMOVE
+24961,"Catherby teleport (tablet)",1196,junk,REMOVE
+11240,"Young impling jar",1182,junk,REMOVE
+299,"Mithril seeds",1158,junk,REMOVE
+5303,"Dwarf weed seed",1050,junk,REMOVE
+25772,"Malicious ashes",986,junk,REMOVE
+12407,"Pest control teleport",932,junk,REMOVE
+8015,"Bones to peaches (tablet)",910,junk,REMOVE
+28790,"Kourend castle teleport (tablet)",910,junk,REMOVE
+24949,"Moonclan teleport (tablet)",842,junk,REMOVE
+24953,"Waterbirth teleport (tablet)",820,junk,REMOVE
+28824,"Civitas illa fortis teleport",819,junk,REMOVE
+31443,"Teleport to boat",813,junk,REMOVE
+8011,"Ardougne teleport (tablet)",793,junk,REMOVE
+8014,"Bones to bananas (tablet)",596,junk,REMOVE
+5298,"Avantoe seed",589,junk,REMOVE
+8007,"Varrock teleport (tablet)",589,junk,REMOVE
+5296,"Toadflax seed",585,junk,REMOVE
+8010,"Camelot teleport (tablet)",584,junk,REMOVE
+8009,"Falador teleport (tablet)",565,junk,REMOVE
+21802,"Revenant cave teleport",559,junk,REMOVE
+8013,"Teleport to house (tablet)",556,junk,REMOVE
+5290,"Calquat tree seed",520,junk,REMOVE

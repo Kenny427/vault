@@ -33,6 +33,8 @@ export default function ManualPoolEditor() {
     const [showAddForm, setShowAddForm] = useState(false);
     const [filter, setFilter] = useState('');
     const [updatingVolumes, setUpdatingVolumes] = useState(false);
+    const [sortBy, setSortBy] = useState<'name' | 'volume' | 'buy_limit' | 'priority'>('name');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     // Form state
     const [itemId, setItemId] = useState('');
@@ -166,10 +168,49 @@ export default function ManualPoolEditor() {
         }
     };
 
+    const handleSort = (field: 'name' | 'volume' | 'buy_limit' | 'priority') => {
+        if (sortBy === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortDirection(field === 'volume' || field === 'buy_limit' ? 'desc' : 'asc');
+        }
+    };
+
     const filteredItems = items.filter(item =>
         item.item_name.toLowerCase().includes(filter.toLowerCase()) ||
         item.category?.toLowerCase().includes(filter.toLowerCase())
     );
+
+    const sortedItems = [...filteredItems].sort((a, b) => {
+        let aVal: any;
+        let bVal: any;
+
+        switch (sortBy) {
+            case 'name':
+                aVal = a.item_name.toLowerCase();
+                bVal = b.item_name.toLowerCase();
+                break;
+            case 'volume':
+                aVal = a.daily_volume ?? -1;
+                bVal = b.daily_volume ?? -1;
+                break;
+            case 'buy_limit':
+                aVal = a.buy_limit ?? -1;
+                bVal = b.buy_limit ?? -1;
+                break;
+            case 'priority':
+                aVal = a.priority;
+                bVal = b.priority;
+                break;
+            default:
+                return 0;
+        }
+
+        if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+    });
 
     const categories = Array.from(new Set(items.map(i => i.category).filter(Boolean)));
 
@@ -340,18 +381,58 @@ export default function ManualPoolEditor() {
                         <table className="w-full">
                             <thead className="bg-slate-900">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Item</th>
+                                    <th 
+                                        className="px-4 py-3 text-left text-xs font-semibold text-slate-400 cursor-pointer hover:text-slate-200 transition-colors"
+                                        onClick={() => handleSort('name')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Item
+                                            {sortBy === 'name' && (
+                                                <span className="text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                            )}
+                                        </div>
+                                    </th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Category</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Priority</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Buy Limit</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Daily Volume</th>
+                                    <th 
+                                        className="px-4 py-3 text-left text-xs font-semibold text-slate-400 cursor-pointer hover:text-slate-200 transition-colors"
+                                        onClick={() => handleSort('priority')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Priority
+                                            {sortBy === 'priority' && (
+                                                <span className="text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                            )}
+                                        </div>
+                                    </th>
+                                    <th 
+                                        className="px-4 py-3 text-left text-xs font-semibold text-slate-400 cursor-pointer hover:text-slate-200 transition-colors"
+                                        onClick={() => handleSort('buy_limit')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Buy Limit
+                                            {sortBy === 'buy_limit' && (
+                                                <span className="text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                            )}
+                                        </div>
+                                    </th>
+                                    <th 
+                                        className="px-4 py-3 text-left text-xs font-semibold text-slate-400 cursor-pointer hover:text-slate-200 transition-colors"
+                                        onClick={() => handleSort('volume')}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Daily Volume
+                                            {sortBy === 'volume' && (
+                                                <span className="text-blue-400">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                                            )}
+                                        </div>
+                                    </th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Tags</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Status</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-700">
-                                {filteredItems.map((item) => (
+                                {sortedItems.map((item) => (
                                     <tr key={item.id} className="hover:bg-slate-700/50">
                                         <td className="px-4 py-3">
                                             <div className="text-sm text-slate-300">{item.item_name}</div>
