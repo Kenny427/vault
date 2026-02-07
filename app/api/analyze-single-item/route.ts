@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
 import { analyzeMeanReversionOpportunity, MeanReversionSignal } from '@/lib/meanReversionAnalysis';
+import { trackEvent, calculateAICost } from '@/lib/adminAnalytics';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -15,45 +17,50 @@ const client = new OpenAI({
  * Works for mega-rares, high-volume flips, and other trading strategies
  */
 async function performGeneralMarketAnalysis(
-  itemId: number, 
-  priceData: any[], 
+  itemId: number,
+  priceData: any[],
   openaiClient: OpenAI
 ) {
   console.log('🌐 Starting general market analysis...');
-  
+
   if (!process.env.OPENAI_API_KEY) {
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'AI analysis unavailable',
         details: 'OpenAI API key not configured'
       },
       { status: 503 }
     );
   }
-  
+
+  // Get user for tracking
+  const supabase = createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id;
+
   // Calculate basic metrics
   const currentPrice = priceData[priceData.length - 1]?.avgHighPrice || priceData[priceData.length - 1]?.avgLowPrice || 0;
   const last7Days = priceData.slice(-7);
   const last30Days = priceData.slice(-30);
   const last90Days = priceData.slice(-90);
-  
+
   const avg7d = last7Days.reduce((sum, d) => sum + (d.avgHighPrice || d.avgLowPrice || 0), 0) / last7Days.length;
   const avg30d = last30Days.reduce((sum, d) => sum + (d.avgHighPrice || d.avgLowPrice || 0), 0) / last30Days.length;
   const avg90d = last90Days.reduce((sum, d) => sum + (d.avgHighPrice || d.avgLowPrice || 0), 0) / last90Days.length;
-  
+
   const vol7d = last7Days.reduce((sum, d) => sum + (d.highPriceVolume || 0), 0) / last7Days.length;
   const vol30d = last30Days.reduce((sum, d) => sum + (d.highPriceVolume || 0), 0) / last30Days.length;
-  
+
   const priceChange7d = ((currentPrice - avg7d) / avg7d) * 100;
   const priceChange30d = ((currentPrice - avg30d) / avg30d) * 100;
   const priceChange90d = ((currentPrice - avg90d) / avg90d) * 100;
-  
+
   const prices = priceData.map(d => d.avgHighPrice || d.avgLowPrice || 0).filter(p => p > 0);
   const minPrice = Math.min(...prices);
   const maxPrice = Math.max(...prices);
   const priceRange = ((maxPrice - minPrice) / minPrice) * 100;
-  
+
   // Determine item category based on price and volume
   let itemCategory = 'Unknown';
   if (currentPrice > 500_000_000) {
@@ -67,9 +74,9 @@ async function performGeneralMarketAnalysis(
   } else {
     itemCategory = 'Low-value item (<1M)';
   }
-  
+
   const volumeCategory = vol7d > 1000 ? 'High-volume' : vol7d > 100 ? 'Medium-volume' : 'Low-volume';
-  
+
   const generalPrompt = `You are an expert OSRS market analyst. Provide comprehensive trading advice for this item.
 
 ITEM ID: ${itemId}
@@ -141,15 +148,15 @@ Valid values:
       },
     ],
   });
-  
+
   const responseText = response.choices[0]?.message.content || '{}';
   console.log('📝 General analysis response received:', responseText.substring(0, 200));
-  
+
   let analysisData: any = {};
   try {
     // Try to extract JSON from markdown code blocks or plain text
     let jsonText = responseText;
-    
+
     // Remove markdown code blocks if present
     const codeBlockMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
     if (codeBlockMatch) {
@@ -161,9 +168,9 @@ Valid values:
         jsonText = jsonMatch[0];
       }
     }
-    
+
     analysisData = JSON.parse(jsonText);
-    
+
     // Validate required fields
     if (!analysisData.confidence || !analysisData.recommendation) {
       console.warn('AI response missing required fields, using fallback');
@@ -184,7 +191,7 @@ Valid values:
   } catch (e) {
     console.error('Failed to parse general analysis response:', e);
     console.error('Raw response:', responseText);
-    
+
     // Return a fallback analysis rather than failing completely
     return NextResponse.json({
       success: true,
@@ -219,9 +226,24 @@ Valid values:
       timestamp: new Date().toISOString()
     });
   }
-  
+
   console.log(`✅ General analysis complete: strategy=${analysisData.tradingStrategy}, confidence=${analysisData.confidence}%`);
-  
+
+  const costUsd = response.usage ? calculateAICost('gpt-4o', response.usage.prompt_tokens, response.usage.completion_tokens) : 0;
+
+  // Track analytics event
+  await trackEvent({
+    userId,
+    eventType: 'ai_analysis_general',
+    metadata: {
+      itemId,
+      model: 'gpt-4o',
+      analysisType: 'general'
+    },
+    costUsd,
+    tokensUsed: response.usage?.total_tokens
+  });
+
   return NextResponse.json({
     success: true,
     analysisType: 'general',
@@ -254,56 +276,61 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const itemIdParam = searchParams.get('itemId');
-    
+
     if (!itemIdParam) {
       return NextResponse.json(
         { success: false, error: 'itemId parameter required' },
         { status: 400 }
       );
     }
-    
+
     const itemId = parseInt(itemIdParam);
-    
+
     if (!Number.isFinite(itemId) || itemId <= 0) {
       return NextResponse.json(
         { success: false, error: 'Invalid itemId' },
         { status: 400 }
       );
     }
-    
+
     console.log(`🔍 Deep Analysis requested for item ${itemId}`);
-    
+
     // Fetch 365-day history with volume data
     const priceData = await getItemHistoryWithVolumes(itemId, 365 * 24 * 60 * 60);
-    
+
     if (!priceData || priceData.length < 30) {
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'Insufficient price history',
           details: `Need at least 30 days of data. Available: ${priceData?.length || 0} days`
         },
         { status: 400 }
       );
     }
-    
+
     console.log(`📊 Retrieved ${priceData.length} days of price history`);
-    
+
     // Step 1: Try mean-reversion analysis first
     const baseSignal = await analyzeMeanReversionOpportunity(
       itemId,
       `Item ${itemId}`, // Will be enriched by API
       priceData
     );
-    
+
     // If mean-reversion fails, use general market analysis instead
     if (!baseSignal) {
       console.log('⚠️ Item does not meet mean-reversion criteria - switching to general analysis');
       return await performGeneralMarketAnalysis(itemId, priceData, client);
     }
-    
+
+    // Get user for tracking
+    const supabase = createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+
     console.log(`✓ Mean-reversion analysis complete: confidence=${baseSignal.confidenceScore}%, potential=${baseSignal.reversionPotential.toFixed(1)}%`);
-    
+
     // Check if OpenAI is available for deep analysis
     if (!process.env.OPENAI_API_KEY) {
       console.warn('⚠️ OpenAI API key not found - returning base analysis only');
@@ -314,10 +341,10 @@ export async function GET(request: Request) {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     // Step 2: STRATEGIST PASS - Deep dive behavioral analysis
     console.log('🧠 Running AI Strategist Pass...');
-    
+
     const strategistPrompt = `You are an expert OSRS market analyst providing DEEP DIVE analysis on this item's flip potential.
 
 ITEM: ${baseSignal.itemName} (ID: ${itemId})
@@ -394,10 +421,10 @@ Return ONLY valid JSON:
         },
       ],
     });
-    
+
     const strategistText = strategistResponse.choices[0]?.message.content || '{}';
     console.log('📝 Strategist response received');
-    
+
     let strategistData: any = {};
     try {
       const jsonMatch = strategistText.match(/\{[\s\S]*\}/);
@@ -407,10 +434,10 @@ Return ONLY valid JSON:
     } catch (e) {
       console.error('Failed to parse strategist response:', e);
     }
-    
+
     // Step 3: AUDITOR PASS - Skeptical review
     console.log('🔍 Running AI Auditor Pass...');
-    
+
     const auditorPrompt = `You are a skeptical investment auditor reviewing this OSRS flip analysis.
 
 ITEM: ${baseSignal.itemName} (${itemId})
@@ -446,10 +473,10 @@ Return ONLY valid JSON:
         },
       ],
     });
-    
+
     const auditorText = auditorResponse.choices[0]?.message.content || '{}';
     console.log('🔎 Auditor response received');
-    
+
     let auditorData: any = {};
     try {
       const jsonMatch = auditorText.match(/\{[\s\S]*\}/);
@@ -459,21 +486,21 @@ Return ONLY valid JSON:
     } catch (e) {
       console.error('Failed to parse auditor response:', e);
     }
-    
+
     // Simplify price targets - user buys at current price
     const exitConservative = Math.round(
-      strategistData.priceTargets?.exitConservative || 
-      baseSignal.exitPriceBase || 
+      strategistData.priceTargets?.exitConservative ||
+      baseSignal.exitPriceBase ||
       baseSignal.currentPrice * 1.12
     );
     const exitAggressive = Math.round(
-      strategistData.priceTargets?.exitAggressive || 
-      baseSignal.exitPriceStretch || 
+      strategistData.priceTargets?.exitAggressive ||
+      baseSignal.exitPriceStretch ||
       exitConservative * 1.1
     );
     const stopLoss = Math.round(
-      strategistData.priceTargets?.triggerStop || 
-      baseSignal.stopLoss || 
+      strategistData.priceTargets?.triggerStop ||
+      baseSignal.stopLoss ||
       baseSignal.currentPrice * 0.93
     );
 
@@ -485,7 +512,7 @@ Return ONLY valid JSON:
     if (exitConservative > maxReasonableExit) {
       console.warn(`⚠️ Capped ${baseSignal.itemName} exit targets: ${exitConservative} → ${finalExitConservative} (max: ${Math.round(maxReasonableExit)})`);
     }
-    
+
     // Merge AI insights into signal
     const enhancedSignal: MeanReversionSignal = {
       ...baseSignal,
@@ -495,12 +522,12 @@ Return ONLY valid JSON:
         trigger: `Exit if thesis invalidated`
       },
       strategicNarrative: strategistData.strategicNarrative || baseSignal.reasoning,
-      volumeVelocity: baseSignal.mediumTerm.volumeAvg > 0 
-        ? baseSignal.shortTerm.volumeAvg / baseSignal.mediumTerm.volumeAvg 
+      volumeVelocity: baseSignal.mediumTerm.volumeAvg > 0
+        ? baseSignal.shortTerm.volumeAvg / baseSignal.mediumTerm.volumeAvg
         : 1.0,
-      confidenceScore: Math.max(0, Math.min(100, 
-        baseSignal.confidenceScore + 
-        (strategistData.confidenceAdjustment || 0) - 
+      confidenceScore: Math.max(0, Math.min(100,
+        baseSignal.confidenceScore +
+        (strategistData.confidenceAdjustment || 0) -
         (auditorData.confidencePenalty || 0)
       )),
       auditorDecision: auditorData.decision || 'approve',
@@ -518,9 +545,9 @@ Return ONLY valid JSON:
       targetSellPrice: finalExitConservative,
       estimatedHoldingPeriod: strategistData.holdingPeriod || baseSignal.estimatedHoldingPeriod,
     };
-    
+
     console.log(`✅ Deep analysis complete: decision=${enhancedSignal.auditorDecision}, final confidence=${enhancedSignal.confidenceScore}%`);
-    
+
     // Calculate token usage for cost tracking
     const tokenUsage = {
       strategist: strategistResponse.usage,
@@ -531,7 +558,23 @@ Return ONLY valid JSON:
         totalTokens: (strategistResponse.usage?.total_tokens || 0) + (auditorResponse.usage?.total_tokens || 0),
       }
     };
-    
+
+    const costUsd = calculateAICost('gpt-4o', tokenUsage.total.inputTokens, tokenUsage.total.outputTokens);
+
+    // Track analytics event
+    await trackEvent({
+      userId,
+      eventType: 'ai_analysis_deep',
+      metadata: {
+        itemId,
+        itemName: enhancedSignal.itemName,
+        model: 'gpt-4o',
+        analysisType: 'deep'
+      },
+      costUsd,
+      tokensUsed: tokenUsage.total.totalTokens
+    });
+
     return NextResponse.json({
       success: true,
       signal: enhancedSignal,
@@ -539,7 +582,7 @@ Return ONLY valid JSON:
       tokenUsage,
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error('Single item analysis failed:', error);
     return NextResponse.json(

@@ -1,7 +1,36 @@
-import { supabase } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { createAdminSupabaseClient } from '@/lib/supabaseAdmin';
 
 const adminSupabase = createAdminSupabaseClient();
+
+/**
+ * AI Model Costs (per 1k tokens)
+ * Prices as of early 2024
+ */
+export const AI_COST_RATES = {
+    'gpt-4o': {
+        input: 0.005,
+        output: 0.015,
+    },
+    'gpt-4o-mini': {
+        input: 0.00015,
+        output: 0.0006,
+    },
+    'gpt-3.5-turbo': {
+        input: 0.0005,
+        output: 0.0015,
+    }
+};
+
+/**
+ * Calculate estimated cost for an AI completion
+ */
+export function calculateAICost(model: string, inputTokens: number, outputTokens: number): number {
+    const rates = AI_COST_RATES[model as keyof typeof AI_COST_RATES] || AI_COST_RATES['gpt-4o-mini'];
+    const inputCost = (inputTokens / 1000) * rates.input;
+    const outputCost = (outputTokens / 1000) * rates.output;
+    return parseFloat((inputCost + outputCost).toFixed(6));
+}
 
 // ============================================
 // ANALYTICS TRACKING
@@ -16,11 +45,13 @@ export interface AnalyticsEvent {
 }
 
 /**
- * Track an analytics event
+ * Track an analytics event (Server-side compatible)
+ * Uses admin client to bypass RLS for system analytics
  */
 export async function trackEvent(event: AnalyticsEvent) {
     try {
-        const { error } = await supabase
+        // Use admin client to bypass RLS - analytics are system writes, not user writes
+        const { error } = await adminSupabase
             .from('system_analytics')
             .insert({
                 user_id: event.userId || null,
@@ -31,10 +62,12 @@ export async function trackEvent(event: AnalyticsEvent) {
             });
 
         if (error) {
-            console.error('Error tracking analytics event:', error);
+            console.error('⚠️ Analytics tracking failed:', error.message);
+            // Don't throw - analytics are non-critical
         }
     } catch (error) {
-        console.error('Failed to track event:', error);
+        // Silently log but don't break the main flow
+        console.error('⚠️ Analytics tracking error:', error);
     }
 }
 
@@ -201,6 +234,71 @@ export async function getPopularItems() {
     }
 }
 
+/**
+ * Increment user API usage
+ */
+export async function incrementUsage(userId: string) {
+    try {
+        const supabase = createServerSupabaseClient();
+
+        // Get or create rate limit
+        let { data: rateLimit } = await supabase
+            .from('rate_limits')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+        if (!rateLimit) {
+            // Create default rate limit
+            const { data: newLimit } = await supabase
+                .from('rate_limits')
+                .insert({
+                    user_id: userId,
+                    daily_limit: 100,
+                    current_usage: 1,
+                })
+                .select()
+                .single();
+
+            return newLimit;
+        }
+
+        // Check if needs reset (more than 24 hours since last reset)
+        const hoursSinceReset =
+            (Date.now() - new Date(rateLimit.last_reset).getTime()) / (1000 * 60 * 60);
+
+        if (hoursSinceReset >= 24) {
+            // Reset usage
+            const { data } = await supabase
+                .from('rate_limits')
+                .update({
+                    current_usage: 1,
+                    last_reset: new Date().toISOString(),
+                })
+                .eq('user_id', userId)
+                .select()
+                .single();
+
+            return data;
+        }
+
+        // Increment usage
+        const { data } = await supabase
+            .from('rate_limits')
+            .update({
+                current_usage: rateLimit.current_usage + 1,
+            })
+            .eq('user_id', userId)
+            .select()
+            .single();
+
+        return data;
+    } catch (error) {
+        console.error('Failed to increment usage:', error);
+        return null;
+    }
+}
+
 // ============================================
 // ERROR LOGGING
 // ============================================
@@ -220,6 +318,7 @@ export interface ErrorLog {
  */
 export async function logError(error: ErrorLog) {
     try {
+        const supabase = createServerSupabaseClient();
         const { error: dbError } = await supabase
             .from('error_logs')
             .insert({
@@ -282,6 +381,7 @@ export interface BroadcastNotification {
  */
 export async function createBroadcast(notification: BroadcastNotification) {
     try {
+        const supabase = createServerSupabaseClient();
         const { data, error } = await supabase
             .from('notifications')
             .insert({
@@ -313,6 +413,7 @@ export async function createBroadcast(notification: BroadcastNotification) {
  */
 export async function getUserNotifications(userId: string) {
     try {
+        const supabase = createServerSupabaseClient();
         const { data, error } = await supabase
             .from('user_notifications')
             .select(`
@@ -348,6 +449,7 @@ export async function getUserNotifications(userId: string) {
  */
 export async function markNotificationRead(notificationId: string, userId: string) {
     try {
+        const supabase = createServerSupabaseClient();
         const { error } = await supabase
             .from('user_notifications')
             .update({

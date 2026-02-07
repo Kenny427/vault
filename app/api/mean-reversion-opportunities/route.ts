@@ -8,6 +8,8 @@ import {
 } from '@/lib/meanReversionAnalysis';
 import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
 import { getCustomPoolItems } from '@/lib/poolManagement';
+import { trackEvent, calculateAICost } from '@/lib/adminAnalytics';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -39,6 +41,11 @@ export async function GET(request: Request) {
     const botFilter = searchParams.get('botLikelihood');
 
     console.log(`[API] Fresh analysis (minConf:${minConfidence}, minPot:${minPotential})`);
+
+    // Get user for tracking
+    const supabase = createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     // Fetch item pool
     let itemsToAnalyze: any[] = [];
@@ -116,7 +123,7 @@ export async function GET(request: Request) {
       console.log(`[API] Dropped items (first 10): ${filteredOutItems.slice(0, 10).map(i => i.itemName).join(', ')}${filteredOutItems.length > 10 ? '...' : ''}`);
     }
 
-    // Step 2: Parallel AI Analysis with Concurrency Limit
+    // Step 2: Parallel AI Analysis with Concurrency Limit (NO PRE-FILTERING - AI decides everything)
     const uniqueOpportunities = new Map<number, MeanReversionSignal>();
     let aiAnalyzedCount = 0;
     let aiApprovedCount = 0;
@@ -125,6 +132,8 @@ export async function GET(request: Request) {
     let totalOutputTokens = 0;
     let accTotalCost = 0;
 
+    // Send ALL signals to AI - no pre-filtering based on confidence or other metrics
+    // AI will decide which items to include/exclude
     const batches = chunkArray(completedSignals, 10);
     const CONCURRENCY_LIMIT = 5;
 
@@ -136,9 +145,36 @@ export async function GET(request: Request) {
         const batchPromises = batchSet.map(async (batch, subIdx) => {
           const batchIdx = i + subIdx;
           try {
-            const prompt = `You are an expert OSRS market analyst. Analyze items for mean reversion. 
-Return ONLY JSON: {"items":[{"id":number,"include":boolean,"confidenceScore":number,"reasoning":"...","entryNow":number,"exitBase":number,"holdWeeks":number,"logic":{"thesis":"...","vulnerability":"...","trigger":"..."}}]}
-Items: ${batch.map(s => `ID:${s.itemId} | ${s.itemName} | P:${Math.round(s.currentPrice)} | Pot:${s.reversionPotential.toFixed(1)}%`).join(', ')}`;
+            const prompt = `You are an expert OSRS market analyst specializing in mean-reversion trading. Analyze each item to determine if it's a viable investment opportunity.
+
+For each item, evaluate:
+- Is the price significantly below historical averages? (deviation matters)
+- Does the item have consistent bot supply/demand patterns?
+- Is there realistic upside potential (at least 10-15%)?
+- Are there any red flags (extreme volatility, manipulation, etc.)?
+
+Return ONLY JSON in this exact format:
+{
+  "items": [
+    {
+      "id": number,
+      "include": boolean (true = approve for alpha feed, false = reject),
+      "confidenceScore": number (0-100 scale where 100 = extremely confident, 0 = no confidence),
+      "reasoning": "Brief explanation of your decision",
+      "entryNow": number (suggested buy price),
+      "exitBase": number (realistic sell target),
+      "holdWeeks": number (1-4 weeks),
+      "logic": {
+        "thesis": "Why this is a good opportunity",
+        "vulnerability": "What could go wrong",
+        "trigger": "When to exit/abort"
+      }
+    }
+  ]
+}
+
+Items to analyze:
+${batch.map(s => `ID:${s.itemId} | ${s.itemName} | Current:${Math.round(s.currentPrice)}gp | BaseConfidence:${Math.round(s.confidenceScore)} | Potential:${s.reversionPotential.toFixed(1)}%`).join('\n')}`;
 
             const aiResponse = await client.chat.completions.create({
               model: 'gpt-4o-mini',
@@ -147,16 +183,32 @@ Items: ${batch.map(s => `ID:${s.itemId} | ${s.itemName} | P:${Math.round(s.curre
               messages: [{ role: 'user', content: prompt }],
             });
 
+            const parsed = JSON.parse(aiResponse.choices[0]?.message?.content || '{}');
+
             // Usage tracking
             const usage = aiResponse.usage;
             if (usage) {
+              const batchCost = calculateAICost('gpt-4o-mini', usage.prompt_tokens, usage.completion_tokens);
+
               totalInputTokens += usage.prompt_tokens;
               totalOutputTokens += usage.completion_tokens;
               totalTokens += usage.total_tokens;
-              accTotalCost += (usage.prompt_tokens / 1000 * 0.00015) + (usage.completion_tokens / 1000 * 0.0006);
+              accTotalCost += batchCost;
+
+              // Track analytics event (fire and forget - non-critical)
+              trackEvent({
+                userId,
+                eventType: 'ai_scan_batch',
+                metadata: {
+                  batchSize: batch.length,
+                  model: 'gpt-4o-mini',
+                  successfulItems: (parsed.items || []).length
+                },
+                costUsd: batchCost,
+                tokensUsed: usage.total_tokens
+              }).catch(() => {}); // Silently ignore analytics errors
             }
 
-            const parsed = JSON.parse(aiResponse.choices[0]?.message?.content || '{}');
             if (Array.isArray(parsed.items)) {
               parsed.items.forEach((decision: any) => {
                 const numericId = typeof decision.id === 'string' ? parseInt(decision.id) : decision.id;
@@ -164,18 +216,26 @@ Items: ${batch.map(s => `ID:${s.itemId} | ${s.itemName} | P:${Math.round(s.curre
                 if (!base) return;
 
                 aiAnalyzedCount++;
+                
+                // Respect AI's decision - if AI says exclude, we exclude. No other filters.
                 if (decision.include === false) return;
 
                 const exitBase = Math.round(decision.exitBase ?? base.exitPriceBase ?? base.currentPrice);
                 const pot = ((exitBase - base.currentPrice) / base.currentPrice) * 100;
 
-                // Final threshold check inside AI loop (can be relaxed)
-                if (pot < 10) return;
+                // BUG FIX: AI sometimes returns scores on 0-10 scale instead of 0-100
+                // If AI provided a confidenceScore between 0-10, scale it up to 0-100
+                let aiConfidence = decision.confidenceScore ?? base.confidenceScore;
+                if (aiConfidence > 0 && aiConfidence <= 10 && decision.confidenceScore !== undefined) {
+                  // Likely on wrong scale - multiply by 10
+                  aiConfidence = aiConfidence * 10;
+                  console.log(`[AI SCALE FIX] ${base.itemName}: AI returned ${decision.confidenceScore}, scaled to ${aiConfidence}`);
+                }
 
                 aiApprovedCount++;
                 uniqueOpportunities.set(base.itemId, {
                   ...base,
-                  confidenceScore: clamp(decision.confidenceScore ?? base.confidenceScore, 0, 100),
+                  confidenceScore: clamp(aiConfidence, 0, 100),
                   targetSellPrice: exitBase,
                   strategicNarrative: decision.logic?.thesis ?? decision.reasoning ?? base.strategicNarrative,
                   logic: decision.logic,
@@ -207,7 +267,7 @@ Items: ${batch.map(s => `ID:${s.itemId} | ${s.itemName} | P:${Math.round(s.curre
       aiAnalyzedCount,
       aiApprovedCount,
       aiMissingCount: completedSignals.length - aiAnalyzedCount,
-      preFilteredCount: completedSignals.length, // CAPTURED = Successful algorithmic analysis
+      preFilteredCount: completedSignals.length, // All items with price data sent to AI
       preThresholdCount: beforeThresholdCount,
       filteredAtStep1: filteredOutItems.length,
       filteredByThreshold: beforeThresholdCount - afterThresholdCount,

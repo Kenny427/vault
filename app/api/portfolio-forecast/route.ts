@@ -116,8 +116,8 @@ export async function POST(request: Request) {
 
 ITEMS TO FORECAST:
 ${itemsWithData
-  .map(
-    (item) => `
+        .map(
+          (item) => `
 ━━━ ${item.itemName} (ID: ${item.itemId}) ━━━
 Entry Price: ${item.buyPrice}gp
 Current: ${item.currentPrice}gp (${(((item.currentPrice - item.buyPrice) / item.buyPrice) * 100).toFixed(1)}% from entry)
@@ -126,8 +126,8 @@ Recent 30d Avg: ${Math.round(item.recentAvg)}gp | StdDev: ${Math.round(item.rece
 Momentum (365d): ${item.momentum.toFixed(1)}%
 Slope: ${item.slope > 0 ? 'Up' : 'Down'}
 `
-  )
-  .join('\n')}
+        )
+        .join('\n')}
 
 FORECAST REQUIREMENTS:
 For each item, provide:

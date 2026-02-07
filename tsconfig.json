@@ -42,7 +42,6 @@
     "app",
     "components",
     "lib",
-    "middleware.ts",
     ".next/types/**/*.ts"
   ],
   "exclude": [
