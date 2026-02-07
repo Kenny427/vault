@@ -145,7 +145,7 @@ export default function PriceChart({
           <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div>
-                <div className="text-slate-400 text-xs mb-1">30D Average</div>
+                <div className="text-slate-400 text-xs mb-1">{timeframeLabel} Average</div>
                 <div className="text-slate-100 font-semibold">{Math.round(averagePrice).toLocaleString()}gp</div>
               </div>
               <div>
@@ -153,11 +153,11 @@ export default function PriceChart({
                 <div className="text-slate-100 font-semibold">{Math.round(avg7d).toLocaleString()}gp</div>
               </div>
               <div>
-                <div className="text-slate-400 text-xs mb-1">30D High</div>
+                <div className="text-slate-400 text-xs mb-1">{timeframeLabel} High</div>
                 <div className="text-green-400 font-semibold">{max.toLocaleString()}gp</div>
               </div>
               <div>
-                <div className="text-slate-400 text-xs mb-1">30D Low</div>
+                <div className="text-slate-400 text-xs mb-1">{timeframeLabel} Low</div>
                 <div className="text-red-400 font-semibold">{min.toLocaleString()}gp</div>
               </div>
               <div>
