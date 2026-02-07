@@ -8,6 +8,7 @@ import { useDashboardStore } from '@/lib/store';
 import { getItemDetails, resolveIconUrl, fetchItemMapping } from '@/lib/api/osrs';
 import SetAlertModal from './SetAlertModal';
 import ItemNotesModal from './ItemNotesModal';
+import ItemGraphModal from './ItemGraphModal';
 
 interface FlipCardProps {
   opportunity: FlipOpportunity;
@@ -20,6 +21,7 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
 
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showGraphModal, setShowGraphModal] = useState(false);
 
   // Fetch item details for icon
   const { data: itemDetails } = useQuery({
@@ -260,11 +262,11 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onViewDetails();
+            setShowGraphModal(true);
           }}
           className="py-2 px-2 bg-osrs-accent hover:bg-osrs-accent/90 text-slate-900 text-xs font-bold rounded transition-colors"
         >
-          📊 Chart
+          📊 Graph
         </button>
         <button
           onClick={(e) => {
@@ -301,6 +303,14 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
           itemId={opportunity.itemId}
           itemName={opportunity.itemName}
           onClose={() => setShowNotesModal(false)}
+        />,
+        document.body
+      )}
+      {showGraphModal && typeof document !== 'undefined' && createPortal(
+        <ItemGraphModal
+          itemId={opportunity.itemId}
+          itemName={opportunity.itemName}
+          onClose={() => setShowGraphModal(false)}
         />,
         document.body
       )}

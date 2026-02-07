@@ -15,6 +15,7 @@ const TIMEFRAMES = [
   { value: '7d', label: '7D', seconds: 7 * 24 * 60 * 60 },
   { value: '30d', label: '30D', seconds: 30 * 24 * 60 * 60 },
   { value: '90d', label: '90D', seconds: 90 * 24 * 60 * 60 },
+  { value: '180d', label: '180D', seconds: 180 * 24 * 60 * 60 },
   { value: '1y', label: '1Y', seconds: 365 * 24 * 60 * 60 },
 ] as const;
 
