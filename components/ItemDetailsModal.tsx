@@ -186,10 +186,10 @@ export default function ItemDetailsModal({ itemId, onClose }: ItemDetailsModalPr
           </button>
 
           {/* Content */}
-          <div className="p-6 space-y-6 max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <div className="px-4 py-6 space-y-6 max-h-[calc(100vh-4rem)] overflow-y-auto">
             {/* Header with Item Info */}
             <div className="flex items-center gap-4 pr-12">
-              <div className="w-12 h-12 bg-slate-800 border border-slate-700 rounded-lg flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-center flex-shrink-0">
                 {iconUrl ? (
                   <img src={iconUrl} alt={itemDetails?.name || 'Item'} className="w-9 h-9" />
                 ) : (
@@ -230,26 +230,26 @@ export default function ItemDetailsModal({ itemId, onClose }: ItemDetailsModalPr
             </div>
 
             {/* Current Price Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <p className="text-slate-400 text-xs mb-1">Current (Mid)</p>
                 <p className="text-2xl font-bold text-slate-100">
                   {priceLoading ? '...' : formatNumber(currentPrice)}
                 </p>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <p className="text-slate-400 text-xs mb-1">Buy (High)</p>
                 <p className="text-2xl font-bold text-green-400">
                   {priceLoading ? '...' : formatNumber(highPrice)}
                 </p>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <p className="text-slate-400 text-xs mb-1">Sell (Low)</p>
                 <p className="text-2xl font-bold text-blue-400">
                   {priceLoading ? '...' : formatNumber(lowPrice)}
                 </p>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <p className="text-slate-400 text-xs mb-1">Daily Volume</p>
                 <p className="text-2xl font-bold text-purple-400">
                   {dailyVolume ? formatNumber(dailyVolume) : '—'}
@@ -258,18 +258,18 @@ export default function ItemDetailsModal({ itemId, onClose }: ItemDetailsModalPr
             </div>
 
             {/* Flip Metrics */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <p className="text-slate-400 text-sm mb-1">Spread</p>
                 <p className="text-xl font-bold text-slate-100">{formatNumber(spread)}</p>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <p className="text-slate-400 text-sm mb-1">Net Profit</p>
                 <p className={`text-xl font-bold ${netProfit > 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {formatNumber(netProfit)}
                 </p>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <p className="text-slate-400 text-sm mb-1">ROI</p>
                 <p className={`text-xl font-bold ${roi > 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {roi.toFixed(2)}%
@@ -283,10 +283,10 @@ export default function ItemDetailsModal({ itemId, onClose }: ItemDetailsModalPr
                 <button
                   key={tf.value}
                   onClick={() => setTimeframe(tf.value)}
-                  className={`px-4 py-2 rounded font-medium transition-colors ${
+                  className={`px-3 py-1 rounded-full text-xs border transition-colors ${
                     timeframe === tf.value
-                      ? 'bg-osrs-accent text-slate-900'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                      ? 'bg-slate-700 border-slate-600 text-slate-100'
+                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   {tf.label}
@@ -295,7 +295,7 @@ export default function ItemDetailsModal({ itemId, onClose }: ItemDetailsModalPr
             </div>
 
             {/* Price Chart */}
-            <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
               <h2 className="text-lg font-semibold text-slate-100 mb-4">
                 Price History ({timeframeLabel})
               </h2>
@@ -319,8 +319,8 @@ export default function ItemDetailsModal({ itemId, onClose }: ItemDetailsModalPr
             </div>
 
             {/* Historical Averages */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <p className="text-slate-400 text-xs mb-1">30D Average</p>
                 <p className="text-lg font-bold text-slate-100">
                   {stats30.avg > 0 ? formatNumber(stats30.avg) : '—'}
@@ -329,7 +329,7 @@ export default function ItemDetailsModal({ itemId, onClose }: ItemDetailsModalPr
                   {stats30.min > 0 && `${formatNumber(stats30.min)} - ${formatNumber(stats30.max)}`}
                 </p>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <p className="text-slate-400 text-xs mb-1">90D Average</p>
                 <p className="text-lg font-bold text-slate-100">
                   {stats90.avg > 0 ? formatNumber(stats90.avg) : '—'}
@@ -338,7 +338,7 @@ export default function ItemDetailsModal({ itemId, onClose }: ItemDetailsModalPr
                   {stats90.min > 0 && `${formatNumber(stats90.min)} - ${formatNumber(stats90.max)}`}
                 </p>
               </div>
-              <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
                 <p className="text-slate-400 text-xs mb-1">180D Average</p>
                 <p className="text-lg font-bold text-slate-100">
                   {stats180.avg > 0 ? formatNumber(stats180.avg) : '—'}
