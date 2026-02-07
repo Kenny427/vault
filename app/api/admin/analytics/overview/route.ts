@@ -20,7 +20,10 @@ export async function GET(request: Request) {
         const eventType = searchParams.get('eventType') || null;
         const minCost = parseFloat(searchParams.get('minCost') || '0');
         const maxCost = parseFloat(searchParams.get('maxCost') || 'Infinity');
-        const granularity = searchParams.get('granularity') || 'day'; // day, hour, week
+        const granularityParam = searchParams.get('granularity') || 'day';
+        const granularity: 'day' | 'hour' | 'week' = ['day', 'hour', 'week'].includes(granularityParam) 
+            ? granularityParam as 'day' | 'hour' | 'week'
+            : 'day';
 
         const overview = await getAnalyticsOverview(days, {
             eventType,

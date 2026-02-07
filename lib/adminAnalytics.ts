@@ -125,7 +125,8 @@ export async function getAnalyticsOverview(days: number = 30, filters?: Analytic
         startDate.setDate(startDate.getDate() - days);
         
         const filterOpts = filters || {};
-        const granularity = filterOpts.granularity || 'day';
+        // Note: granularity parameter available for future time-series aggregation
+        // const _granularity = filterOpts.granularity || 'day';
 
         // Helper to build filters for queries
         const buildQuery = (query: any) => {
@@ -159,7 +160,7 @@ export async function getAnalyticsOverview(days: number = 30, filters?: Analytic
         const { data: costData } = await buildQuery(costQuery)
             .not('cost_usd', 'is', null);
 
-        const totalCost = costData?.reduce((sum, row) => sum + (Number(row.cost_usd) || 0), 0) || 0;
+        const totalCost = costData?.reduce((sum: number, row: any) => sum + (Number(row.cost_usd) || 0), 0) || 0;
 
         // Get total tokens
         let tokenQuery = adminSupabase
@@ -168,7 +169,7 @@ export async function getAnalyticsOverview(days: number = 30, filters?: Analytic
         const { data: tokenData } = await buildQuery(tokenQuery)
             .not('tokens_used', 'is', null);
 
-        const totalTokens = tokenData?.reduce((sum, row) => sum + (row.tokens_used || 0), 0) || 0;
+        const totalTokens = tokenData?.reduce((sum: number, row: any) => sum + (row.tokens_used || 0), 0) || 0;
 
         // Get event breakdown
         let eventBreakdownQuery = adminSupabase
@@ -177,7 +178,7 @@ export async function getAnalyticsOverview(days: number = 30, filters?: Analytic
         const { data: eventBreakdown } = await buildQuery(eventBreakdownQuery);
 
         const eventCounts: Record<string, number> = {};
-        eventBreakdown?.forEach(row => {
+        eventBreakdown?.forEach((row: any) => {
             eventCounts[row.event_type] = (eventCounts[row.event_type] || 0) + 1;
         });
 
@@ -189,7 +190,7 @@ export async function getAnalyticsOverview(days: number = 30, filters?: Analytic
             .not('user_id', 'is', null);
 
         const userCounts: Record<string, number> = {};
-        userActivity?.forEach(row => {
+        userActivity?.forEach((row: any) => {
             if (row.user_id) {
                 userCounts[row.user_id] = (userCounts[row.user_id] || 0) + 1;
             }
@@ -237,7 +238,7 @@ export async function getCostBreakdown(days: number = 30, eventType?: string | n
         // Group by date/hour
         const breakdown: Record<string, { count: number; cost: number }> = {};
 
-        data?.forEach(row => {
+        data?.forEach((row: any) => {
             const date = new Date(row.created_at);
             const dateKey = date.toLocaleDateString('en-US');
             
@@ -273,7 +274,7 @@ export async function getPopularItems() {
             .select('item_id, item_name');
 
         const favoriteCounts: Record<number, { name: string; count: number }> = {};
-        favorites?.forEach(fav => {
+        favorites?.forEach((fav: any) => {
             if (!favoriteCounts[fav.item_id]) {
                 favoriteCounts[fav.item_id] = { name: fav.item_name, count: 0 };
             }
@@ -295,7 +296,7 @@ export async function getPopularItems() {
             .select('item_id, item_name');
 
         const alertCounts: Record<number, { name: string; count: number }> = {};
-        alerts?.forEach(alert => {
+        alerts?.forEach((alert: any) => {
             if (!alertCounts[alert.item_id]) {
                 alertCounts[alert.item_id] = { name: alert.item_name, count: 0 };
             }
@@ -319,7 +320,7 @@ export async function getPopularItems() {
             .not('metadata->itemId', 'is', null);
 
         const analyzedCounts: Record<number, { name: string; count: number }> = {};
-        analyzed?.forEach(row => {
+        analyzed?.forEach((row: any) => {
             const itemId = row.metadata?.itemId;
             const itemName = row.metadata?.itemName;
             if (itemId && itemName) {
