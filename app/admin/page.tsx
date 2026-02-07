@@ -64,7 +64,7 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
         <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">🔒</div>
+          <div className="text-6xl mb-4">Access</div>
           <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
           <p className="text-slate-400 mb-4">
             You don&apos;t have permission to access the admin panel.
@@ -78,15 +78,15 @@ export default function AdminPage() {
   }
 
   const tabs = [
-    { id: 'insights' as Tab, label: '💡 Pool Insights', description: 'Performance & optimization' },
-    { id: 'pool-editor' as Tab, label: '✏️ Pool Editor', description: 'Manage items' },
-    { id: 'analytics' as Tab, label: '📊 Analytics', description: 'System metrics' },
-    { id: 'users' as Tab, label: '👥 Users', description: 'User management' },
-    { id: 'notifications' as Tab, label: '📢 Notifications', description: 'Broadcasts' },
-    { id: 'monitoring' as Tab, label: '⚙️ Monitoring', description: 'DB & rate limits' },
-    { id: 'errors' as Tab, label: '🐛 Errors', description: 'Error logs' },
-    { id: 'pool-manager' as Tab, label: '🎯 Legacy Pool', description: 'Old pool manager' },
-    { id: 'pool-stats' as Tab, label: '📈 Stats', description: 'Filter stats' },
+    { id: 'insights' as Tab, label: 'Pool Insights', description: 'Performance and optimization' },
+    { id: 'pool-editor' as Tab, label: 'Pool Editor', description: 'Manage items' },
+    { id: 'analytics' as Tab, label: 'Analytics', description: 'System metrics' },
+    { id: 'users' as Tab, label: 'Users', description: 'User management' },
+    { id: 'notifications' as Tab, label: 'Notifications', description: 'Broadcasts' },
+    { id: 'monitoring' as Tab, label: 'Monitoring', description: 'DB and rate limits' },
+    { id: 'errors' as Tab, label: 'Errors', description: 'Error logs' },
+    { id: 'pool-manager' as Tab, label: 'Legacy Pool', description: 'Old pool manager' },
+    { id: 'pool-stats' as Tab, label: 'Stats', description: 'Filter stats' },
   ];
 
   return (

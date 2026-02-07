@@ -106,43 +106,75 @@ export async function trackEvent(event: AnalyticsEvent) {
 }
 
 /**
- * Get analytics overview (admin only)
+ * Analytics filter options
  */
-export async function getAnalyticsOverview(days: number = 30) {
+export interface AnalyticsFilterOptions {
+    eventType?: string | null;
+    minCost?: number | null;
+    maxCost?: number | null;
+    granularity?: 'hour' | 'day' | 'week';
+}
+
+/**
+ * Get analytics overview (admin only) with filtering support
+ */
+export async function getAnalyticsOverview(days: number = 30, filters?: AnalyticsFilterOptions) {
     try {
         const adminSupabase = getAdminSupabase();
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
+        
+        const filterOpts = filters || {};
+        const granularity = filterOpts.granularity || 'day';
+
+        // Helper to build filters for queries
+        const buildQuery = (query: any) => {
+            query = query.gte('created_at', startDate.toISOString());
+            
+            if (filterOpts.eventType) {
+                query = query.eq('event_type', filterOpts.eventType);
+            }
+            
+            if (filterOpts.minCost !== null && filterOpts.minCost !== undefined) {
+                query = query.gte('cost_usd', filterOpts.minCost);
+            }
+            
+            if (filterOpts.maxCost !== null && filterOpts.maxCost !== undefined) {
+                query = query.lte('cost_usd', filterOpts.maxCost);
+            }
+            
+            return query;
+        };
 
         // Get total events
-        const { count: totalEvents } = await adminSupabase
+        let eventQuery = adminSupabase
             .from('system_analytics')
-            .select('*', { count: 'exact', head: true })
-            .gte('created_at', startDate.toISOString());
+            .select('*', { count: 'exact', head: true });
+        const { count: totalEvents } = await buildQuery(eventQuery);
 
         // Get total costs
-        const { data: costData } = await adminSupabase
+        let costQuery = adminSupabase
             .from('system_analytics')
-            .select('cost_usd')
-            .gte('created_at', startDate.toISOString())
+            .select('cost_usd');
+        const { data: costData } = await buildQuery(costQuery)
             .not('cost_usd', 'is', null);
 
         const totalCost = costData?.reduce((sum, row) => sum + (Number(row.cost_usd) || 0), 0) || 0;
 
         // Get total tokens
-        const { data: tokenData } = await adminSupabase
+        let tokenQuery = adminSupabase
             .from('system_analytics')
-            .select('tokens_used')
-            .gte('created_at', startDate.toISOString())
+            .select('tokens_used');
+        const { data: tokenData } = await buildQuery(tokenQuery)
             .not('tokens_used', 'is', null);
 
         const totalTokens = tokenData?.reduce((sum, row) => sum + (row.tokens_used || 0), 0) || 0;
 
         // Get event breakdown
-        const { data: eventBreakdown } = await adminSupabase
+        let eventBreakdownQuery = adminSupabase
             .from('system_analytics')
-            .select('event_type')
-            .gte('created_at', startDate.toISOString());
+            .select('event_type');
+        const { data: eventBreakdown } = await buildQuery(eventBreakdownQuery);
 
         const eventCounts: Record<string, number> = {};
         eventBreakdown?.forEach(row => {
@@ -150,10 +182,10 @@ export async function getAnalyticsOverview(days: number = 30) {
         });
 
         // Get top users by activity
-        const { data: userActivity } = await adminSupabase
+        let userActivityQuery = adminSupabase
             .from('system_analytics')
-            .select('user_id')
-            .gte('created_at', startDate.toISOString())
+            .select('user_id');
+        const { data: userActivity } = await buildQuery(userActivityQuery)
             .not('user_id', 'is', null);
 
         const userCounts: Record<string, number> = {};
@@ -182,8 +214,56 @@ export async function getAnalyticsOverview(days: number = 30) {
 }
 
 /**
- * Get popular items across all users
+ * Get cost breakdown by time period
  */
+export async function getCostBreakdown(days: number = 30, eventType?: string | null) {
+    try {
+        const adminSupabase = getAdminSupabase();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+
+        let query = adminSupabase
+            .from('system_analytics')
+            .select('created_at, cost_usd, event_type')
+            .gte('created_at', startDate.toISOString())
+            .not('cost_usd', 'is', null);
+
+        if (eventType) {
+            query = query.eq('event_type', eventType);
+        }
+
+        const { data } = await query;
+
+        // Group by date/hour
+        const breakdown: Record<string, { count: number; cost: number }> = {};
+
+        data?.forEach(row => {
+            const date = new Date(row.created_at);
+            const dateKey = date.toLocaleDateString('en-US');
+            
+            if (!breakdown[dateKey]) {
+                breakdown[dateKey] = { count: 0, cost: 0 };
+            }
+            
+            breakdown[dateKey].count += 1;
+            breakdown[dateKey].cost += Number(row.cost_usd) || 0;
+        });
+
+        // Convert to array and sort by date
+        const sortedBreakdown = Object.entries(breakdown)
+            .map(([date, data]) => ({
+                date,
+                ...data,
+                avgCostPerEvent: data.cost / data.count,
+            }))
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        return sortedBreakdown;
+    } catch (error) {
+        console.error('Error getting cost breakdown:', error);
+        return [];
+    }
+}
 export async function getPopularItems() {
     try {
         const adminSupabase = getAdminSupabase();

@@ -14,11 +14,20 @@ export async function GET(request: Request) {
             );
         }
 
-        // Get days parameter from query string
+        // Get filter parameters from query string
         const { searchParams } = new URL(request.url);
         const days = parseInt(searchParams.get('days') || '30');
+        const eventType = searchParams.get('eventType') || null;
+        const minCost = parseFloat(searchParams.get('minCost') || '0');
+        const maxCost = parseFloat(searchParams.get('maxCost') || 'Infinity');
+        const granularity = searchParams.get('granularity') || 'day'; // day, hour, week
 
-        const overview = await getAnalyticsOverview(days);
+        const overview = await getAnalyticsOverview(days, {
+            eventType,
+            minCost: minCost > 0 ? minCost : null,
+            maxCost: isFinite(maxCost) ? maxCost : null,
+            granularity,
+        });
 
         if (!overview) {
             return NextResponse.json(
