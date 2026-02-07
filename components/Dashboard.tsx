@@ -12,6 +12,7 @@ import DetailedAnalysisModal from './DetailedAnalysisModal';
 import FilteredItemsModal from './FilteredItemsModal';
 import SettingsModal from './SettingsModal';
 import AlphaFeedInfoModal from './AlphaFeedInfoModal';
+import ItemDetailsModal from './ItemDetailsModal';
 import KeyboardShortcuts from './KeyboardShortcuts';
 import { FlipOpportunity, FlipType } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
@@ -228,6 +229,7 @@ export default function Dashboard() {
   }>>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showAlphaFeedInfo, setShowAlphaFeedInfo] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
 
   const [lastRefresh, setLastRefresh] = useState<Date | null>(() => {
     if (typeof window !== 'undefined') {
@@ -936,7 +938,7 @@ export default function Dashboard() {
                         key={opp.itemId}
                         opportunity={opp}
                         onViewDetails={() => {
-                          router.push(`/item/${opp.itemId}`);
+                          setSelectedItemId(opp.itemId);
                         }}
                       />
                     ))}
@@ -1000,6 +1002,14 @@ export default function Dashboard() {
         isOpen={showAlphaFeedInfo}
         onClose={() => setShowAlphaFeedInfo(false)}
       />
+
+      {/* Item Details Modal */}
+      {selectedItemId && (
+        <ItemDetailsModal
+          itemId={selectedItemId}
+          onClose={() => setSelectedItemId(null)}
+        />
+      )}
 
       {/* Keyboard Shortcuts Handler */}
       <KeyboardShortcuts />
