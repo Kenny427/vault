@@ -6,8 +6,6 @@ import SearchBar from './SearchBar';
 import FlipCard from './FlipCard';
 import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
-import PoolManager from './PoolManager';
-import PoolManagementPanel from './PoolManagementPanel';
 import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
@@ -22,8 +20,6 @@ import { initDinkWebhookListener } from '@/lib/dinkWebhook';
 import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 
 type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
-type MenuTab = 'admin' | 'pool-management';
-
 
 
 /**
@@ -182,8 +178,6 @@ export default function Dashboard() {
   const [opportunities, setOpportunities] = useState<FlipOpportunity[]>([]);
   const [sortBy, setSortBy] = useState<'score' | 'roi' | 'profit' | 'confidence'>('score');
   const [flipTypeFilter] = useState<FlipType | 'all'>('all');
-  const [showMenu, setShowMenu] = useState(false);
-  const [activeMenuTab, setActiveMenuTab] = useState<MenuTab | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-active-tab');
@@ -591,12 +585,11 @@ export default function Dashboard() {
           <button
             onClick={() => {
               setActiveTab('portfolio');
-              setActiveMenuTab(null);
-              setShowMenu(false);
             }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'portfolio' && !activeMenuTab
-              ? 'text-osrs-accent border-b-2 border-osrs-accent'
-              : 'text-slate-400 hover:text-slate-300'
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'portfolio'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             💼 Portfolio
@@ -604,12 +597,11 @@ export default function Dashboard() {
           <button
             onClick={() => {
               setActiveTab('opportunities');
-              setActiveMenuTab(null);
-              setShowMenu(false);
             }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'opportunities' && !activeMenuTab
-              ? 'text-osrs-accent border-b-2 border-osrs-accent'
-              : 'text-slate-400 hover:text-slate-300'
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'opportunities'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             ⚡ Alpha Feed
@@ -618,12 +610,11 @@ export default function Dashboard() {
           <button
             onClick={() => {
               setActiveTab('performance');
-              setActiveMenuTab(null);
-              setShowMenu(false);
             }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'performance' && !activeMenuTab
-              ? 'text-osrs-accent border-b-2 border-osrs-accent'
-              : 'text-slate-400 hover:text-slate-300'
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'performance'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             📈 Performance
@@ -631,12 +622,11 @@ export default function Dashboard() {
           <button
             onClick={() => {
               setActiveTab('alerts');
-              setActiveMenuTab(null);
-              setShowMenu(false);
             }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'alerts' && !activeMenuTab
-              ? 'text-osrs-accent border-b-2 border-osrs-accent'
-              : 'text-slate-400 hover:text-slate-300'
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'alerts'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             🔔 Price Alerts
@@ -644,61 +634,22 @@ export default function Dashboard() {
           <button
             onClick={() => {
               setActiveTab('favorites');
-              setActiveMenuTab(null);
-              setShowMenu(false);
             }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${activeTab === 'favorites' && !activeMenuTab
-              ? 'text-osrs-accent border-b-2 border-osrs-accent'
-              : 'text-slate-400 hover:text-slate-300'
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'favorites'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
               }`}
           >
             ⭐ Favorites
           </button>
-
-          {/* Settings Menu */}
-          <div className="relative ml-auto">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className={`px-4 py-3 font-semibold transition-all rounded-lg ${showMenu
-                ? 'text-osrs-accent bg-slate-700/50'
-                : 'text-slate-400 hover:text-slate-300'
-                }`}
-              title="More options"
-            >
-              ⚙️
-            </button>
-            {showMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg z-50">
-                <button
-                  onClick={() => {
-                    setActiveMenuTab('admin');
-                    setShowMenu(false);
-                  }}
-                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${activeMenuTab === 'admin' ? 'text-osrs-accent' : 'text-slate-300'
-                    }`}
-                >
-                  ⚙️ Pool Manager
-                </button>
-                <button
-                  onClick={() => {
-                    setActiveMenuTab('pool-management');
-                    setShowMenu(false);
-                  }}
-                  className={`block w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors ${activeMenuTab === 'pool-management' ? 'text-osrs-accent' : 'text-slate-300'
-                    }`}
-                >
-                  📊 Pool Stats
-                </button>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Portfolio Tab Content */}
-        {activeTab === 'portfolio' && !activeMenuTab && <Portfolio />}
+        {activeTab === 'portfolio' && <Portfolio />}
 
         {/* Opportunities Tab Content */}
-        {activeTab === 'opportunities' && !activeMenuTab && (
+        {activeTab === 'opportunities' && (
           <>
             {/* AI Analysis Status & Refresh Button */}
             <div className="bg-gradient-to-r from-blue-900 to-blue-800 border border-blue-700 rounded-lg p-4 mb-6">
@@ -878,7 +829,7 @@ export default function Dashboard() {
         )}
 
         {/* Favorites Tab Content */}
-        {activeTab === 'favorites' && !activeMenuTab && (
+        {activeTab === 'favorites' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-slate-100">Favorite Items</h2>
@@ -888,16 +839,10 @@ export default function Dashboard() {
         )}
 
         {/* Performance Tab Content */}
-        {activeTab === 'performance' && !activeMenuTab && <PerformanceDashboard />}
+        {activeTab === 'performance' && <PerformanceDashboard />}
 
         {/* Price Alerts Tab Content */}
-        {activeTab === 'alerts' && !activeMenuTab && <PriceAlerts />}
-
-        {/* Menu Tab: Pool Manager */}
-        {activeMenuTab === 'admin' && <PoolManager />}
-
-        {/* Menu Tab: Pool Stats */}
-        {activeMenuTab === 'pool-management' && <PoolManagementPanel />}
+        {activeTab === 'alerts' && <PriceAlerts />}
       </main>
 
       {/* Detailed Analysis Modal */}

@@ -123,13 +123,13 @@ export default function PortfolioSummary() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
-          <div className="text-xs text-slate-400 mb-1">Invested</div>
+          <div className="text-xs text-slate-400 mb-1">Total invested</div>
           <div className="text-xl font-semibold text-slate-100">
             {stats.totalInvested.toLocaleString()}
           </div>
         </div>
         <div className="bg-slate-900/50 rounded-lg p-4 border border-slate-800">
-          <div className="text-xs text-slate-400 mb-1">Current Value</div>
+          <div className="text-xs text-slate-400 mb-1">Current value</div>
           <div className="text-xl font-semibold text-slate-100">
             {Math.round(stats.currentValue).toLocaleString()}
           </div>

@@ -23,7 +23,6 @@ export function formatCompactNumber(n: number): string {
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { usePortfolioStore } from '@/lib/portfolioStore';
 import PortfolioSummary from './PortfolioSummary';
 import PortfolioReviewModal from './PortfolioReviewModal';
@@ -34,7 +33,6 @@ import SetAlertModal from './SetAlertModal';
 import ItemNotesModal from './ItemNotesModal';
 import TradeHistory from './TradeHistory';
 import PendingTransactionsModal from './PendingTransactionsModal';
-import SearchBar from './SearchBar';
 import { getBatchPrices } from '@/lib/api/osrs';
 import { usePendingTransactionsStore } from '@/lib/pendingTransactionsStore';
 
@@ -62,7 +60,6 @@ interface PortfolioSummaryAI {
 }
 
 export default function Portfolio() {
-  const router = useRouter();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSaleModal, setShowSaleModal] = useState(false);
   const [showPendingTransactions, setShowPendingTransactions] = useState(false);
@@ -234,7 +231,7 @@ export default function Portfolio() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold text-slate-100">Portfolio</h2>
-          <p className="text-slate-400 text-sm">Track buys, sales, and performance</p>
+          <p className="text-slate-400 text-sm">Track your portfolio&apos;s performance</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -280,10 +277,6 @@ export default function Portfolio() {
         </div>
       </div>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
-        <SearchBar onItemSelect={(item) => router.push(`/item/${item.id}`)} />
-      </div>
-
       {showTradeHistory ? (
         <TradeHistory />
       ) : (
@@ -317,7 +310,7 @@ export default function Portfolio() {
                 <tr>
                   <th className="text-left px-6 py-4 text-slate-300 font-semibold">Item</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Qty</th>
-                  <th className="text-right px-6 py-4 text-slate-300 font-semibold">Remaining</th>
+                  <th className="text-right px-6 py-4 text-slate-300 font-semibold">Rem</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Buy</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Current</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">
@@ -328,7 +321,7 @@ export default function Portfolio() {
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">P/L</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">
                     <div>Est. Profit</div>
-                    <div className="text-xs text-slate-500 font-normal">(if target reached)</div>
+                    <div className="text-xs text-slate-500 font-normal">(If target reached)</div>
                   </th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold"></th>
                 </tr>
@@ -479,7 +472,7 @@ export default function Portfolio() {
             <div className="sticky top-0 bg-gradient-to-r from-purple-900/90 to-blue-900/90 backdrop-blur-sm px-6 py-4 border-b border-purple-700/50 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-white">🤖 AI Portfolio Tools</h2>
-                <p className="text-sm text-purple-200 mt-1">Powered by GPT-4o-mini • ~$0.003 per analysis</p>
+                <p className="text-sm text-purple-200 mt-1">Powered by GPT-4o-mini</p>
               </div>
               <button
                 onClick={() => setShowAIMenu(false)}
@@ -546,7 +539,7 @@ export default function Portfolio() {
 
               <div className="bg-slate-800/30 rounded-lg p-4 border border-slate-700">
                 <p className="text-xs text-slate-400 text-center">
-                  💡 <span className="font-semibold">Tip:</span> Target prices will replace the default +10% calculation in your portfolio table
+                  ⚠️ <span className="font-semibold">Note:</span> AI is never guaranteed to be correct, do your own research aswell.
                 </p>
               </div>
             </div>

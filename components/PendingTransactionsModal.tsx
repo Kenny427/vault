@@ -10,6 +10,7 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
   const [filterType, setFilterType] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
 
   const transactions = usePendingTransactionsStore((state) => state.transactions);
   const removeTransaction = usePendingTransactionsStore((state) => state.removeTransaction);
@@ -210,10 +211,59 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Setup Instructions */}
+          {/* Setup Instructions - Collapsible */}
+          <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg">
+            <button
+              onClick={() => setShowSetupGuide(!showSetupGuide)}
+              className="w-full px-4 py-3 flex items-center justify-between hover:bg-blue-900/30 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-blue-300 font-semibold">Setup Instructions</span>
+              </div>
+              <span className="text-blue-300 text-lg">
+                {showSetupGuide ? '▼' : '▶'}
+              </span>
+            </button>
+
+            {showSetupGuide && (
+              <div className="px-4 pb-4 pt-2 border-t border-blue-700/50">
+                <ol className="text-sm text-slate-300 space-y-2 ml-4 list-decimal">
+                  <li>
+                    Activate and open the <span className="font-semibold">DINK Plugin</span> on RuneLite
+                  </li>
+                  <li>
+                    Set your <span className="font-semibold">Webhook URL</span> to:
+                    <div className="bg-slate-800 p-2 rounded mt-1 text-blue-300 font-mono text-xs break-all">
+                      https://vault-three-lime.vercel.app/api/webhooks/dink
+                    </div>
+                  </li>
+                  <li>
+                    Configure the plugin settings exactly as these:
+                    <ul className="list-disc ml-4 mt-1 space-y-1 text-xs text-slate-400">
+                      <li>Enable GE Transactions: ✓</li>
+                      <li>Include Cancelled: ✓</li>
+                      <li>Min Value: 0</li>
+                      <li>In Progress Spacing: -1 mins</li>
+                      <li>Notification Message: <span className="font-mono">%USERNAME% %TYPE% %ITEM% %STATUS%</span></li>
+                    </ul>
+                  </li>
+                  <li>
+                    Add your RuneScape accounts in <span className="font-semibold">Settings</span> (top right of dashboard)
+                  </li>
+                  <li>
+                    Transactions will appear here automatically when you trade on the GE
+                  </li>
+                </ol>
+              </div>
+            )}
+          </div>
+
           {transactions.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-4xl mb-4">🔕</div>
               <p className="text-slate-400 text-lg">No pending transactions</p>
+              <p className="text-slate-500 text-sm mt-2">Click the setup instructions above to get started</p>
             </div>
           ) : (
             <>
