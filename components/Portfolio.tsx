@@ -68,10 +68,28 @@ export default function Portfolio() {
   const [showNotesModal, setShowNotesModal] = useState<{ itemId: number; itemName: string } | null>(null);
   const [showTradeHistory, setShowTradeHistory] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [aiReview, setAIReview] = useState<PortfolioSummaryAI | null>(null);
+  const [aiReview, setAIReview] = useState<PortfolioSummaryAI | null>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('portfolioAIReview');
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          const now = Date.now();
+          const thirtyMinutes = 30 * 60 * 1000;
+          if (now - timestamp < thirtyMinutes) {
+            return data;
+          }
+        } catch (e) {
+          // Invalid cache, ignore
+        }
+      }
+    }
+    return null;
+  });
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAIMenu, setShowAIMenu] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [targetPrices, setTargetPrices] = useState<Record<number, { target: number; confidence: number; timeframe: string; reasoning: string }>>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('portfolioTargetPrices');
@@ -85,6 +103,16 @@ export default function Portfolio() {
       localStorage.setItem('portfolioTargetPrices', JSON.stringify(targetPrices));
     }
   }, [targetPrices]);
+
+  useEffect(() => {
+    if (aiReview && typeof window !== 'undefined') {
+      localStorage.setItem('portfolioAIReview', JSON.stringify({
+        data: aiReview,
+        timestamp: Date.now()
+      }));
+    }
+  }, [aiReview]);
+
   const [isCalculatingTargets, setIsCalculatingTargets] = useState(false);
   const items = usePortfolioStore((state) => state.items);
   const removeItem = usePortfolioStore((state) => state.removeItem);
@@ -131,6 +159,7 @@ export default function Portfolio() {
     if (items.length === 0) return;
     
     setIsAnalyzing(true);
+    setLoadingMessage('Analyzing your portfolio...');
     try {
       // Prepare portfolio data with current prices
       const portfolioData = items.map(item => {
@@ -161,8 +190,10 @@ export default function Portfolio() {
       const review = await response.json();
       setAIReview(review);
       setShowReviewModal(true);
+      setLoadingMessage('');
     } catch (error) {
       console.error('AI portfolio review failed:', error);
+      setLoadingMessage('');
       alert('Failed to analyze portfolio. Please try again.');
     } finally {
       setIsAnalyzing(false);
@@ -173,6 +204,7 @@ export default function Portfolio() {
     if (items.length === 0) return;
     
     setIsCalculatingTargets(true);
+    setLoadingMessage('Calculating smart target prices...');
     try {
       // Prepare holdings data
       const holdings = items.map(item => {
@@ -215,10 +247,12 @@ export default function Portfolio() {
       });
       
       setTargetPrices(targets);
+      setLoadingMessage('');
       console.log(`✅ Set target prices for ${Object.keys(targets).length} items`);
       alert(`✅ AI calculated smart target prices for ${Object.keys(targets).length} items! These will persist across refreshes.`);
     } catch (error) {
       console.error('Target calculation failed:', error);
+      setLoadingMessage('');
       alert('Failed to calculate targets. Please try again.');
     } finally {
       setIsCalculatingTargets(false);
@@ -600,6 +634,22 @@ export default function Portfolio() {
           }}
         />
       )}
+
+      {/* Loading Modal */}
+      {loadingMessage && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl border border-purple-500/50 p-8 shadow-2xl">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin">
+                <div className="text-4xl">✨</div>
+              </div>
+              <p className="text-white font-semibold text-lg">{loadingMessage}</p>
+              <p className="text-slate-400 text-sm">This may take a few moments...</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
