@@ -79,13 +79,9 @@ export default function Portfolio() {
       const cached = localStorage.getItem('portfolioAIReview');
       if (cached) {
         try {
-          const { data, timestamp } = JSON.parse(cached);
-          const now = Date.now();
-          const twentyFourHours = 24 * 60 * 60 * 1000;
-          // Keep cached data for 24 hours (same as rate limit)
-          if (now - timestamp < twentyFourHours) {
-            return data;
-          }
+          const { data } = JSON.parse(cached);
+          // Keep cached results indefinitely until new analysis is run
+          return data;
         } catch (e) {
           // Invalid cache, ignore
         }
