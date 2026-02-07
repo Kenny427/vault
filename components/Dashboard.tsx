@@ -323,11 +323,12 @@ export default function Dashboard() {
           // Phase 2: Slower AI analysis (20-90% in 25 seconds)
           progress = 20 + ((elapsedSeconds - 20) / 25) * 70;
         } else {
-          // Phase 3: Fast finalization (90-99% in remaining time)
-          progress = 90 + ((elapsedSeconds - 45) / 5) * 9;
+          // Phase 3: Slow down as we approach completion (90-95%)
+          const overtime = elapsedSeconds - 45;
+          progress = 90 + Math.min(overtime * 0.5, 5); // Asymptotically approach 95%
         }
         
-        setScanProgress(Math.min(progress, 99)); // Don't hit 100 until truly done
+        setScanProgress(Math.min(progress, 95)); // Cap at 95%, let completion jump to 100%
       }, 1000);
 
       // Update messages on fixed timers
@@ -360,7 +361,7 @@ export default function Dashboard() {
       clearTimeout(step2Timer);
       clearTimeout(step3Timer);
 
-      setScanProgress(95);
+      // Don't set progress here - let it jump from current to 100% when done
       setScanMessage('Finalising alpha feed (Step 3/3)');
       setScanTip('Sorting by opportunity score...');
 
