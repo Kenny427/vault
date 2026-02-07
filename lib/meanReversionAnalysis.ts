@@ -41,6 +41,14 @@ export interface MeanReversionSignal {
   botLikelihood: 'very high' | 'high' | 'medium' | 'low';
   supplyStability: number; // 0-100, higher = more stable
 
+  // ⭐ NEW: Temporal Analysis (Structural Repricing Detection)
+  priceStability30d: number; // 0-100, how stable price has been (100 = no volatility)
+  trendDirection: 'rising' | 'falling' | 'stable'; // 90d trend
+  daysSinceLastMajorShift: number; // Days since >15% price change
+  priceRange30d: { high: number; low: number; spread: number }; // Recent trading range
+  momentum: 'accelerating_down' | 'decelerating_down' | 'flat' | 'accelerating_up' | 'decelerating_up';
+  structuralRepricingRisk: 'very_high' | 'high' | 'moderate' | 'low'; // Risk this is NEW equilibrium, not temporary
+
   // Recommendation
   suggestedInvestment: number; // GP amount
   targetSellPrice: number;
@@ -331,8 +339,9 @@ function calculateConfidence({
   const weightedDeviation = Math.max(0, mediumDeviation) * 0.65 + Math.max(0, longDeviation) * 0.35;
   let confidence = weightedDeviation * 2.2;
 
+  // Boost confidence more significantly for bot-suppressed items (this is the strategy!)
   if (botDumpScore > 0) {
-    confidence += Math.min(20, botDumpScore * 0.25);
+    confidence += Math.min(35, botDumpScore * 0.35);
   }
 
   if (recoveryStrength > 0) {
@@ -359,6 +368,8 @@ function calculateConfidence({
     confidence -= 5;
   }
 
+  // Only apply downtrend penalty if NOT bot-suppressed
+  // (Bot suppression causes downtrends - that's the opportunity, not a penalty!)
   confidence -= downtrendPenalty;
 
   return clamp(confidence, 0, 100);
@@ -522,8 +533,13 @@ function detectTrendReversal(priceData: PriceDataPoint[]): {
 
 /**
  * Calculate downtrend severity and penalty
+ * For bot-suppressed items, downtrends are EXPECTED (that's the opportunity!)
+ * Only heavily penalize organic downtrends (non-bot items declining)
  */
-function assessDowntrendPenalty(priceData: PriceDataPoint[]): {
+function assessDowntrendPenalty(
+  priceData: PriceDataPoint[],
+  botLikelihood: 'very high' | 'high' | 'medium' | 'low'
+): {
   penalty: number; // 0-100, penalty to confidence
   reasoning: string;
 } {
@@ -550,6 +566,19 @@ function assessDowntrendPenalty(priceData: PriceDataPoint[]): {
   // Strong downtrend penalty: more than 20% decline with high confidence
   if (declinePercent > 20 && trend.strength > 50) {
     console.log(`[DOWNTREND-CHECK] Passed condition check: decline=${declinePercent.toFixed(1)} > 20 AND strength=${trend.strength} > 50`);
+    
+    // CHECK BOT LIKELIHOOD: If high bot activity, downtrend is likely bot-driven suppression (opportunity!)
+    if (botLikelihood === 'very high' || botLikelihood === 'high') {
+      // Bot-driven downtrend = sustained suppression = mean-reversion opportunity
+      // Minimal penalty since this is actually the signal we want
+      console.log(`[DOWNTREND-CHECK] High bot activity detected - downtrend likely bot suppression, minimal penalty`);
+      return {
+        penalty: 10,  // Minimal penalty for bot-driven downtrends
+        reasoning: `Downtrend (${declinePercent.toFixed(0)}% from peak) likely bot-driven suppression - mean-reversion opportunity`,
+      };
+    }
+    
+    // Non-bot item with strong downtrend = organic decline (risky)
     // Check if it's stabilizing (mitigates penalty)
     const { isReversing, reversingStrength, foundSupport } = detectTrendReversal(priceData);
     console.log(`[DOWNTREND-CHECK] Reversal check: isReversing=${isReversing}, reversingStrength=${reversingStrength}`);
@@ -594,6 +623,181 @@ function assessDowntrendPenalty(priceData: PriceDataPoint[]): {
 
   console.log(`[DOWNTREND-CHECK] No significant downtrend (decline: ${declinePercent.toFixed(1)}%)`);
   return { penalty: 0, reasoning: 'No significant downtrend' };
+}
+
+// ============================================
+// ⭐ NEW: TEMPORAL ANALYSIS FUNCTIONS
+// Detect structural repricing vs temporary bot suppression
+// ============================================
+
+/**
+ * Calculate price stability over last 30 days
+ * Returns 0-100 where 100 = perfectly stable (no volatility)
+ */
+function calculatePriceStability(priceData: PriceDataPoint[], days: number = 30): number {
+  const cutoffTime = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
+  const relevantData = priceData.filter(d => d.timestamp >= cutoffTime);
+  
+  if (relevantData.length < 3) return 50; // Not enough data
+  
+  const prices = relevantData.map(d => (d.avgHighPrice + d.avgLowPrice) / 2);
+  const avg = prices.reduce((sum, p) => sum + p, 0) / prices.length;
+  
+  if (avg === 0) return 50;
+  
+  // Calculate coefficient of variation (CV) = (stddev / mean) * 100
+  const squaredDiffs = prices.map(p => Math.pow(p - avg, 2));
+  const variance = squaredDiffs.reduce((sum, d) => sum + d, 0) / prices.length;
+  const stdDev = Math.sqrt(variance);
+  const cv = (stdDev / avg) * 100; // Percentage volatility
+  
+  // Convert to stability score (inverse of volatility)
+  // CV of 0% = 100 stability, CV of 20%+ = 0 stability
+  const stability = Math.max(0, 100 - (cv * 5));
+  return Math.round(stability);
+}
+
+/**
+ * Determine trend direction over 90 days
+ */
+function calculateTrendDirection(priceData: PriceDataPoint[]): 'rising' | 'falling' | 'stable' {
+  const cutoffTime = Math.floor(Date.now() / 1000) - (90 * 24 * 60 * 60);
+  const relevantData = priceData.filter(d => d.timestamp >= cutoffTime);
+  
+  if (relevantData.length < 10) return 'stable';
+  
+  // Compare first third vs last third
+  const thirdSize = Math.floor(relevantData.length / 3);
+  const firstThird = relevantData.slice(0, thirdSize);
+  const lastThird = relevantData.slice(-thirdSize);
+  
+  const avgFirst = firstThird.reduce((sum, d) => sum + (d.avgHighPrice + d.avgLowPrice) / 2, 0) / firstThird.length;
+  const avgLast = lastThird.reduce((sum, d) => sum + (d.avgHighPrice + d.avgLowPrice) / 2, 0) / lastThird.length;
+  
+  const changePercent = ((avgLast - avgFirst) / avgFirst) * 100;
+  
+  if (changePercent > 5) return 'rising';
+  if (changePercent < -5) return 'falling';
+  return 'stable';
+}
+
+/**
+ * Calculate days since last major price shift (>15% change sustained for 3+ days)
+ */
+function calculateDaysSinceLastMajorShift(priceData: PriceDataPoint[]): number {
+  if (priceData.length < 5) return 0;
+  
+  const prices = priceData.map(d => ({
+    timestamp: d.timestamp,
+    price: (d.avgHighPrice + d.avgLowPrice) / 2
+  }));
+  
+  // Walk backwards from most recent
+  for (let i = prices.length - 1; i >= 4; i--) {
+    const currentPrice = prices[i].price;
+    const olderPrice = prices[i - 3].price; // 3 days earlier
+    
+    const changePercent = Math.abs(((currentPrice - olderPrice) / olderPrice) * 100);
+    
+    if (changePercent > 15) {
+      // Found a major shift!
+      const daysSince = Math.floor((Date.now() / 1000 - prices[i].timestamp) / (24 * 60 * 60));
+      return daysSince;
+    }
+  }
+  
+  // No major shift found in available data
+  return Math.min(365, priceData.length); // Return data age or 365, whichever is less
+}
+
+/**
+ * Calculate 30-day high/low range
+ */
+function calculatePriceRange(priceData: PriceDataPoint[], days: number = 30): { high: number; low: number; spread: number } {
+  const cutoffTime = Math.floor(Date.now() / 1000) - (days * 24 * 60 * 60);
+  const relevantData = priceData.filter(d => d.timestamp >= cutoffTime);
+  
+  if (relevantData.length === 0) {
+    return { high: 0, low: 0, spread: 0 };
+  }
+  
+  const prices = relevantData.map(d => (d.avgHighPrice + d.avgLowPrice) / 2);
+  const high = Math.max(...prices);
+  const low = Math.min(...prices);
+  const spread = high > 0 ? ((high - low) / low) * 100 : 0;
+  
+  return { high: Math.round(high), low: Math.round(low), spread: Math.round(spread * 10) / 10 };
+}
+
+/**
+ * Calculate price momentum (velocity and acceleration)
+ */
+function calculateMomentum(priceData: PriceDataPoint[]): 'accelerating_down' | 'decelerating_down' | 'flat' | 'accelerating_up' | 'decelerating_up' {
+  if (priceData.length < 14) return 'flat';
+  
+  const recent7d = priceData.slice(-7);
+  const prior7d = priceData.slice(-14, -7);
+  
+  if (recent7d.length < 3 || prior7d.length < 3) return 'flat';
+  
+  const avgRecent = recent7d.reduce((sum, d) => sum + (d.avgHighPrice + d.avgLowPrice) / 2, 0) / recent7d.length;
+  const avgPrior = prior7d.reduce((sum, d) => sum + (d.avgHighPrice + d.avgLowPrice) / 2, 0) / prior7d.length;
+  const avgOlder = priceData.slice(-21, -14).reduce((sum, d) => sum + (d.avgHighPrice + d.avgLowPrice) / 2, 0) / Math.max(1, priceData.slice(-21, -14).length);
+  
+  const recentChange = ((avgRecent - avgPrior) / avgPrior) * 100;
+  const priorChange = ((avgPrior - avgOlder) / avgOlder) * 100;
+  
+  // Determine direction
+  if (Math.abs(recentChange) < 2) return 'flat';
+  
+  if (recentChange < 0) {
+    // Price falling
+    if (priorChange < 0 && Math.abs(recentChange) > Math.abs(priorChange)) {
+      return 'accelerating_down'; // Getting worse
+    }
+    return 'decelerating_down'; // Slowing fall
+  } else {
+    // Price rising
+    if (priorChange > 0 && recentChange > priorChange) {
+      return 'accelerating_up'; // Getting faster
+    }
+    return 'decelerating_up'; // Slowing rise
+  }
+}
+
+/**
+ * Assess structural repricing risk
+ * CRITICAL: High risk = this is new equilibrium, NOT a mean-reversion opportunity
+ */
+function assessStructuralRepricingRisk(
+  stability: number,
+  daysSinceMajorShift: number,
+  trend: 'rising' | 'falling' | 'stable',
+  momentum: string
+): 'very_high' | 'high' | 'moderate' | 'low' {
+  
+  // VERY HIGH RISK: Stable for 90+ days = new equilibrium
+  if (daysSinceMajorShift > 90 && stability > 70) {
+    return 'very_high'; // Dragon dart scenario - stable 7 months
+  }
+  
+  // HIGH RISK: Stable for 60+ days with clear trend
+  if (daysSinceMajorShift > 60 && stability > 60 && trend !== 'stable') {
+    return 'high';
+  }
+  
+  // Additional HIGH RISK: Falling with accelerating momentum = organic decline
+  if (trend === 'falling' && momentum === 'accelerating_down') {
+    return 'high';
+  }
+  
+  // MODERATE RISK: Stable for 30+ days
+  if (daysSinceMajorShift > 30 && stability > 50) {
+    return 'moderate';
+  }
+  
+  // LOW RISK: Recent volatility = likely temporary suppression
+  return 'low';
 }
 
 /**
@@ -658,11 +862,13 @@ export async function analyzeMeanReversionOpportunity(
   const volumeSpikeRatio =
     metrics30d.volumeAvg > 0 ? metrics7d.volumeAvg / Math.max(1, metrics30d.volumeAvg) : 1;
 
+  // BALANCED SCORING: Bot farms can suppress prices over 2-4 weeks (medium) AND long-term
+  // Prioritize medium + long gaps while still valuing short-term movements
   let botDumpScore =
-    shortTermShock * 2.4 +
-    mediumGap * 1.6 +
-    longGap * 1.1 +
-    (volumeSpikeRatio > 1 ? (volumeSpikeRatio - 1) * 25 : 0);
+    shortTermShock * 2.0 +    // Recent activity (7d vs 30d) - still important
+    mediumGap * 2.5 +         // 2-4 week bot activity (30d vs 90d) - HIGH priority
+    longGap * 2.5 +           // Long-term suppression (90d vs 365d) - HIGH priority
+    (volumeSpikeRatio > 1 ? (volumeSpikeRatio - 1) * 35 : 0);  // Increased volume weight
 
   botDumpScore +=
     botLikelihood === 'very high'
@@ -726,7 +932,10 @@ export async function analyzeMeanReversionOpportunity(
   const liquidityScore = calculateLiquidityScore(metrics30d.volumeAvg);
   const volatilityRisk = assessVolatilityRisk(metrics7d.volatility, metrics90d.volatility, currentPrice);
 
-  const { penalty: downtrendPenalty, reasoning: downtrendReasoning } = assessDowntrendPenalty(priceData);
+  const { penalty: downtrendPenalty, reasoning: downtrendReasoning } = assessDowntrendPenalty(
+    priceData,
+    botLikelihood
+  );
 
   const confidenceScore = calculateConfidence({
     mediumDeviation,
@@ -779,6 +988,19 @@ export async function analyzeMeanReversionOpportunity(
     estimatedHoldingPeriod
   );
 
+  // ⭐ Calculate new temporal analysis metrics
+  const priceStability30d = calculatePriceStability(priceData, 30);
+  const trendDirection = calculateTrendDirection(priceData);
+  const daysSinceLastMajorShift = calculateDaysSinceLastMajorShift(priceData);
+  const priceRange30d = calculatePriceRange(priceData, 30);
+  const momentum = calculateMomentum(priceData);
+  const structuralRepricingRisk = assessStructuralRepricingRisk(
+    priceStability30d,
+    daysSinceLastMajorShift,
+    trendDirection,
+    momentum
+  );
+
   const holdNarrative = `Buy between ${entryRangeLow}-${entryRangeHigh}gp (current ${entryPriceNow}gp). Target ${exitPriceBase}-${exitPriceStretch}gp over ${estimatedHoldingPeriod}. Reassess if closes below ${stopLoss}gp or if volume spikes beyond ${Math.round(metrics30d.volumeAvg * 1.4)} units.`;
 
   return {
@@ -819,6 +1041,14 @@ export async function analyzeMeanReversionOpportunity(
 
     botLikelihood,
     supplyStability,
+
+    // Temporal analysis (structural repricing detection)
+    priceStability30d,
+    trendDirection,
+    daysSinceLastMajorShift,
+    priceRange30d,
+    momentum,
+    structuralRepricingRisk,
 
     suggestedInvestment,
     targetSellPrice,

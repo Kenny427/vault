@@ -201,6 +201,8 @@ export default function Dashboard() {
     breakdown?: { inputCostUSD: number; outputCostUSD: number };
   } | null>(null);
   const [analysisStats, setAnalysisStats] = useState<{
+    totalAnalyzed: number;
+    stage0FilteredCount: number;
     aiAnalyzedCount: number;
     aiApprovedCount: number;
     preFilteredCount: number;
@@ -214,6 +216,15 @@ export default function Dashboard() {
   const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   const [filteredItems, setFilteredItems] = useState<{ itemId: number; itemName: string; reason: string }[]>([]);
   const [showFilteredItems, setShowFilteredItems] = useState(false);
+  const [aiRejectedItems, setAiRejectedItems] = useState<Array<{
+    itemId: number;
+    itemName: string;
+    systemScore: number;
+    systemConfidence: number;
+    aiDecision: string;
+    aiReasoning: string;
+    aiConfidence: number;
+  }>>([]);
   const [showSettings, setShowSettings] = useState(false);
 
   const [lastRefresh, setLastRefresh] = useState<Date | null>(() => {
@@ -342,6 +353,8 @@ export default function Dashboard() {
 
       if (data.summary) {
         setAnalysisStats({
+          totalAnalyzed: data.summary.totalAnalyzed || 0,
+          stage0FilteredCount: data.summary.stage0FilteredCount || 0,
           aiAnalyzedCount: data.summary.aiAnalyzedCount || 0,
           aiApprovedCount: data.summary.aiApprovedCount || 0,
           preFilteredCount: data.summary.preFilteredCount || 0,
@@ -370,6 +383,11 @@ export default function Dashboard() {
       // Store filtered items
       if (data.filteredItems && Array.isArray(data.filteredItems)) {
         setFilteredItems(data.filteredItems);
+      }
+
+      // Store AI rejected items with reasoning
+      if (data.aiRejectedItems && Array.isArray(data.aiRejectedItems)) {
+        setAiRejectedItems(data.aiRejectedItems);
       }
 
       // Track filtered stats for analysis
@@ -435,6 +453,82 @@ export default function Dashboard() {
   };
 
 
+
+  // Export scan results for comparison
+  const exportScanResults = () => {
+    if (opportunities.length === 0) {
+      alert('No scan results to export. Run an Alpha Feed scan first.');
+      return;
+    }
+
+    // NOTE: Manually change 'gpt-4o-mini' to 'gpt-4o' when testing different models
+    const modelName = 'gpt-4o-mini';
+
+    const exportData = {
+      exportTimestamp: new Date().toISOString(),
+      model: modelName,
+      summary: {
+        totalAnalyzed: totalAnalyzed || 0,
+        aiAnalyzedCount: analysisStats?.aiAnalyzedCount || 0,
+        aiApprovedCount: analysisStats?.aiApprovedCount || 0,
+        preFilteredCount: analysisStats?.preFilteredCount || 0,
+        cost: analysisCost
+      },
+      items: opportunities.map(opp => ({
+        itemId: opp.itemId,
+        itemName: opp.itemName,
+        currentPrice: opp.buyPrice,
+        score: opp.opportunityScore,
+        confidence: opp.confidence,
+        roi: opp.profitMargin,
+        estimatedHoldTime: opp.estimatedHoldTime,
+        aiReasoning: opp.aiReasoning || null,
+        // Find detailed analysis if available
+        detailedAnalysis: detailedAnalyses.find(d => d.itemId === opp.itemId)?.detailedAnalysis || null
+      })),
+      filteredOut: filteredItems.map(f => ({
+        itemId: f.itemId,
+        itemName: f.itemName,
+        reason: f.reason
+      })),
+      rejectedByAI: {
+        totalRejected: aiRejectedItems.length,
+        stage1Mandatory: aiRejectedItems
+          .filter(r => r.aiDecision === 'rejected_stage1_mandatory')
+          .map(r => ({
+            itemId: r.itemId,
+            itemName: r.itemName,
+            systemScore: r.systemScore,
+            systemConfidence: r.systemConfidence,
+            aiReasoning: r.aiReasoning,
+            aiConfidence: r.aiConfidence
+          })),
+        stage2Quality: aiRejectedItems
+          .filter(r => r.aiDecision === 'rejected_stage2_quality')
+          .map(r => ({
+            itemId: r.itemId,
+            itemName: r.itemName,
+            systemScore: r.systemScore,
+            systemConfidence: r.systemConfidence,
+            aiReasoning: r.aiReasoning,
+            aiConfidence: r.aiConfidence
+          }))
+      }
+    };
+
+    // Download as JSON
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `alpha-feed-scan-${new Date().toISOString().split('T')[0]}-${modelName}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    alert(`Exported ${opportunities.length} items to JSON file`);
+  };
 
   useEffect(() => {
     analyzeRef.current = analyzeWithAI;
@@ -683,7 +777,7 @@ export default function Dashboard() {
                   </div>
                   {!loading && analysisStats && (
                     <div className="text-xs text-blue-200/80">
-                      Analysis: {analysisStats.preFilteredCount} signals captured → {analysisStats.aiAnalyzedCount} AI evaluated → {analysisStats.aiApprovedCount} approved{typeof analysisStats.aiMissingCount === 'number' && analysisStats.aiMissingCount > 0 ? ` (${analysisStats.aiMissingCount} missing)` : ''}
+                      Analysis: {analysisStats.totalAnalyzed} items → {analysisStats.stage0FilteredCount} filtered (Stage 0) → {analysisStats.aiAnalyzedCount} AI evaluated → {analysisStats.aiApprovedCount} approved
                     </div>
                   )}
 
@@ -723,6 +817,16 @@ export default function Dashboard() {
                       className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium text-sm transition-colors"
                     >
                       🔍 {filteredItems.length} Filtered
+                    </button>
+                  )}
+                  {/* Export button hidden but code preserved for future use */}
+                  {false && !loading && opportunities.length > 0 && (
+                    <button
+                      onClick={exportScanResults}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-medium text-sm transition-colors"
+                      title="Export scan results as JSON for comparison"
+                    >
+                      📥 Export Results
                     </button>
                   )}
                 </div>
