@@ -481,7 +481,7 @@ export default function Dashboard() {
       return;
     }
 
-    // NOTE: Manually change 'gpt-4o-mini' to 'gpt-4o' when testing different models
+    // NOTE: Manually change model to match backend for testing
     const modelName = 'gpt-4o-mini';
 
     const exportData = {
