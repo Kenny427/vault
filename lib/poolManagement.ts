@@ -29,6 +29,9 @@ export interface PoolItem {
     enabled: boolean;
     tags: string[];
     notes: string | null;
+    buy_limit: number | null;
+    daily_volume: number | null;
+    last_volume_update: string | null;
     added_by: string | null;
     created_at: string;
     updated_at: string;

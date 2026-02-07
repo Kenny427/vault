@@ -11,14 +11,28 @@ interface PoolItem {
     enabled: boolean;
     tags: string[];
     notes: string | null;
+    buy_limit: number | null;
+    daily_volume: number | null;
+    last_volume_update: string | null;
     created_at: string;
 }
+
+// Helper function to format volume numbers
+const formatVolume = (volume: number): string => {
+    if (volume >= 1000000) {
+        return `${(volume / 1000000).toFixed(2)}M`;
+    } else if (volume >= 1000) {
+        return `${(volume / 1000).toFixed(1)}K`;
+    }
+    return volume.toLocaleString();
+};
 
 export default function ManualPoolEditor() {
     const [loading, setLoading] = useState(true);
     const [items, setItems] = useState<PoolItem[]>([]);
     const [showAddForm, setShowAddForm] = useState(false);
     const [filter, setFilter] = useState('');
+    const [updatingVolumes, setUpdatingVolumes] = useState(false);
 
     // Form state
     const [itemId, setItemId] = useState('');
@@ -125,6 +139,33 @@ export default function ManualPoolEditor() {
         }
     };
 
+    const handleUpdateVolumes = async () => {
+        if (!confirm('This will fetch buy limits and volumes for all enabled items from the OSRS Wiki API. This may take a few minutes. Continue?')) {
+            return;
+        }
+
+        setUpdatingVolumes(true);
+        try {
+            const response = await fetch('/api/admin/pool/update-volumes', {
+                method: 'POST',
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                alert(`Updated ${result.updated} items. Errors: ${result.errors}`);
+                await loadItems(); // Reload to show new data
+            } else {
+                const error = await response.json();
+                alert(`Error: ${error.error || 'Failed to update volumes'}`);
+            }
+        } catch (error) {
+            console.error('Error updating volumes:', error);
+            alert('Failed to update volumes');
+        } finally {
+            setUpdatingVolumes(false);
+        }
+    };
+
     const filteredItems = items.filter(item =>
         item.item_name.toLowerCase().includes(filter.toLowerCase()) ||
         item.category?.toLowerCase().includes(filter.toLowerCase())
@@ -144,12 +185,21 @@ export default function ManualPoolEditor() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-slate-100">🎯 Manual Pool Editor</h2>
-                <button
-                    onClick={() => setShowAddForm(!showAddForm)}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors"
-                >
-                    {showAddForm ? 'Cancel' : '+ Add Item'}
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleUpdateVolumes}
+                        disabled={updatingVolumes}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded text-sm transition-colors"
+                    >
+                        {updatingVolumes ? '⏳ Updating...' : '📊 Update Volumes'}
+                    </button>
+                    <button
+                        onClick={() => setShowAddForm(!showAddForm)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm transition-colors"
+                    >
+                        {showAddForm ? 'Cancel' : '+ Add Item'}
+                    </button>
+                </div>
             </div>
 
             {/* Stats */}
@@ -293,6 +343,8 @@ export default function ManualPoolEditor() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Item</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Category</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Priority</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Buy Limit</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Daily Volume</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Tags</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Status</th>
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400">Actions</th>
@@ -309,6 +361,18 @@ export default function ManualPoolEditor() {
                                             {item.category || '-'}
                                         </td>
                                         <td className="px-4 py-3 text-sm text-slate-400">{item.priority}</td>
+                                        <td className="px-4 py-3 text-sm text-slate-400">
+                                            {item.buy_limit ? item.buy_limit.toLocaleString() : '-'}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {item.daily_volume ? (
+                                                <div className="text-sm text-slate-300">
+                                                    {formatVolume(item.daily_volume)}
+                                                </div>
+                                            ) : (
+                                                <span className="text-sm text-slate-500">-</span>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-wrap gap-1">
                                                 {item.tags.map((tag, idx) => (
