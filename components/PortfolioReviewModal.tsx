@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React from 'react';
 
 interface PortfolioAIReview {
   itemId: number;
@@ -34,75 +34,17 @@ interface PortfolioReviewModalProps {
 }
 
 export default function PortfolioReviewModal({ review, onClose }: PortfolioReviewModalProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
-  
   if (!review) return null;
 
-  const handleExportPDF = () => {
-    // Use browser's print dialog to save as PDF
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Please allow popups to export PDF');
-      return;
-    }
-
-    const content = contentRef.current?.innerHTML || '';
-    const timestamp = new Date().toLocaleString();
-    
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Portfolio Review - ${timestamp}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; background: white; color: black; }
-            h1 { color: #8b5cf6; }
-            h2 { color: #6366f1; margin-top: 20px; }
-            .metric { margin: 10px 0; font-size: 14px; }
-            .item { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; page-break-inside: avoid; }
-            .item-title { font-size: 18px; font-weight: bold; color: #8b5cf6; margin-bottom: 10px; }
-            .price-guidance { margin: 10px 0; padding: 10px; background: #e0e7ff; border-left: 4px solid #6366f1; }
-            .price-guidance h3 { margin: 0 0 10px 0; font-size: 14px; color: #4f46e5; }
-            .price-row { margin: 5px 0; font-size: 13px; }
-            .stop-loss { color: #dc2626; font-weight: bold; }
-            .warning { color: #dc2626; font-weight: bold; }
-            @media print { .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <h1>📊 AI Portfolio Review</h1>
-          <p style="color: #666; font-size: 12px;">Generated: ${timestamp}</p>
-          ${content}
-          <p style="margin-top: 40px; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 10px;">
-            Disclaimer: AI analysis is not guaranteed to be accurate. Always do your own research before making trading decisions.
-          </p>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
-  };
-
   return (
-
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
       <div className="bg-slate-900 rounded-xl border border-purple-700/50 max-w-3xl w-full max-h-[90vh] overflow-auto shadow-2xl relative" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-purple-700/50 p-4 flex items-center justify-between z-10">
           <h2 className="text-2xl font-bold text-purple-300">📊 AI Portfolio Review</h2>
-          <div className="flex gap-2">
-            <button 
-              onClick={handleExportPDF}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors text-sm flex items-center gap-2"
-            >
-              📄 Export PDF
-            </button>
-            <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl px-2">×</button>
-          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-2xl px-2">×</button>
         </div>
 
-        <div ref={contentRef} className="p-8">
+        <div className="p-8">
           <div className="metric mb-6">
             <div className="grid grid-cols-2 gap-4 mb-4">
               <div>

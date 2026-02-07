@@ -92,6 +92,24 @@ export default function Portfolio() {
     }
     return null;
   });
+  const [lastAnalysisTimestamp, setLastAnalysisTimestamp] = useState<number | null>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem('portfolioAIReview');
+      if (cached) {
+        try {
+          const { timestamp } = JSON.parse(cached);
+          const now = Date.now();
+          const thirtyMinutes = 30 * 60 * 1000;
+          if (now - timestamp < thirtyMinutes) {
+            return timestamp;
+          }
+        } catch (e) {
+          // Invalid cache, ignore
+        }
+      }
+    }
+    return null;
+  });
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAIMenu, setShowAIMenu] = useState(false);
@@ -111,13 +129,13 @@ export default function Portfolio() {
   }, [targetPrices]);
 
   useEffect(() => {
-    if (aiReview && typeof window !== 'undefined') {
+    if (aiReview && lastAnalysisTimestamp && typeof window !== 'undefined') {
       localStorage.setItem('portfolioAIReview', JSON.stringify({
         data: aiReview,
-        timestamp: Date.now()
+        timestamp: lastAnalysisTimestamp
       }));
     }
-  }, [aiReview]);
+  }, [aiReview, lastAnalysisTimestamp]);
 
   const [isCalculatingTargets, setIsCalculatingTargets] = useState(false);
   const items = usePortfolioStore((state) => state.items);
@@ -194,7 +212,9 @@ export default function Portfolio() {
       }
 
       const review = await response.json();
+      const timestamp = Date.now();
       setAIReview(review);
+      setLastAnalysisTimestamp(timestamp);
       setShowReviewModal(true);
       setLoadingMessage('');
     } catch (error) {
@@ -531,18 +551,36 @@ export default function Portfolio() {
                     <p className="text-sm text-slate-400">
                       AI analyzes all holdings to assess risk, diversification, and provides recommendations
                     </p>
+                    {lastAnalysisTimestamp && (
+                      <p className="text-xs text-green-400 mt-2">
+                        ✓ Last analyzed {new Date(lastAnalysisTimestamp).toLocaleString()} ({Math.floor((Date.now() - lastAnalysisTimestamp) / 60000)} min ago)
+                      </p>
+                    )}
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setShowAIMenu(false);
-                    handleAIReview();
-                  }}
-                  disabled={isAnalyzing}
-                  className="w-full px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
-                >
-                  {isAnalyzing ? '⏳ Analyzing Portfolio...' : '🚀 Run Portfolio Review'}
-                </button>
+                <div className="flex gap-2">
+                  {aiReview && (
+                    <button
+                      onClick={() => {
+                        setShowAIMenu(false);
+                        setShowReviewModal(true);
+                      }}
+                      className="flex-1 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition-colors"
+                    >
+                      👁️ View Last Analysis
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowAIMenu(false);
+                      handleAIReview();
+                    }}
+                    disabled={isAnalyzing}
+                    className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-colors"
+                  >
+                    {isAnalyzing ? '⏳ Analyzing...' : '🚀 Run New Analysis'}
+                  </button>
+                </div>
               </div>
 
               {/* Portfolio Review Modal */}
