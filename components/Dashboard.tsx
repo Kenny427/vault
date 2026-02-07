@@ -935,7 +935,6 @@ export default function Dashboard() {
                       <FlipCard
                         key={opp.itemId}
                         opportunity={opp}
-                        onViewDetails={() => router.push(`/item/${opp.itemId}`)}
                       />
                     ))}
                   </div>

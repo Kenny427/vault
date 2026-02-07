@@ -12,10 +12,9 @@ import ItemGraphModal from './ItemGraphModal';
 
 interface FlipCardProps {
   opportunity: FlipOpportunity;
-  onViewDetails: () => void;
 }
 
-export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) {
+export default function FlipCard({ opportunity }: FlipCardProps) {
   const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
   const isInFavorites = favorites.some(item => item.id === opportunity.itemId);
 
@@ -82,8 +81,7 @@ export default function FlipCard({ opportunity, onViewDetails }: FlipCardProps) 
 
   return (
     <div
-      onClick={onViewDetails}
-      className={`bg-gradient-to-br from-slate-800 to-slate-900 border ${getScoreBorder(opportunity.opportunityScore)} rounded-lg overflow-hidden hover:border-osrs-accent transition-all cursor-pointer hover:shadow-lg hover:shadow-osrs-accent/20 hover:-translate-y-1`}
+      className={`bg-gradient-to-br from-slate-800 to-slate-900 border ${getScoreBorder(opportunity.opportunityScore)} rounded-lg overflow-hidden hover:border-osrs-accent transition-all hover:shadow-lg hover:shadow-osrs-accent/20`}
     >
       {/* Header - Item Name & Favorite */}
       <div className="p-4 border-b border-slate-700 bg-slate-900/50">

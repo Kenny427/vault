@@ -295,9 +295,12 @@ export async function getItemHistory(
       return null;
     }
     
-    // Use all data points returned - don't filter by timestamp range
-    // The API already returns the correct timeframe based on timestep parameter
+    // Filter data to only include points within the requested timestamp range
+    const now = Math.floor(Date.now() / 1000);
+    const cutoffTimestamp = now - timestampRange;
+    
     const processedData = data
+      .filter((point: any) => point.timestamp >= cutoffTimestamp)
       .map((point: any) => {
         const avgHigh = point.avgHighPrice || point.high || 0;
         const avgLow = point.avgLowPrice || point.low || 0;
