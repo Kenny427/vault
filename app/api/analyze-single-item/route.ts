@@ -81,6 +81,16 @@ async function performGeneralMarketAnalysis(
   // Fetch game update context
   const gameContext = await getGameUpdateContext(itemId, 14); // Last 14 days
   const updateGuidance = generateUpdateGuidance(gameContext.updates);
+  
+  // Check for bearish drop rate increases
+  const dropRateIncreases = gameContext.updates.filter(u => 
+    u.impact_type === 'drop_rate_increase' || 
+    (u.sentiment === 'bearish' && u.notes?.toLowerCase().includes('drop rate'))
+  );
+  
+  const dropRateWarning = dropRateIncreases.length > 0
+    ? `\n⚠️ **CRITICAL WARNING**: This item's drop rate was INCREASED (more common). Expect FALLING PRICES due to increased supply. NOT a buy opportunity unless deeply oversold.\n`
+    : '';
 
   const generalPrompt = `You are an expert OSRS market analyst. Provide comprehensive trading advice for this item.
 
@@ -101,8 +111,9 @@ VOLUME PATTERNS:
 PRICE VOLATILITY:
 - 90d Range: ${minPrice.toLocaleString()}gp - ${maxPrice.toLocaleString()}gp
 - Volatility: ${priceRange.toFixed(1)}%
-${gameContext.hasUpdates ? gameContext.contextText : ''}${updateGuidance}
+${gameContext.hasUpdates ? gameContext.contextText : ''}${updateGuidance}${dropRateWarning}
 TASK: Analyze this item and provide actionable trading advice. Consider:
+**CRITICAL**: If drop rate INCREASED = item is MORE COMMON = BEARISH (price falls). DO NOT recommend as buy.
 1. What trading strategy fits this item? (Quick flip, merch, long-term hold, avoid?)
 2. Is the current price favorable for entry?
 3. What are realistic profit expectations?
@@ -350,6 +361,20 @@ export async function GET(request: Request) {
     // Step 2: STRATEGIST PASS - Deep dive behavioral analysis
     console.log('🧠 Running AI Strategist Pass...');
 
+    // Fetch game update context for mean-reversion analysis
+    const gameContext = await getGameUpdateContext(itemId, 14);
+    const updateGuidance = generateUpdateGuidance(gameContext.updates);
+    
+    // Check for bearish drop rate increases
+    const dropRateIncreases = gameContext.updates.filter(u => 
+      u.impact_type === 'drop_rate_increase' || 
+      (u.sentiment === 'bearish' && u.notes?.toLowerCase().includes('drop rate'))
+    );
+    
+    const dropRateWarning = dropRateIncreases.length > 0
+      ? `\n⚠️ **CRITICAL WARNING**: This item's drop rate was INCREASED in a recent update. This means MORE SUPPLY = FALLING PRICES likely. Exercise extreme caution - this could invalidate mean-reversion thesis.\n${dropRateIncreases.map(u => `   - ${u.title}: ${u.notes}`).join('\n')}\n`
+      : '';
+
     const strategistPrompt = `You are an expert OSRS market analyst providing DEEP DIVE analysis on this item's flip potential.
 
 ITEM: ${baseSignal.itemName} (ID: ${itemId})
@@ -369,8 +394,10 @@ METRICS:
 - Volatility: ${baseSignal.volatilityRisk}
 - Base Confidence: ${baseSignal.confidenceScore}%
 - Upside Potential: ${baseSignal.reversionPotential.toFixed(1)}%
-
+${gameContext.hasUpdates ? gameContext.contextText : ''}${updateGuidance}${dropRateWarning}
 TASK: Provide engaging, specific analysis that a trader would actually want to read.
+
+**CRITICAL GAME UPDATE RULE**: If this item had drop rate  INCREASED (more common) in a recent update, the mean-reversion thesis is likely INVALID. Acknowledge this and reduce confidence significantly.
 
 1. **THESIS** (The Core Story):Write 2-3 compelling sentences explaining WHY this is an opportunity NOW. Include:
    - Specific catalysts or market events (bot bans, updates, seasonal patterns)
@@ -449,12 +476,13 @@ ITEM: ${baseSignal.itemName} (${itemId})
 CURRENT PRICE: ${baseSignal.currentPrice}gp
 STRATEGIST THESIS: ${strategistData.logic?.thesis || 'Standard mean-reversion opportunity'}
 PROPOSED EXITS: Conservative ${strategistData.priceTargets?.exitConservative || baseSignal.exitPriceBase}gp | Aggressive ${strategistData.priceTargets?.exitAggressive || baseSignal.exitPriceStretch}gp
-
+${gameContext.hasUpdates ? '\n' + gameContext.contextText : ''}${dropRateWarning}
 CRITIQUE:
 1. Is this real mean-reversion or structural decline (game changes, dead content)?
-2. Are exit targets realistic given 365d average is ${baseSignal.longTerm.avgPrice}gp?
-3. Are volume patterns and bot signals credible?
-4. Does the narrative match the data or is it overly optimistic?
+2. **CRITICAL**: If drop rate INCREASED (item more common), this invalidates mean-reversion thesis - REJECT
+3. Are exit targets realistic given 365d average is ${baseSignal.longTerm.avgPrice}gp?
+4. Are volume patterns and bot signals credible?
+5. Does the narrative match the data or is it overly optimistic?
 
 Return ONLY valid JSON:
 {

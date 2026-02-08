@@ -31,10 +31,18 @@ TASK: Extract all OSRS tradeable items mentioned or affected by this update.
 
 For each item, determine:
 1. **name**: Exact OSRS item name
-2. **relationship**: How it's affected (requirement/reward/buff/nerf/drop_rate_change/other)
+2. **relationship**: How it's affected - MUST be one of:
+   - requirement: Item is needed for content (BULLISH - demand increases)
+   - reward: Item is given as reward (BEARISH - supply increases)
+   - buff: Item is improved/stronger (BULLISH - demand increases)
+   - nerf: Item is weakened (BEARISH - demand decreases)
+   - drop_increase: Drop rate INCREASED = more common (BEARISH - price falls)
+   - drop_decrease: Drop rate DECREASED = rarer (BULLISH - price rises)
+   - new_method: New way to obtain/use item
+   - other: General relation
 3. **quantity**: If a specific amount is mentioned
 4. **confidence**: 0-100 (how sure you are this item is affected)
-5. **notes**: Brief explanation
+5. **notes**: Brief explanation INCLUDING whether it's bullish or bearish
 
 Also provide:
 - **overall_sentiment**: bullish/bearish/neutral/mixed (market direction)
@@ -45,6 +53,8 @@ IMPORTANT RULES:
 - Only include TRADEABLE items (not quest-only items)
 - Include items indirectly affected (e.g., if Dragons buffed, Dragon bones will rise)
 - Be conservative with confidence scores
+- **CRITICAL**: Drop rate INCREASES make items MORE common = BEARISH (use drop_increase)
+- **CRITICAL**: Drop rate DECREASES make items RARER = BULLISH (use drop_decrease)
 - Consider supply AND demand impacts
 - Think about secondary effects
 
@@ -181,8 +191,28 @@ export function determineSentiment(
   relationship: string,
   notes?: string
 ): 'bullish' | 'bearish' | 'neutral' {
-  const bullishTerms = ['requirement', 'buff', 'demand', 'increase', 'rare'];
-  const bearishTerms = ['nerf', 'drop_increase', 'supply', 'easier', 'common'];
+  // Direct mapping for clear relationships
+  const directMappings: Record<string, 'bullish' | 'bearish'> = {
+    'requirement': 'bullish',  // Demand increases
+    'buff': 'bullish',          // Item is better
+    'drop_decrease': 'bullish', // Becomes rarer
+    'reward': 'bearish',        // Supply increases
+    'nerf': 'bearish',          // Item is worse
+    'drop_increase': 'bearish', // Becomes more common
+    'drop_rate_increase': 'bearish', // Alternative naming
+  };
+
+  // Check for direct mapping first
+  const relLower = relationship.toLowerCase();
+  for (const [key, sentiment] of Object.entries(directMappings)) {
+    if (relLower.includes(key)) {
+      return sentiment;
+    }
+  }
+
+  // Fallback to keyword analysis
+  const bullishTerms = ['requirement', 'buff', 'demand', 'rarer', 'decrease', 'reduced drop'];
+  const bearishTerms = ['nerf', 'drop increase', 'supply', 'easier', 'common', 'more frequent'];
 
   const text = `${relationship} ${notes || ''}`.toLowerCase();
 
