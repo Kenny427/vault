@@ -9,18 +9,22 @@ import { getItemDetails, resolveIconUrl, fetchItemMapping } from '@/lib/api/osrs
 import SetAlertModal from './SetAlertModal';
 import ItemNotesModal from './ItemNotesModal';
 import ItemGraphModal from './ItemGraphModal';
+import FeedbackModal from './FeedbackModal';
 
 interface FlipCardProps {
   opportunity: FlipOpportunity;
+  onSkip?: (itemId: number) => void;
 }
 
-export default function FlipCard({ opportunity }: FlipCardProps) {
+export default function FlipCard({ opportunity, onSkip }: FlipCardProps) {
   const { favorites, addToFavorites, removeFromFavorites } = useDashboardStore();
   const isInFavorites = favorites.some(item => item.id === opportunity.itemId);
 
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [showGraphModal, setShowGraphModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<'accept' | 'decline' | 'skip'>('skip');
 
   // Fetch item details for icon
   const { data: itemDetails } = useQuery({
@@ -65,6 +69,47 @@ export default function FlipCard({ opportunity }: FlipCardProps) {
     }
   };
 
+  const handleSkip = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFeedbackType('skip');
+    setShowFeedbackModal(true);
+  };
+
+  const handleFeedbackSubmit = async (feedback: {
+    itemId: number;
+    feedbackType: 'accept' | 'decline' | 'skip';
+    reason: string;
+    tags: string[];
+    confidence: number;
+  }) => {
+    try {
+      // Save feedback to database
+      await fetch('/api/ai-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...feedback,
+          itemName: opportunity.itemName,
+          aiConfidence: opportunity.confidence,
+          aiThesis: opportunity.buyWhen,
+          priceAtFeedback: opportunity.currentPrice,
+        }),
+      });
+
+      // If skip, store in localStorage with 24h expiry
+      if (feedback.feedbackType === 'skip') {
+        const skipped = JSON.parse(localStorage.getItem('osrs-skipped-items') || '{}');
+        skipped[opportunity.itemId] = Date.now() + (24 * 60 * 60 * 1000); // 24h from now
+        localStorage.setItem('osrs-skipped-items', JSON.stringify(skipped));
+        
+        // Notify parent to remove from view
+        if (onSkip) onSkip(opportunity.itemId);
+      }
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+    }
+  };
+
   const getScoreGradient = (score: number) => {
     if (score >= 70) return 'from-green-400 to-emerald-500';
     if (score >= 50) return 'from-yellow-400 to-orange-500';
@@ -102,18 +147,27 @@ export default function FlipCard({ opportunity }: FlipCardProps) {
               <p className="text-xs text-slate-500 mt-1">ID: {opportunity.itemId}</p>
             </div>
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleFavorite(e);
-            }}
-            className={`ml-2 px-3 py-1 rounded text-sm font-bold transition-all ${isInFavorites
-              ? 'bg-osrs-accent text-slate-900'
-              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-              }`}
-          >
-            {isInFavorites ? '★' : '☆'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSkip}
+              className="px-3 py-1 bg-yellow-600/80 hover:bg-yellow-600 text-white rounded text-sm font-bold transition-colors"
+              title="Skip for 24h"
+            >
+              ⏭️
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFavorite(e);
+              }}
+              className={`px-3 py-1 rounded text-sm font-bold transition-all ${isInFavorites
+                ? 'bg-osrs-accent text-slate-900'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+            >
+              {isInFavorites ? '★' : '☆'}
+            </button>
+          </div>
         </div>
 
         {/* Score Badge, Hold Time & Buy Limit - Primary Metrics */}
@@ -256,34 +310,61 @@ export default function FlipCard({ opportunity }: FlipCardProps) {
 
 
       {/* Quick Actions */}
-      <div className="p-3 border-t border-slate-700 bg-slate-900/30 grid grid-cols-3 gap-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowGraphModal(true);
-          }}
-          className="py-2 px-2 bg-osrs-accent hover:bg-osrs-accent/90 text-slate-900 text-xs font-bold rounded transition-colors"
-        >
-          📊 Graph
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowSetAlertModal(true);
-          }}
-          className="py-2 px-2 bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-bold rounded transition-colors"
-        >
-          🔔 Alert
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowNotesModal(true);
-          }}
-          className="py-2 px-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded transition-colors"
-        >
-          📝 Notes
-        </button>
+      <div className="p-3 border-t border-slate-700 bg-slate-900/30 space-y-2">
+        {/* Feedback Actions */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setFeedbackType('accept');
+              setShowFeedbackModal(true);
+            }}
+            className="py-2 px-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded transition-colors"
+          >
+            ✅ Accept
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setFeedbackType('decline');
+              setShowFeedbackModal(true);
+            }}
+            className="py-2 px-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded transition-colors"
+          >
+            ❌ Decline
+          </button>
+        </div>
+        
+        {/* Utility Actions */}
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowGraphModal(true);
+            }}
+            className="py-2 px-2 bg-osrs-accent hover:bg-osrs-accent/90 text-slate-900 text-xs font-bold rounded transition-colors"
+          >
+            📊 Graph
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowSetAlertModal(true);
+            }}
+            className="py-2 px-2 bg-yellow-600 hover:bg-yellow-700 text-white text-xs font-bold rounded transition-colors"
+          >
+            🔔 Alert
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowNotesModal(true);
+            }}
+            className="py-2 px-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded transition-colors"
+          >
+            📝 Notes
+          </button>
+        </div>
       </div>
 
       {/* Modals - rendered outside card using portal */}
@@ -309,6 +390,25 @@ export default function FlipCard({ opportunity }: FlipCardProps) {
           itemId={opportunity.itemId}
           itemName={opportunity.itemName}
           onClose={() => setShowGraphModal(false)}
+        />,
+        document.body
+      )}
+      {showFeedbackModal && typeof document !== 'undefined' && createPortal(
+        <FeedbackModal
+          isOpen={showFeedbackModal}
+          onClose={() => setShowFeedbackModal(false)}
+          itemId={opportunity.itemId}
+          itemName={opportunity.itemName}
+          feedbackType={feedbackType}
+          aiRecommendation={{
+            confidence: opportunity.confidence || 0,
+            thesis: opportunity.buyWhen || '',
+            targets: {
+              entry: opportunity.buyPrice,
+              exit: opportunity.sellPrice,
+            },
+          }}
+          onSubmit={handleFeedbackSubmit}
         />,
         document.body
       )}

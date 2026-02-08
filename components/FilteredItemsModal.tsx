@@ -166,7 +166,7 @@ export default function FilteredItemsModal({
                 </p>
               ) : (
                 Object.entries(categorizedStage0).map(([category, items]) => (
-                  <details key={category} className="border border-slate-700 rounded-lg bg-slate-800/50" open>
+                  <details key={category} className="border border-slate-700 rounded-lg bg-slate-800/50">
                     <summary className="cursor-pointer p-4 hover:bg-slate-800/80 transition-colors">
                       <div className="flex items-center gap-3">
                         <span className="text-base font-semibold text-blue-300">{category}</span>
@@ -216,7 +216,7 @@ export default function FilteredItemsModal({
                 <>
                   {/* Stage 1: Mandatory Rejections */}
                   {stage1Rejections.length > 0 && (
-                    <details className="border border-red-700/50 rounded-lg bg-red-900/10" open>
+                    <details className="border border-red-700/50 rounded-lg bg-red-900/10">
                       <summary className="cursor-pointer p-4 hover:bg-red-900/20 transition-colors">
                         <div className="flex items-center gap-3">
                           <span className="text-base font-semibold text-red-400">
@@ -251,7 +251,7 @@ export default function FilteredItemsModal({
 
                   {/* Stage 2: Quality Rejections */}
                   {stage2Rejections.length > 0 && (
-                    <details className="border border-orange-700/50 rounded-lg bg-orange-900/10" open>
+                    <details className="border border-orange-700/50 rounded-lg bg-orange-900/10">
                       <summary className="cursor-pointer p-4 hover:bg-orange-900/20 transition-colors">
                         <div className="flex items-center gap-3">
                           <span className="text-base font-semibold text-orange-400">

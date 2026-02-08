@@ -228,6 +228,7 @@ export default function Dashboard() {
   }>>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [showAlphaFeedInfo, setShowAlphaFeedInfo] = useState(false);
+  const [skippedItems, setSkippedItems] = useState<Set<number>>(new Set());
 
   const [lastRefresh, setLastRefresh] = useState<Date | null>(() => {
     if (typeof window !== 'undefined') {
@@ -619,10 +620,41 @@ export default function Dashboard() {
     }
   }, [activeTab]);
 
+  // Load and clean up skipped items
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const skipped = JSON.parse(localStorage.getItem('osrs-skipped-items') || '{}');
+      const now = Date.now();
+      const stillSkipped = new Set<number>();
+      
+      // Keep only non-expired skips
+      Object.entries(skipped).forEach(([itemId, expiry]) => {
+        if (typeof expiry === 'number' && expiry > now) {
+          stillSkipped.add(Number(itemId));
+        }
+      });
+      
+      // Update localStorage to remove expired
+      const cleanedSkips: Record<number, number> = {};
+      stillSkipped.forEach(id => {
+        cleanedSkips[id] = skipped[id];
+      });
+      localStorage.setItem('osrs-skipped-items', JSON.stringify(cleanedSkips));
+      
+      setSkippedItems(stillSkipped);
+    }
+  }, []);
+
+  // Handle item skip
+  const handleItemSkip = (itemId: number) => {
+    setSkippedItems(prev => new Set(prev).add(itemId));
+  };
+
 
 
   // Filter opportunities based on settings
   let filteredOpportunities = opportunities.filter(opp => {
+    if (skippedItems.has(opp.itemId)) return false; // Filter skipped items
     if (opp.opportunityScore < minOpportunityScore) return false;
     // Only filter by recommendation if it's been set (AI pass sets this)
     if (opp.recommendation && opp.recommendation !== 'buy') return false;
@@ -935,6 +967,7 @@ export default function Dashboard() {
                       <FlipCard
                         key={opp.itemId}
                         opportunity={opp}
+                        onSkip={handleItemSkip}
                       />
                     ))}
                   </div>
