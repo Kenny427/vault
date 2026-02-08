@@ -4,6 +4,7 @@ import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
 import { analyzeMeanReversionOpportunity, MeanReversionSignal } from '@/lib/meanReversionAnalysis';
 import { trackEvent, calculateAICost } from '@/lib/adminAnalytics';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { getGameUpdateContext, generateUpdateGuidance } from '@/lib/gameUpdateContext';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -77,6 +78,10 @@ async function performGeneralMarketAnalysis(
 
   const volumeCategory = vol7d > 1000 ? 'High-volume' : vol7d > 100 ? 'Medium-volume' : 'Low-volume';
 
+  // Fetch game update context
+  const gameContext = await getGameUpdateContext(itemId, 14); // Last 14 days
+  const updateGuidance = generateUpdateGuidance(gameContext.updates);
+
   const generalPrompt = `You are an expert OSRS market analyst. Provide comprehensive trading advice for this item.
 
 ITEM ID: ${itemId}
@@ -96,7 +101,7 @@ VOLUME PATTERNS:
 PRICE VOLATILITY:
 - 90d Range: ${minPrice.toLocaleString()}gp - ${maxPrice.toLocaleString()}gp
 - Volatility: ${priceRange.toFixed(1)}%
-
+${gameContext.hasUpdates ? gameContext.contextText : ''}${updateGuidance}
 TASK: Analyze this item and provide actionable trading advice. Consider:
 1. What trading strategy fits this item? (Quick flip, merch, long-term hold, avoid?)
 2. Is the current price favorable for entry?

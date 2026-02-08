@@ -12,8 +12,9 @@ import BroadcastNotifications from '@/components/BroadcastNotifications';
 import PoolInsights from '@/components/PoolInsights';
 import ManualPoolEditor from '@/components/ManualPoolEditor';
 import SystemMonitoring from '@/components/SystemMonitoring';
+import GameUpdatesManager from '@/components/GameUpdatesManager';
 
-type Tab = 'insights' | 'pool-editor' | 'analytics' | 'pool-manager' | 'pool-stats' | 'users' | 'errors' | 'notifications' | 'monitoring';
+type Tab = 'insights' | 'pool-editor' | 'analytics' | 'pool-manager' | 'pool-stats' | 'users' | 'errors' | 'notifications' | 'monitoring' | 'game-updates';
 
 const ADMIN_EMAIL = 'kenstorholt@gmail.com';
 
@@ -80,6 +81,7 @@ export default function AdminPage() {
   const tabs = [
     { id: 'insights' as Tab, label: 'Pool Insights', description: 'Performance and optimization' },
     { id: 'pool-editor' as Tab, label: 'Pool Editor', description: 'Manage items' },
+    { id: 'game-updates' as Tab, label: 'Game Updates', description: 'OSRS updates tracker' },
     { id: 'analytics' as Tab, label: 'Analytics', description: 'System metrics' },
     { id: 'users' as Tab, label: 'Users', description: 'User management' },
     { id: 'notifications' as Tab, label: 'Notifications', description: 'Broadcasts' },
@@ -128,6 +130,7 @@ export default function AdminPage() {
         <div className="bg-slate-900 rounded-lg p-6 border border-slate-700">
           {activeTab === 'insights' && <PoolInsights />}
           {activeTab === 'pool-editor' && <ManualPoolEditor />}
+          {activeTab === 'game-updates' && <GameUpdatesManager />}
           {activeTab === 'analytics' && <AnalyticsDashboard />}
           {activeTab === 'users' && <UserManagement />}
           {activeTab === 'notifications' && <BroadcastNotifications />}
