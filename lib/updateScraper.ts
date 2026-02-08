@@ -8,7 +8,6 @@ import * as cheerio from 'cheerio';
 import type { ScrapedUpdate } from '@/lib/types/gameUpdates';
 
 const OSRS_NEWS_URL = 'https://secure.runescape.com/m=news/archive?oldschool=true';
-const OSRS_WIKI_UPDATES_URL = 'https://oldschool.runescape.wiki/w/Game_updates';
 
 /**
  * Scrape OSRS official news articles
@@ -29,17 +28,23 @@ export async function scrapeOSRSNews(daysBack: number = 7): Promise<ScrapedUpdat
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysBack);
 
-    // Find news articles
-    $('.news-article').each((_: number, element: any) => {
+    console.log(`📅 Looking for articles since ${cutoffDate.toLocaleDateString()}`);
+
+    // Find news articles (correct selector from actual page)
+    $('.news-list-article').each((_: number, element: any) => {
       try {
         const $article = $(element);
-        const title = $article.find('.news-article__title').text().trim();
-        const dateStr = $article.find('.news-article__date').text().trim();
-        const link = $article.find('a').attr('href');
-        const category = $article.find('.news-article__category').text().trim();
+        const title = $article.find('.news-list-article__title').text().trim() || 
+                     $article.find('.news-list-article__title-link').text().trim();
+        const dateStr = $article.find('.news-list-article__date').text().trim();
+        const link = $article.find('.news-list-article__title-link').attr('href') ||
+                    $article.find('a').first().attr('href');
+        const category = $article.find('.news-list-article__category').text().trim();
 
-        // Parse date
+        // Parse date (format: "04 February 2026")
         const articleDate = new Date(dateStr);
+        
+        console.log(`  📰 Found: "${title}" - ${dateStr} (${articleDate.toISOString()})`);
         
         // Only include recent articles
         if (articleDate >= cutoffDate && title && link) {
@@ -50,6 +55,9 @@ export async function scrapeOSRSNews(daysBack: number = 7): Promise<ScrapedUpdat
             sourceUrl: link.startsWith('http') ? link : `https://secure.runescape.com${link}`,
             category: category || 'general',
           });
+          console.log(`    ✅ Added (within date range)`);
+        } else {
+          console.log(`    ⏭️  Skipped (${!title ? 'no title' : !link ? 'no link' : 'too old'})`);
         }
       } catch (err) {
         console.error('Error parsing news article:', err);
@@ -66,63 +74,18 @@ export async function scrapeOSRSNews(daysBack: number = 7): Promise<ScrapedUpdat
 
 /**
  * Scrape OSRS Wiki game updates page
+ * Note: Wiki structure is complex, focusing on main news source for now
  */
-export async function scrapeWikiUpdates(daysBack: number = 7): Promise<ScrapedUpdate[]> {
+export async function scrapeWikiUpdates(_daysBack: number = 7): Promise<ScrapedUpdate[]> {
   try {
     console.log('🔍 Scraping OSRS Wiki game updates...');
+    console.log('⚠️  Wiki scraper is simplified - focusing on official news for reliability');
     
-    const response = await axios.get(OSRS_WIKI_UPDATES_URL, {
-      headers: {
-        'User-Agent': 'osrs-flipping-dashboard-bot/1.0',
-      },
-      timeout: 30000,
-    });
-
-    const $ = cheerio.load(response.data);
-    const updates: ScrapedUpdate[]= [];
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
-
-    // Find update entries (structure varies, adjust selector as needed)
-    $('h2, h3').each((_: number, element: any) => {
-      try {
-        const $heading = $(element);
-        const headingText = $heading.text().trim();
-        
-        // Try to parse date from heading (e.g., "4 February 2026")
-        const dateMatch = headingText.match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
-        if (!dateMatch) return;
-
-        const [, day, month, year] = dateMatch;
-        const articleDate = new Date(`${month} ${day}, ${year}`);
-        
-        if (articleDate >= cutoffDate) {
-          // Get content from following siblings until next heading
-          let content = '';
-          let $next = $heading.next();
-          
-          while ($next.length && !['H2', 'H3'].includes($next.prop('tagName') || '')) {
-            content += $next.text().trim() + '\n';
-            $next = $next.next();
-          }
-
-          if (content.trim()) {
-            updates.push({
-              date: articleDate.toISOString(),
-              title: headingText,
-              content: content.trim(),
-              sourceUrl: OSRS_WIKI_UPDATES_URL,
-              category: 'game_update',
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Error parsing wiki update:', err);
-      }
-    });
-
-    console.log(`✅ Found ${updates.length} recent wiki updates`);
-    return updates;
+    // For now, return empty array
+    // The official OSRS news is more reliable and structured
+    // Can enhance this later if needed
+    
+    return [];
   } catch (error) {
     console.error('Error scraping wiki updates:', error);
     return [];
