@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { FlipOpportunity, PricePoint } from './analysis';
 import type { MeanReversionSignal } from '@/lib/meanReversionAnalysis';
+import { getGameUpdateContext } from '@/lib/gameUpdateContext';
 
 
 // Lazy-loaded OpenAI client - only initialized when needed
@@ -45,6 +46,13 @@ export async function analyzeFlipsWithAI(
 ): Promise<FlipOpportunity[]> {
   // Get lazy-loaded client
   const aiClient = getClient();
+
+  // Fetch game updates for all items in parallel
+  const gameUpdatePromises = items.map(item => getGameUpdateContext(item.id, 14));
+  const gameUpdateResults = await Promise.all(gameUpdatePromises);
+  const gameUpdateMap = new Map(
+    items.map((item, idx) => [item.id, gameUpdateResults[idx]])
+  );
 
   // Check cache
   const cacheKey = items.map(i => i.id).sort().join(',');
@@ -173,6 +181,25 @@ export async function analyzeFlipsWithAI(
     };
   });
 
+  // Build game updates context string for items that have updates
+  const gameUpdatesContext = itemsData
+    .map(item => {
+      const updates = gameUpdateMap.get(item.id);
+      if (!updates || !updates.hasUpdates || updates.updates.length === 0) return '';
+      
+      const updateLines = updates.updates.slice(0, 2).map(u => 
+        `  - ${u.title.substring(0, 60)}... (${u.impact_type}, ${u.confidence}% relevant)`
+      ).join('\n');
+      
+      return `${item.name} (ID ${item.id}):\n${updateLines}`;
+    })
+    .filter(s => s.length > 0)
+    .join('\n');
+
+  const gameUpdatesSection = gameUpdatesContext.length > 0 
+    ? `\n🎮 RECENT GAME UPDATES (Last 14 days):\n${gameUpdatesContext}\n**Consider these updates in your reasoning** - items affected by positive updates may have stronger recovery potential.\n`
+    : '';
+
   const prompt = `OSRS mean-reversion analyzer. Find items 10-30% below 90d/365d avg with recovery potential.
 
 INCLUDE if ANY apply:
@@ -184,7 +211,7 @@ SKIP only if:
 - Declining across all timeframes (structural decline)
 - Bottom 5% + no recovery history
 - Erratic data (anomaly)
-
+${gameUpdatesSection}
 Format: ID|Name|Cur|Avg[30/90/365]|Dev[30/365]%|Vol|Pctl[30/365]|Sup|Res|RecPot%|Trend|Risk
 
 ${itemsData.map(item => `${item.id}|${item.name}|${item.currentPrice}|${item.timeframes['30d'].avg}/${item.timeframes['90d'].avg}/${item.timeframes['365d'].avg}|${item.timeframes['30d'].deviation}/${item.timeframes['365d'].deviation}|${item.timeframes['365d'].volatility}%|${item.trendAnalysis.pricePercentile30}/${item.trendAnalysis.pricePercentile365}|${item.technicalIndicators.supportLevel}|${item.technicalIndicators.resistanceLevel}|${item.technicalIndicators.recoveryPotential}|${item.trendAnalysis.direction}|${item.technicalIndicators.extremeVolatility ? 'high' : item.technicalIndicators.priceCollapse ? 'crash' : item.technicalIndicators.priceSurge ? 'surge' : 'normal'}`).join('\n')}

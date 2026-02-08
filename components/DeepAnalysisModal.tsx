@@ -17,6 +17,7 @@ export default function DeepAnalysisModal({ itemId, itemName, onClose }: DeepAna
   const [analysisType, setAnalysisType] = useState<'mean-reversion' | 'general'>('mean-reversion');
   const [generalData, setGeneralData] = useState<any>(null);
   const [metrics, setMetrics] = useState<any>(null);
+  const [gameUpdates, setGameUpdates] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAnalysis();
@@ -44,6 +45,9 @@ export default function DeepAnalysisModal({ itemId, itemName, onClose }: DeepAna
         setSignal(data.signal);
         setAiEnhanced(data.aiEnhanced || false);
       }
+      
+      // Set game updates if present
+      setGameUpdates(data.gameUpdates || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch analysis');
     } finally {
@@ -142,6 +146,51 @@ export default function DeepAnalysisModal({ itemId, itemName, onClose }: DeepAna
               >
                 Retry
               </button>
+            </div>
+          )}
+
+          {/* Game Updates Section */}
+          {gameUpdates.length > 0 && !loading && (
+            <div className="mb-6 bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-blue-300 mb-3 flex items-center gap-2">
+                🎮 Recent Game Updates
+              </h3>
+              <div className="space-y-3">
+                {gameUpdates.map((update, idx) => (
+                  <div key={idx} className="bg-slate-800/50 rounded p-3">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1">
+                        <a 
+                          href={update.source_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 font-medium text-sm line-clamp-2"
+                        >
+                          {update.title}
+                        </a>
+                        <p className="text-slate-400 text-xs mt-1">
+                          {new Date(update.update_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-1 rounded text-xs whitespace-nowrap ${
+                        update.sentiment === 'positive' ? 'bg-emerald-900/40 text-emerald-300' :
+                        update.sentiment === 'negative' ? 'bg-red-900/40 text-red-300' :
+                        'bg-slate-700 text-slate-300'
+                      }`}>
+                        {update.impact_type || 'neutral'}
+                      </span>
+                    </div>
+                    {update.confidence && (
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <span>Relevance: {update.confidence}%</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-slate-500 mt-3">
+                💡 AI considers these updates when making recommendations
+              </p>
             </div>
           )}
 

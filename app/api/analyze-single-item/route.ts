@@ -580,10 +580,14 @@ Return ONLY valid JSON:
       tokensUsed: tokenUsage.total.totalTokens
     });
 
+    // Get game updates for this item
+    const itemGameContext = await getGameUpdateContext(itemId, 14);
+
     return NextResponse.json({
       success: true,
       signal: enhancedSignal,
       aiEnhanced: true,
+      gameUpdates: itemGameContext.updates,
       tokenUsage,
       timestamp: new Date().toISOString()
     });
