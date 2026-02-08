@@ -174,10 +174,10 @@ export async function GET(request: Request) {
             return acc;
           }, {});
 
-          // Build feedback summary
+          // Build feedback summary with actionable instructions
           const topDeclines = Object.entries(declineCounts)
             .sort(([,a]: any, [,b]: any) => b - a)
-            .slice(0, 5)
+            .slice(0, 6)
             .map(([tag, count]) => `"${tag}" (${count}x)`)
             .join(', ');
 
@@ -188,25 +188,93 @@ export async function GET(request: Request) {
             .join(', ');
 
           if (topDeclines || topAccepts || rejectionFeedback.length > 0) {
-            feedbackContext = `\n\n🎓 USER'S RECENT FEEDBACK PATTERNS (Last 30 Days - ${recentFeedback.length} entries):\n\n`;
+            feedbackContext = `\n\n🎓 USER'S FEEDBACK-BASED LEARNING (Last 30 Days - ${recentFeedback.length} decisions):\n\n`;
             
             if (topDeclines) {
-              feedbackContext += `❌ Common DECLINE reasons:\n   ${topDeclines}\n   → Adjust thinking: User frequently rejects opportunities with these patterns\n\n`;
+              feedbackContext += `❌ USER FREQUENTLY DECLINES:\n   ${topDeclines}\n\n`;
+              
+              // Provide specific adaptation instructions based on tag patterns
+              const adaptations: string[] = [];
+              if (topDeclines.includes('Price Stable = New Equilibrium')) {
+                adaptations.push('   → INCREASE stability scrutiny: Reject if stable >60 days (was >90)');
+              }
+              if (topDeclines.includes('Exit Target Unrealistic')) {
+                adaptations.push('   → LOWER exit targets by 10-15%: Use conservative historical resistance levels');
+              }
+              if (topDeclines.includes('Weak Bot Evidence')) {
+                adaptations.push('   → REQUIRE bot likelihood >70% (was >60%) + clear dump pattern');
+              }
+              if (topDeclines.includes('Hold Time Too Long')) {
+                adaptations.push('   → PRIORITIZE 2-3 week recoveries: Reject >4 weeks unless exceptional');
+              }
+              if (topDeclines.includes('Margin Too Thin')) {
+                adaptations.push('   → INCREASE minimum margin: Require 20%+ ROI (was 15%) to pass quality bar');
+              }
+              if (topDeclines.includes('Already Recovering')) {
+                adaptations.push('   → CHECK momentum: Reject if price recovering >3 days (entry timing missed)');
+              }
+              if (topDeclines.includes('Volume Too Low')) {
+                adaptations.push('   → INCREASE liquidity threshold: Require liquidity >50 (was >40)');
+              }
+              
+              if (adaptations.length > 0) {
+                feedbackContext += `\n📊 ADAPTING ANALYSIS:\n${adaptations.join('\n')}\n\n`;
+              }
             }
             
             if (topAccepts) {
-              feedbackContext += `✅ Common ACCEPT patterns:\n   ${topAccepts}\n   → Prioritize: User favors opportunities matching these characteristics\n\n`;
+              feedbackContext += `✅ USER FREQUENTLY ACCEPTS:\n   ${topAccepts}\n\n`;
+              
+              // Identify what user values
+              const preferences: string[] = [];
+              if (topAccepts.includes('Large Price Deviation')) {
+                preferences.push('   → FAVOR items >30% below avg (user values big deviations)');
+              }
+              if (topAccepts.includes('Strong Bot Evidence')) {
+                preferences.push('   → FAVOR high bot likelihood + recent dumps (user trusts bot thesis)');
+              }
+              if (topAccepts.includes('High Liquidity')) {
+                preferences.push('   → FAVOR high-liquidity items (user prioritizes low-risk exits)');
+              }
+              if (topAccepts.includes('Historical Support')) {
+                preferences.push('   → FAVOR items at clear support levels (user values technical analysis)');
+              }
+              if (topAccepts.includes('Quick Recovery')) {
+                preferences.push('   → FAVOR 2-3 week timeframes (user prefers fast flips)');
+              }
+              
+              if (preferences.length > 0) {
+                feedbackContext += `\n🎯 USER PREFERENCES:\n${preferences.join('\n')}\n\n`;
+              }
             }
 
             if (rejectionFeedback.length > 0) {
-              feedbackContext += `⚠️ Items user thought should NOT be rejected (${rejectionFeedback.length} cases):\n`;
+              feedbackContext += `⚠️ ITEMS USER WANTS APPROVED (${rejectionFeedback.length} false negatives):\n`;
               rejectionFeedback.slice(0, 3).forEach(f => {
                 feedbackContext += `   • ${f.item}: ${(f.tags || []).join(', ')}\n`;
               });
-              feedbackContext += `   → Consider: User's quality bar may differ from current filters\n\n`;
+              
+              // Provide loosening instructions
+              const looseningTips: string[] = [];
+              const wrongRejectionTags = rejectionFeedback.flatMap(f => f.tags || []).filter(t => t);
+              if (wrongRejectionTags.some(t => t.includes('Stability Filter'))) {
+                looseningTips.push('   → LOOSEN stability filter: Allow stable items if strong bot dump evidence');
+              }
+              if (wrongRejectionTags.some(t => t.includes('Margin Threshold'))) {
+                looseningTips.push('   → LOOSEN margin requirements: Accept 15-18% ROI for high-quality setups');
+              }
+              if (wrongRejectionTags.some(t => t.includes('Missed Strong Bot Dump'))) {
+                looseningTips.push('   → LOWER Stage 1 rejection bar: User sees good opportunities you\'re missing');
+              }
+              
+              if (looseningTips.length > 0) {
+                feedbackContext += `\n🔧 REDUCE STRICTNESS:\n${looseningTips.join('\n')}\n\n`;
+              } else {
+                feedbackContext += `   → Your filters are TOO STRICT: Consider loosening quality thresholds\n\n`;
+              }
             }
 
-            feedbackContext += `💡 LEARNING INSTRUCTION: Adapt your analysis to match user's demonstrated preferences above.\n   - If user frequently declines "Price Too Stable", increase scrutiny on stability metrics\n   - If user accepts "Strong Bot Dump" patterns, be less conservative on bot evidence\n   - If user marks rejections as "Too Strict", slightly lower quality thresholds\n`;
+            feedbackContext += `⚡ CRITICAL: These adaptations override default thresholds. User feedback = ground truth.\n`;
           }
 
           console.log(`[AI] Loaded ${recentFeedback.length} feedback entries for learning context`);

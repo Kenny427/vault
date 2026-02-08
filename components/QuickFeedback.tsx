@@ -15,33 +15,38 @@ interface QuickFeedbackProps {
 
 const QUICK_TAGS = {
   accept: [
-    'Strong Setup',
-    'Clear Bot Dump Pattern',
-    'Good Risk/Reward Ratio',
-    'Fast Recovery Likely'
+    'Large Price Deviation (>25% below avg)',
+    'Strong Bot Evidence + Recent Dump',
+    'High Liquidity = Low Risk',
+    'Clear Historical Support Level',
+    'Quick Recovery Expected (2-3 weeks)'
   ],
   decline: [
     'Price Stable = New Equilibrium',
     'Exit Target Unrealistic',
-    'Organic Decline (Not Bot Dump)',
-    'Hold Time Too Long',
     'Weak Bot Evidence',
-    'Margin Too Thin After Tax'
+    'Hold Time Too Long (>4 weeks)',
+    'Margin Too Thin After Costs',
+    'Already Recovering (Missed Entry)',
+    'Volume Too Low (Illiquid)'
   ],
   skip: [
-    'Not My Strategy',
-    'Already Exposed to Similar',
-    'Liquidity Concerns'
+    'Outside My Price Range',
+    'Already Holding Similar Position',
+    'Different Strategy/Timeframe',
+    'Too Illiquid for My Volume'
   ],
   correct_rejection: [
-    'Good Filter (Structural)',
-    'Good Filter (Low Quality)',
-    'Good Filter (Weak Setup)'
+    'Correctly Caught Stable Price',
+    'Correctly Caught Weak Bot Evidence',
+    'Correctly Caught Thin Margins',
+    'Correctly Caught Quality Issues'
   ],
   wrong_rejection: [
-    'Missed Good Bot Dump',
-    'Too Conservative',
-    'Should Review Criteria'
+    'Missed Strong Bot Dump',
+    'Stability Filter Too Strict',
+    'Margin Threshold Too High',
+    'Good Setup Was Filtered Out'
   ]
 };
 
