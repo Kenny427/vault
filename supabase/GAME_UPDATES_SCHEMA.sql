@@ -66,11 +66,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Triggers for automatic timestamp updates
+DROP TRIGGER IF EXISTS update_game_updates_updated_at ON game_updates;
 CREATE TRIGGER update_game_updates_updated_at
     BEFORE UPDATE ON game_updates
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_update_item_impacts_updated_at ON update_item_impacts;
 CREATE TRIGGER update_update_item_impacts_updated_at
     BEFORE UPDATE ON update_item_impacts
     FOR EACH ROW
