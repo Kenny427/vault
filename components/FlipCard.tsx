@@ -9,7 +9,7 @@ import { getItemDetails, resolveIconUrl, fetchItemMapping } from '@/lib/api/osrs
 import SetAlertModal from './SetAlertModal';
 import ItemNotesModal from './ItemNotesModal';
 import ItemGraphModal from './ItemGraphModal';
-import FeedbackModal from './FeedbackModal';
+import QuickFeedback from './QuickFeedback';
 
 interface FlipCardProps {
   opportunity: FlipOpportunity;
@@ -23,8 +23,7 @@ export default function FlipCard({ opportunity, onSkip }: FlipCardProps) {
   const [showSetAlertModal, setShowSetAlertModal] = useState(false);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [showGraphModal, setShowGraphModal] = useState(false);
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [feedbackType, setFeedbackType] = useState<'accept' | 'decline' | 'skip'>('skip');
+  const [feedbackType, setFeedbackType] = useState<'accept' | 'decline' | 'skip' | null>(null);
 
   // Fetch item details for icon
   const { data: itemDetails } = useQuery({
@@ -72,42 +71,18 @@ export default function FlipCard({ opportunity, onSkip }: FlipCardProps) {
   const handleSkip = (e: React.MouseEvent) => {
     e.stopPropagation();
     setFeedbackType('skip');
-    setShowFeedbackModal(true);
   };
 
-  const handleFeedbackSubmit = async (feedback: {
-    itemId: number;
-    feedbackType: 'accept' | 'decline' | 'skip';
-    reason: string;
-    tags: string[];
-    confidence: number;
-  }) => {
-    try {
-      // Save feedback to database
-      await fetch('/api/ai-feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...feedback,
-          itemName: opportunity.itemName,
-          aiConfidence: opportunity.confidence,
-          aiThesis: opportunity.buyWhen,
-          priceAtFeedback: opportunity.currentPrice,
-        }),
-      });
-
-      // If skip, store in localStorage with 24h expiry
-      if (feedback.feedbackType === 'skip') {
-        const skipped = JSON.parse(localStorage.getItem('osrs-skipped-items') || '{}');
-        skipped[opportunity.itemId] = Date.now() + (24 * 60 * 60 * 1000); // 24h from now
-        localStorage.setItem('osrs-skipped-items', JSON.stringify(skipped));
-        
-        // Notify parent to remove from view
-        if (onSkip) onSkip(opportunity.itemId);
-      }
-    } catch (error) {
-      console.error('Failed to submit feedback:', error);
+  const handleFeedbackComplete = () => {
+    // If skip, hide the item
+    if (feedbackType === 'skip' && onSkip) {
+      const skipped = JSON.parse(localStorage.getItem('osrs-skipped-items') || '{}');
+      skipped[opportunity.itemId] = Date.now() + (24 * 60 * 60 * 1000); // 24h from now
+      localStorage.setItem('osrs-skipped-items', JSON.stringify(skipped));
+      onSkip(opportunity.itemId);
     }
+    // Reset feedback state
+    setFeedbackType(null);
   };
 
   const getScoreGradient = (score: number) => {
@@ -312,28 +287,45 @@ export default function FlipCard({ opportunity, onSkip }: FlipCardProps) {
       {/* Quick Actions */}
       <div className="p-3 border-t border-slate-700 bg-slate-900/30 space-y-2">
         {/* Feedback Actions */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setFeedbackType('accept');
-              setShowFeedbackModal(true);
-            }}
-            className="py-2 px-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded transition-colors"
-          >
-            ✅ Accept
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setFeedbackType('decline');
-              setShowFeedbackModal(true);
-            }}
-            className="py-2 px-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded transition-colors"
-          >
-            ❌ Decline
-          </button>
-        </div>
+        {feedbackType ? (
+          <div className="p-3 bg-slate-800 rounded border border-slate-600">
+            <div className="text-xs font-semibold text-slate-300 mb-2">
+              {feedbackType === 'accept' && '✅ Why do you accept this recommendation?'}
+              {feedbackType === 'decline' && '❌ Why do you decline this recommendation?'}
+              {feedbackType === 'skip' && '⏭️ Why are you skipping this item?'}
+            </div>
+            <QuickFeedback
+              itemId={opportunity.itemId}
+              itemName={opportunity.itemName}
+              feedbackType={feedbackType}
+              aiConfidence={opportunity.confidence}
+              aiThesis={opportunity.buyWhen}
+              price={opportunity.currentPrice}
+              onComplete={handleFeedbackComplete}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setFeedbackType('accept');
+              }}
+              className="py-2 px-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded transition-colors"
+            >
+              ✅ Accept
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setFeedbackType('decline');
+              }}
+              className="py-2 px-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded transition-colors"
+            >
+              ❌ Decline
+            </button>
+          </div>
+        )}
         
         {/* Utility Actions */}
         <div className="grid grid-cols-3 gap-2">
@@ -390,25 +382,6 @@ export default function FlipCard({ opportunity, onSkip }: FlipCardProps) {
           itemId={opportunity.itemId}
           itemName={opportunity.itemName}
           onClose={() => setShowGraphModal(false)}
-        />,
-        document.body
-      )}
-      {showFeedbackModal && typeof document !== 'undefined' && createPortal(
-        <FeedbackModal
-          isOpen={showFeedbackModal}
-          onClose={() => setShowFeedbackModal(false)}
-          itemId={opportunity.itemId}
-          itemName={opportunity.itemName}
-          feedbackType={feedbackType}
-          aiRecommendation={{
-            confidence: opportunity.confidence || 0,
-            thesis: opportunity.buyWhen || '',
-            targets: {
-              entry: opportunity.buyPrice,
-              exit: opportunity.sellPrice,
-            },
-          }}
-          onSubmit={handleFeedbackSubmit}
         />,
         document.body
       )}

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS ai_feedback (
     -- Item & Recommendation Details
     item_id INTEGER NOT NULL,
     item_name TEXT NOT NULL,
-    feedback_type TEXT NOT NULL CHECK (feedback_type IN ('accept', 'decline', 'skip')),
+    feedback_type TEXT NOT NULL CHECK (feedback_type IN ('accept', 'decline', 'skip', 'correct_rejection', 'wrong_rejection')),
     
     -- User Feedback
     reason TEXT,
@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS ai_feedback (
     -- AI's Original Recommendation
     ai_confidence INTEGER,
     ai_thesis TEXT,
+    ai_rejection_reason TEXT, -- For rejected items: what stage/reason
     price_at_feedback BIGINT,
     
     -- Context at time of feedback

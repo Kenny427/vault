@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import QuickFeedback from './QuickFeedback';
 
 interface FilteredItem {
   itemId: number;
@@ -33,6 +34,7 @@ export default function FilteredItemsModal({
 }: FilteredItemsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'stage0' | 'ai'>('stage0');
+  const [feedbackState, setFeedbackState] = useState<Record<number, 'correct' | 'wrong' | null>>({});
 
   useEffect(() => {
     if (!isOpen) return;
@@ -179,19 +181,51 @@ export default function FilteredItemsModal({
                       {items.map((item) => (
                         <div
                           key={item.itemId}
-                          className="flex items-start justify-between p-3 rounded bg-slate-900/50 border border-slate-700"
+                          className="p-3 rounded bg-slate-900/50 border border-slate-700 space-y-2"
                         >
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-slate-200 truncate">{item.itemName}</p>
-                            <p className="text-xs text-slate-500 mt-1">{item.reason}</p>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-slate-200 truncate">{item.itemName}</p>
+                              <p className="text-xs text-slate-500 mt-1">{item.reason}</p>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveItem(item.itemId)}
+                              className="ml-3 px-3 py-1 bg-red-600/80 hover:bg-red-600 text-white text-xs rounded font-medium transition-colors flex-shrink-0"
+                              title="Remove from pool"
+                            >
+                              Remove
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleRemoveItem(item.itemId)}
-                            className="ml-3 px-3 py-1 bg-red-600/80 hover:bg-red-600 text-white text-xs rounded font-medium transition-colors flex-shrink-0"
-                            title="Remove from pool"
-                          >
-                            Remove
-                          </button>
+                          
+                          {/* Feedback Section */}
+                          {feedbackState[item.itemId] === null ? (
+                            <div className="flex gap-2 pt-2 border-t border-slate-700">
+                              <button
+                                onClick={() => setFeedbackState(prev => ({ ...prev, [item.itemId]: 'correct' }))}
+                                className="flex-1 px-3 py-1.5 text-xs rounded bg-green-600/20 hover:bg-green-600/30 
+                                         text-green-400 border border-green-600/30 transition-all"
+                              >
+                                ✅ Correct Filter
+                              </button>
+                              <button
+                                onClick={() => setFeedbackState(prev => ({ ...prev, [item.itemId]: 'wrong' }))}
+                                className="flex-1 px-3 py-1.5 text-xs rounded bg-red-600/20 hover:bg-red-600/30 
+                                         text-red-400 border border-red-600/30 transition-all"
+                              >
+                                ❌ Should Pass
+                              </button>
+                            </div>
+                          ) : feedbackState[item.itemId] && (
+                            <div className="pt-2 border-t border-slate-700">
+                              <QuickFeedback
+                                itemId={item.itemId}
+                                itemName={item.itemName}
+                                feedbackType={feedbackState[item.itemId] === 'correct' ? 'correct_rejection' : 'wrong_rejection'}
+                                aiRejectionReason={item.reason}
+                                onComplete={() => setFeedbackState(prev => ({ ...prev, [item.itemId]: null }))}
+                              />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -234,7 +268,7 @@ export default function FilteredItemsModal({
                         {stage1Rejections.map((item) => (
                           <div
                             key={item.itemId}
-                            className="p-4 rounded bg-slate-900/50 border border-red-700/30"
+                            className="p-4 rounded bg-slate-900/50 border border-red-700/30 space-y-3"
                           >
                             <div className="flex items-start justify-between mb-2">
                               <h4 className="font-semibold text-slate-200">{item.itemName}</h4>
@@ -243,6 +277,38 @@ export default function FilteredItemsModal({
                               </span>
                             </div>
                             <p className="text-sm text-slate-400 leading-relaxed">{item.aiReasoning}</p>
+                            
+                            {/* Feedback Section */}
+                            {feedbackState[item.itemId] === null ? (
+                              <div className="flex gap-2 pt-2 border-t border-red-700/30">
+                                <button
+                                  onClick={() => setFeedbackState(prev => ({ ...prev, [item.itemId]: 'correct' }))}
+                                  className="flex-1 px-3 py-1.5 text-xs rounded bg-green-600/20 hover:bg-green-600/30 
+                                           text-green-400 border border-green-600/30 transition-all font-medium"
+                                >
+                                  ✅ Correct Rejection
+                                </button>
+                                <button
+                                  onClick={() => setFeedbackState(prev => ({ ...prev, [item.itemId]: 'wrong' }))}
+                                  className="flex-1 px-3 py-1.5 text-xs rounded bg-red-600/20 hover:bg-red-600/30 
+                                           text-red-400 border border-red-600/30 transition-all font-medium"
+                                >
+                                  ❌ Should Pass
+                                </button>
+                              </div>
+                            ) : feedbackState[item.itemId] && (
+                              <div className="pt-2 border-t border-red-700/30">
+                                <QuickFeedback
+                                  itemId={item.itemId}
+                                  itemName={item.itemName}
+                                  feedbackType={feedbackState[item.itemId] === 'correct' ? 'correct_rejection' : 'wrong_rejection'}
+                                  aiConfidence={item.aiConfidence}
+                                  aiThesis={item.aiReasoning}
+                                  aiRejectionReason={`Stage 1: ${item.aiReasoning}`}
+                                  onComplete={() => setFeedbackState(prev => ({ ...prev, [item.itemId]: null }))}
+                                />
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -269,7 +335,7 @@ export default function FilteredItemsModal({
                         {stage2Rejections.map((item) => (
                           <div
                             key={item.itemId}
-                            className="p-4 rounded bg-slate-900/50 border border-orange-700/30"
+                            className="p-4 rounded bg-slate-900/50 border border-orange-700/30 space-y-3"
                           >
                             <div className="flex items-start justify-between mb-2">
                               <h4 className="font-semibold text-slate-200">{item.itemName}</h4>
@@ -278,6 +344,38 @@ export default function FilteredItemsModal({
                               </span>
                             </div>
                             <p className="text-sm text-slate-400 leading-relaxed">{item.aiReasoning}</p>
+                            
+                            {/* Feedback Section */}
+                            {feedbackState[item.itemId] === null ? (
+                              <div className="flex gap-2 pt-2 border-t border-orange-700/30">
+                                <button
+                                  onClick={() => setFeedbackState(prev => ({ ...prev, [item.itemId]: 'correct' }))}
+                                  className="flex-1 px-3 py-1.5 text-xs rounded bg-green-600/20 hover:bg-green-600/30 
+                                           text-green-400 border border-green-600/30 transition-all font-medium"
+                                >
+                                  ✅ Correct Rejection
+                                </button>
+                                <button
+                                  onClick={() => setFeedbackState(prev => ({ ...prev, [item.itemId]: 'wrong' }))}
+                                  className="flex-1 px-3 py-1.5 text-xs rounded bg-red-600/20 hover:bg-red-600/30 
+                                           text-red-400 border border-red-600/30 transition-all font-medium"
+                                >
+                                  ❌ Should Pass
+                                </button>
+                              </div>
+                            ) : feedbackState[item.itemId] && (
+                              <div className="pt-2 border-t border-orange-700/30">
+                                <QuickFeedback
+                                  itemId={item.itemId}
+                                  itemName={item.itemName}
+                                  feedbackType={feedbackState[item.itemId] === 'correct' ? 'correct_rejection' : 'wrong_rejection'}
+                                  aiConfidence={item.aiConfidence}
+                                  aiThesis={item.aiReasoning}
+                                  aiRejectionReason={`Stage 2: ${item.aiReasoning}`}
+                                  onComplete={() => setFeedbackState(prev => ({ ...prev, [item.itemId]: null }))}
+                                />
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
