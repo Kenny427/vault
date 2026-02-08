@@ -135,6 +135,87 @@ export async function GET(request: Request) {
       console.log(`[API] Dropped items (first 10): ${filteredOutItems.slice(0, 10).map(i => i.itemName).join(', ')}${filteredOutItems.length > 10 ? '...' : ''}`);
     }
 
+    // Fetch recent feedback for AI learning context
+    let feedbackContext = '';
+    if (userId) {
+      try {
+        const { data: recentFeedback } = await supabase
+          .from('ai_feedback')
+          .select('feedback_type, tags, ai_confidence, ai_thesis, item_name')
+          .eq('user_id', userId)
+          .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+          .order('created_at', { ascending: false })
+          .limit(30);
+
+        if (recentFeedback && recentFeedback.length > 0) {
+          // Aggregate patterns
+          const declinePatterns = recentFeedback
+            .filter(f => f.feedback_type === 'decline')
+            .flatMap(f => f.tags || [])
+            .filter(t => t);
+          
+          const acceptPatterns = recentFeedback
+            .filter(f => f.feedback_type === 'accept')
+            .flatMap(f => f.tags || [])
+            .filter(t => t);
+          
+          const rejectionFeedback = recentFeedback
+            .filter(f => f.feedback_type === 'wrong_rejection')
+            .map(f => ({ item: f.item_name, tags: f.tags }));
+
+          // Count patterns
+          const declineCounts = declinePatterns.reduce((acc: any, tag) => {
+            acc[tag] = (acc[tag] || 0) + 1;
+            return acc;
+          }, {});
+
+          const acceptCounts = acceptPatterns.reduce((acc: any, tag) => {
+            acc[tag] = (acc[tag] || 0) + 1;
+            return acc;
+          }, {});
+
+          // Build feedback summary
+          const topDeclines = Object.entries(declineCounts)
+            .sort(([,a]: any, [,b]: any) => b - a)
+            .slice(0, 5)
+            .map(([tag, count]) => `"${tag}" (${count}x)`)
+            .join(', ');
+
+          const topAccepts = Object.entries(acceptCounts)
+            .sort(([,a]: any, [,b]: any) => b - a)
+            .slice(0, 5)
+            .map(([tag, count]) => `"${tag}" (${count}x)`)
+            .join(', ');
+
+          if (topDeclines || topAccepts || rejectionFeedback.length > 0) {
+            feedbackContext = `\n\n🎓 USER'S RECENT FEEDBACK PATTERNS (Last 30 Days - ${recentFeedback.length} entries):\n\n`;
+            
+            if (topDeclines) {
+              feedbackContext += `❌ Common DECLINE reasons:\n   ${topDeclines}\n   → Adjust thinking: User frequently rejects opportunities with these patterns\n\n`;
+            }
+            
+            if (topAccepts) {
+              feedbackContext += `✅ Common ACCEPT patterns:\n   ${topAccepts}\n   → Prioritize: User favors opportunities matching these characteristics\n\n`;
+            }
+
+            if (rejectionFeedback.length > 0) {
+              feedbackContext += `⚠️ Items user thought should NOT be rejected (${rejectionFeedback.length} cases):\n`;
+              rejectionFeedback.slice(0, 3).forEach(f => {
+                feedbackContext += `   • ${f.item}: ${(f.tags || []).join(', ')}\n`;
+              });
+              feedbackContext += `   → Consider: User's quality bar may differ from current filters\n\n`;
+            }
+
+            feedbackContext += `💡 LEARNING INSTRUCTION: Adapt your analysis to match user's demonstrated preferences above.\n   - If user frequently declines "Price Too Stable", increase scrutiny on stability metrics\n   - If user accepts "Strong Bot Dump" patterns, be less conservative on bot evidence\n   - If user marks rejections as "Too Strict", slightly lower quality thresholds\n`;
+          }
+
+          console.log(`[AI] Loaded ${recentFeedback.length} feedback entries for learning context`);
+        }
+      } catch (feedbackError) {
+        console.log('[AI] No feedback available for learning (non-critical)');
+      }
+    }
+
     // STAGE 0: Software Pre-Filter (Aggressive - Quality Over Quantity)
     // Goal: Remove objectively unprofitable/unfeasible opportunities before AI analysis
     const stage0Filtered: any[] = [];
@@ -228,7 +309,7 @@ export async function GET(request: Request) {
           try {
             const prompt = `You are an expert OSRS economist analyzing mean-reversion opportunities in items suppressed by bot activity.
 
-🎯 STRATEGY: Identify items trading below historical averages due to bot oversupply. Buy undervalued, hold 2-12 weeks, profit when price reverts to historical mean (driven by bot bans, supply normalization, mean-reversion).
+🎯 STRATEGY: Identify items trading below historical averages due to bot oversupply. Buy undervalued, hold 2-12 weeks, profit when price reverts to historical mean (driven by bot bans, supply normalization, mean-reversion).${feedbackContext}
 
 � YOUR JOB: INDEPENDENTLY ANALYZE the price data provided. The system's calculated metrics are shown as REFERENCE ONLY - you should form your own conclusions from the raw data.
 

@@ -14,11 +14,34 @@ interface QuickFeedbackProps {
 }
 
 const QUICK_TAGS = {
-  accept: ['Good Analysis', 'High Confidence', 'Matches Research'],
-  decline: ['Wrong Analysis', 'Too Risky', 'Better Options'],
-  skip: ['Not Interested', 'Already Trading', 'Low Liquidity'],
-  correct_rejection: ['Good Filter', 'Correct Decision', 'Would Skip'],
-  wrong_rejection: ['Should Pass', 'Good Opportunity', 'Too Strict']
+  accept: [
+    'Strong Setup',
+    'Bot Pattern Clear',
+    'Good Risk/Reward',
+    'Fast Recovery Expected'
+  ],
+  decline: [
+    'Price Too Stable (New Equilibrium)',
+    'ROI Too Low (<15%)',
+    'Organic Decline (Not Bots)',
+    'Recovery Too Slow (>4 weeks)',
+    'Weak Bot Evidence'
+  ],
+  skip: [
+    'Not My Strategy',
+    'Already Holding Similar',
+    'Low Liquidity Risk'
+  ],
+  correct_rejection: [
+    'Correctly Filtered (Structural)',
+    'Correctly Filtered (ROI)',
+    'Correctly Filtered (Quality)'
+  ],
+  wrong_rejection: [
+    'Should Pass (Strong Bot Dump)',
+    'Should Pass (Good ROI)',
+    'Too Strict (Borderline Good)'
+  ]
 };
 
 export default function QuickFeedback({
