@@ -15,38 +15,37 @@ interface QuickFeedbackProps {
 
 const QUICK_TAGS = {
   accept: [
-    'Large Price Deviation (>25% below avg)',
-    'Strong Bot Evidence + Recent Dump',
-    'High Liquidity = Low Risk',
-    'Clear Historical Support Level',
-    'Quick Recovery Expected (2-3 weeks)'
+    'Price way below normal',
+    'Clear bot dump happening',
+    'Easy to sell later',
+    'Should bounce back soon',
+    'Good profit potential'
   ],
   decline: [
-    'Price Stable = New Equilibrium',
-    'Exit Target Unrealistic',
-    'Weak Bot Evidence',
-    'Hold Time Too Long (>4 weeks)',
-    'Margin Too Thin After Costs',
-    'Already Recovering (Missed Entry)',
-    'Volume Too Low (Illiquid)'
+    'Price seems stable at this level',
+    'Price target too high',
+    'No clear bot activity',
+    'Takes too long to profit',
+    'Profit too small',
+    'Already going back up',
+    'Hard to buy/sell (low volume)'
   ],
   skip: [
-    'Outside My Price Range',
-    'Already Holding Similar Position',
-    'Different Strategy/Timeframe',
-    'Too Illiquid for My Volume'
+    'Too expensive for me',
+    'Already have similar items',
+    'Not my style',
+    'Too risky for my taste'
   ],
   correct_rejection: [
-    'Correctly Caught Stable Price',
-    'Correctly Caught Weak Bot Evidence',
-    'Correctly Caught Thin Margins',
-    'Correctly Caught Quality Issues'
+    'Good filter (price stable)',
+    'Good filter (weak setup)',
+    'Good filter (low profit)',
+    'Correctly rejected'
   ],
   wrong_rejection: [
-    'Missed Strong Bot Dump',
-    'Stability Filter Too Strict',
-    'Margin Threshold Too High',
-    'Good Setup Was Filtered Out'
+    'Actually a good opportunity',
+    'Filters too strict',
+    'Should have passed'
   ]
 };
 
