@@ -219,7 +219,7 @@ export default function PendingTransactionsModal({ onClose }: { onClose: () => v
               className="w-full px-4 py-3 flex items-center justify-between hover:bg-blue-900/30 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <span className="text-blue-300 font-semibold">Setup Instructions</span>
+                <span className="text-blue-300 font-semibold">🔧 Setup Instructions</span>
               </div>
               <span className="text-blue-300 text-lg">
                 {showSetupGuide ? '▼' : '▶'}
