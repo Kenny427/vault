@@ -47,6 +47,23 @@ CREATE TRIGGER update_ai_feedback_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- Enable RLS
+ALTER TABLE ai_feedback ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies
+CREATE POLICY "Users can insert their own feedback"
+    ON ai_feedback FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own feedback"
+    ON ai_feedback FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own feedback"
+    ON ai_feedback FOR UPDATE
+    USING (auth.uid() = user_id)
+    WITH CHECK (auth.uid() = user_id);
+
 -- View for recent feedback summary
 CREATE OR REPLACE VIEW ai_feedback_summary AS
 SELECT 

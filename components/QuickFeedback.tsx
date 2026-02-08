@@ -40,22 +40,28 @@ export default function QuickFeedback({
     setSubmitting(true);
     
     try {
-      await fetch('/api/ai-feedback', {
+      const response = await fetch('/api/ai-feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          item_id: itemId,
-          item_name: itemName,
-          feedback_type: feedbackType,
+          itemId: itemId,
+          itemName: itemName,
+          feedbackType: feedbackType,
           tags: [tag],
           reason: null,
-          user_confidence: null,
-          ai_confidence: aiConfidence,
-          ai_thesis: aiThesis,
-          ai_rejection_reason: aiRejectionReason,
-          price_at_feedback: price
+          confidence: null,
+          aiConfidence: aiConfidence,
+          aiThesis: aiThesis,
+          aiRejectionReason: aiRejectionReason,
+          priceAtFeedback: price
         })
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Feedback API error:', errorData);
+        throw new Error('Failed to save feedback');
+      }
       
       setSubmitted(true);
       setTimeout(() => {
