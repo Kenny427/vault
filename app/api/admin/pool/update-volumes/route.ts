@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/adminAuth';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
-import { fetchItemMapping, getItemHistoryWithVolumes } from '@/lib/api/osrs';
+import { fetchItemMapping, getItemDailyVolume } from '@/lib/api/osrs';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes
@@ -54,19 +54,10 @@ export async function POST() {
                     const itemInfo = mappingMap.get(item.item_id);
                     const buyLimit = itemInfo?.limit || null;
 
-                    // Fetch volume data (last 24 hours)
+                    // Fetch daily volume using the same method as FlipCard
                     let dailyVolume: number | null = null;
                     try {
-                        const priceData = await getItemHistoryWithVolumes(item.item_id, 24 * 60 * 60);
-                        if (priceData && priceData.length > 0) {
-                            // Calculate average daily volume from recent data
-                            const recentData = priceData.slice(-7); // Last 7 days
-                            const totalVolume = recentData.reduce((sum, d) => {
-                                const vol = (d.highPriceVolume || 0) + (d.lowPriceVolume || 0);
-                                return sum + vol;
-                            }, 0);
-                            dailyVolume = Math.floor(totalVolume / recentData.length);
-                        }
+                        dailyVolume = await getItemDailyVolume(item.item_id);
                     } catch (volumeError) {
                         console.warn(`Failed to fetch volume for ${item.item_name}:`, volumeError);
                     }
