@@ -831,12 +831,12 @@ export default function Dashboard() {
                   >
                     {loading ? 'Analyzing...' : '🔄 Refresh Analysis'}
                   </button>
-                  {!loading && filteredItems.length > 0 && (
+                  {!loading && (filteredItems.length > 0 || aiRejectedItems.length > 0) && (
                     <button
                       onClick={() => setShowFilteredItems(true)}
                       className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded font-medium text-sm transition-colors"
                     >
-                      🔍 {filteredItems.length} Filtered
+                      🔍 {filteredItems.length + aiRejectedItems.length} Rejected
                     </button>
                   )}
                   {/* Export button hidden but code preserved for future use */}
@@ -987,6 +987,7 @@ export default function Dashboard() {
         isOpen={showFilteredItems}
         onClose={() => setShowFilteredItems(false)}
         filteredItems={filteredItems}
+        aiRejectedItems={aiRejectedItems}
       />
 
       {/* Settings Modal */}

@@ -8,19 +8,31 @@ interface FilteredItem {
   reason: string;
 }
 
+interface AIRejectedItem {
+  itemId: number;
+  itemName: string;
+  systemScore: number;
+  systemConfidence: number;
+  aiDecision: string;
+  aiReasoning: string;
+  aiConfidence: number;
+}
+
 interface FilteredItemsModalProps {
   isOpen: boolean;
   onClose: () => void;
   filteredItems: FilteredItem[];
+  aiRejectedItems: AIRejectedItem[];
 }
 
 export default function FilteredItemsModal({
   isOpen,
   onClose,
   filteredItems,
+  aiRejectedItems = [],
 }: FilteredItemsModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
-  const [removingItem, setRemovingItem] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'stage0' | 'ai'>('stage0');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -52,58 +64,51 @@ export default function FilteredItemsModal({
     if (!removed.includes(itemId)) {
       removed.push(itemId);
       localStorage.setItem('osrs-removed-items', JSON.stringify(removed));
-      setRemovingItem(itemId);
-      setTimeout(() => setRemovingItem(null), 300);
     }
   };
 
-  // Categorize filter reasons for better organization
+  // Categorize Stage 0 filter reasons
   const categorizeReason = (reason: string) => {
-    if (reason.includes('ROI too low')) return 'Low ROI (<10%)';
-    if (reason.includes('Hold time too long')) return 'Hold Time Too Long';
-    if (reason.includes('Price at/above 90d average')) return 'No Price Suppression';
-    if (reason.includes('Exit target too marginal')) return 'Marginal Exit Target';
+    if (reason.includes('ROI too low')) return 'Low ROI';
+    if (reason.includes('Hold time too long')) return 'Hold Time';
+    if (reason.includes('Price at/above 90d average')) return 'No Suppression';
+    if (reason.includes('Exit target too marginal')) return 'Low Target';
     if (reason.includes('Liquidity too low')) return 'Low Liquidity';
     if (reason.includes('Insufficient history')) return 'Insufficient Data';
     return 'Other';
   };
 
-  // Group by category
-  const categorizedItems = filteredItems.reduce((acc, item) => {
+  // Group Stage 0 by category
+  const categorizedStage0 = filteredItems.reduce((acc, item) => {
     const category = categorizeReason(item.reason);
-    if (!acc[category]) {
-      acc[category] = [];
-    }
+    if (!acc[category]) acc[category] = [];
     acc[category].push(item);
     return acc;
   }, {} as Record<string, FilteredItem[]>);
 
-  // Sort categories by count (largest first)
-  const categoryOrder = ['Low ROI (<10%)', 'No Price Suppression', 'Hold Time Too Long', 'Marginal Exit Target', 'Low Liquidity', 'Insufficient Data', 'Other'];
-  const sortedCategories = categoryOrder.filter(cat => categorizedItems[cat] && categorizedItems[cat].length > 0);
+  // Group AI rejections by stage
+  const stage1Rejections = aiRejectedItems.filter(r => r.aiDecision === 'rejected_stage1_mandatory');
+  const stage2Rejections = aiRejectedItems.filter(r => r.aiDecision === 'rejected_stage2_quality');
+
+  // Calculate totals
+  const totalRejected = filteredItems.length + aiRejectedItems.length;
+  const stage0Count = filteredItems.length;
+  const aiCount = aiRejectedItems.length;
 
   if (!isOpen) return null;
-
-  // Calculate summary stats
-  const totalFiltered = filteredItems.length;
-  const categoryCounts = sortedCategories.map(cat => ({
-    name: cat,
-    count: categorizedItems[cat].length,
-    percentage: ((categorizedItems[cat].length / totalFiltered) * 100).toFixed(0)
-  }));
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div
         ref={modalRef}
-        className="bg-slate-900 border border-slate-700 rounded-lg max-w-3xl w-full max-h-[80vh] overflow-y-auto"
+        className="bg-slate-900 border border-slate-700 rounded-lg max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col"
       >
         {/* Header */}
-        <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-6 flex items-center justify-between">
+        <div className="bg-slate-800 border-b border-slate-700 p-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-100">🔍 Stage 0 Pre-Filter Results</h2>
+            <h2 className="text-2xl font-bold text-slate-100">🔍 Rejection Analysis</h2>
             <p className="text-sm text-slate-400 mt-1">
-              {totalFiltered} items filtered before AI analysis
+              {totalRejected} items rejected • Stage 0: {stage0Count} • AI: {aiCount}
             </p>
           </div>
           <button
@@ -114,81 +119,191 @@ export default function FilteredItemsModal({
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="bg-slate-800/50 border-b border-slate-700 flex gap-2 px-6">
+          <button
+            onClick={() => setActiveTab('stage0')}
+            className={`px-6 py-3 font-medium transition-all border-b-2 ${
+              activeTab === 'stage0'
+                ? 'text-blue-400 border-blue-400'
+                : 'text-slate-400 border-transparent hover:text-slate-200'
+            }`}
+          >
+            Stage 0: Pre-Filter
+            <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-700 text-xs">
+              {stage0Count}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('ai')}
+            className={`px-6 py-3 font-medium transition-all border-b-2 ${
+              activeTab === 'ai'
+                ? 'text-purple-400 border-purple-400'
+                : 'text-slate-400 border-transparent hover:text-slate-200'
+            }`}
+          >
+            AI Rejections
+            <span className="ml-2 px-2 py-0.5 rounded-full bg-slate-700 text-xs">
+              {aiCount}
+            </span>
+          </button>
+        </div>
+
         {/* Content */}
-        <div className="p-6 space-y-6">
-          {filteredItems.length === 0 ? (
-            <p className="text-slate-400 text-center py-8">
-              No filtered items this refresh. All pool items passed Stage 0 pre-filter.
-            </p>
-          ) : (
-            <>
-              {/* Summary Section */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {activeTab === 'stage0' ? (
+            <div className="space-y-4">
               <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-4">
-                <h3 className="text-lg font-semibold text-blue-300 mb-3">📊 Filter Summary</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {categoryCounts.map((cat) => (
-                    <div key={cat.name} className="bg-slate-800/50 rounded p-3 border border-slate-700">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-slate-300">{cat.name}</span>
-                        <span className="text-xs font-semibold text-blue-400">{cat.percentage}%</span>
-                      </div>
-                      <div className="text-2xl font-bold text-slate-100">{cat.count}</div>
-                    </div>
-                  ))}
-                </div>
+                <h3 className="text-sm font-semibold text-blue-300 mb-2">📊 Automatic Pre-Filter</h3>
+                <p className="text-xs text-slate-400">
+                  Items failing basic profitability/feasibility checks (saves ~70% AI cost)
+                </p>
               </div>
 
-              {/* Detailed Categories */}
-              {sortedCategories.map((category) => (
-                <details key={category} className="border border-slate-700 rounded-lg bg-slate-800/50" open={category === sortedCategories[0]}>
-                  <summary className="cursor-pointer p-4 hover:bg-slate-800/80 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg font-semibold text-osrs-accent">{category}</span>
-                      <span className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-700 text-xs font-semibold text-slate-200">
-                        {categorizedItems[category].length} items
-                      </span>
-                    </div>
-                  </summary>
-
-                  <div className="p-4 pt-0 space-y-2 max-h-64 overflow-y-auto">
-                    {categorizedItems[category].map((item) => (
-                      <div
-                        key={item.itemId}
-                        className={`flex items-center justify-between p-3 rounded bg-slate-900/50 border border-slate-700 transition-all ${
-                          removingItem === item.itemId ? 'opacity-50' : ''
-                        }`}
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-200">{item.itemName}</p>
-                          <p className="text-xs text-slate-500 mt-1">{item.reason}</p>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveItem(item.itemId)}
-                          className="ml-4 px-3 py-1 bg-red-600/80 hover:bg-red-600 text-white text-xs rounded font-medium transition-colors"
-                          title="Remove from pool"
-                        >
-                          Remove
-                        </button>
+              {stage0Count === 0 ? (
+                <p className="text-slate-400 text-center py-8">
+                  ✓ All pool items passed Stage 0 pre-filter
+                </p>
+              ) : (
+                Object.entries(categorizedStage0).map(([category, items]) => (
+                  <details key={category} className="border border-slate-700 rounded-lg bg-slate-800/50" open>
+                    <summary className="cursor-pointer p-4 hover:bg-slate-800/80 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <span className="text-base font-semibold text-blue-300">{category}</span>
+                        <span className="px-2.5 py-1 rounded-full bg-slate-700 text-xs font-semibold text-slate-200">
+                          {items.length}
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                </details>
-              ))}
-            </>
+                    </summary>
+                    <div className="p-4 pt-0 space-y-2 max-h-64 overflow-y-auto">
+                      {items.map((item) => (
+                        <div
+                          key={item.itemId}
+                          className="flex items-start justify-between p-3 rounded bg-slate-900/50 border border-slate-700"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-slate-200 truncate">{item.itemName}</p>
+                            <p className="text-xs text-slate-500 mt-1">{item.reason}</p>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveItem(item.itemId)}
+                            className="ml-3 px-3 py-1 bg-red-600/80 hover:bg-red-600 text-white text-xs rounded font-medium transition-colors flex-shrink-0"
+                            title="Remove from pool"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                ))
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-purple-900/20 border border-purple-700/50 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-purple-300 mb-2">🤖 AI Quality Control</h3>
+                <p className="text-xs text-slate-400">
+                  Items analyzed by AI but rejected for structural issues or weak recovery potential
+                </p>
+              </div>
+
+              {aiCount === 0 ? (
+                <p className="text-slate-400 text-center py-8">
+                  ✓ All AI-analyzed items were approved
+                </p>
+              ) : (
+                <>
+                  {/* Stage 1: Mandatory Rejections */}
+                  {stage1Rejections.length > 0 && (
+                    <details className="border border-red-700/50 rounded-lg bg-red-900/10" open>
+                      <summary className="cursor-pointer p-4 hover:bg-red-900/20 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <span className="text-base font-semibold text-red-400">
+                            ⛔ Stage 1: Mandatory Rejections
+                          </span>
+                          <span className="px-2.5 py-1 rounded-full bg-red-900/50 text-xs font-semibold text-red-300">
+                            {stage1Rejections.length}
+                          </span>
+                        </div>
+                        <p className="text-xs text-red-400/70 mt-1">
+                          Structural issues • Permanent declines • Critical flaws
+                        </p>
+                      </summary>
+                      <div className="p-4 pt-0 space-y-3 max-h-96 overflow-y-auto">
+                        {stage1Rejections.map((item) => (
+                          <div
+                            key={item.itemId}
+                            className="p-4 rounded bg-slate-900/50 border border-red-700/30"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="font-semibold text-slate-200">{item.itemName}</h4>
+                              <span className="px-2 py-0.5 rounded text-xs font-semibold bg-red-900/50 text-red-300">
+                                AI: {item.aiConfidence}%
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-400 leading-relaxed">{item.aiReasoning}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+
+                  {/* Stage 2: Quality Rejections */}
+                  {stage2Rejections.length > 0 && (
+                    <details className="border border-orange-700/50 rounded-lg bg-orange-900/10" open>
+                      <summary className="cursor-pointer p-4 hover:bg-orange-900/20 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <span className="text-base font-semibold text-orange-400">
+                            ⚠️ Stage 2: Quality Rejections
+                          </span>
+                          <span className="px-2.5 py-1 rounded-full bg-orange-900/50 text-xs font-semibold text-orange-300">
+                            {stage2Rejections.length}
+                          </span>
+                        </div>
+                        <p className="text-xs text-orange-400/70 mt-1">
+                          Weak signals • Marginal opportunities • Low confidence
+                        </p>
+                      </summary>
+                      <div className="p-4 pt-0 space-y-3 max-h-96 overflow-y-auto">
+                        {stage2Rejections.map((item) => (
+                          <div
+                            key={item.itemId}
+                            className="p-4 rounded bg-slate-900/50 border border-orange-700/30"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="font-semibold text-slate-200">{item.itemName}</h4>
+                              <span className="px-2 py-0.5 rounded text-xs font-semibold bg-orange-900/50 text-orange-300">
+                                AI: {item.aiConfidence}%
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-400 leading-relaxed">{item.aiReasoning}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-slate-800 border-t border-slate-700 p-4">
-          <p className="text-xs text-slate-400 mb-3">
-            💡 Stage 0 removes unprofitable items before AI analysis (saves 70% cost). Items shown passed data quality checks but failed profitability thresholds.
-          </p>
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors"
-          >
-            Close
-          </button>
+        <div className="bg-slate-800 border-t border-slate-700 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-slate-400">
+              {activeTab === 'stage0' 
+                ? '💡 Stage 0 filters items before AI to reduce costs'
+                : '🧠 AI rejections reveal why opportunities don\'t meet quality standards'}
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors text-sm"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>
