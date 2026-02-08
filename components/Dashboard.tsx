@@ -230,6 +230,17 @@ export default function Dashboard() {
   const [showAlphaFeedInfo, setShowAlphaFeedInfo] = useState(false);
   const [skippedItems, setSkippedItems] = useState<Set<number>>(new Set());
 
+  // Cached Alpha Feed state
+  const [cachedFeed, setCachedFeed] = useState<{
+    scannedBy: string;
+    scannedAt: string;
+    expiresAt: string;
+    minutesUntilRescan: number;
+    isExpired: boolean;
+  } | null>(null);
+  const [_loadingCache, setLoadingCache] = useState(true);
+  const [canRescan, setCanRescan] = useState(true);
+
   const [lastRefresh, setLastRefresh] = useState<Date | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-last-refresh');
@@ -248,6 +259,12 @@ export default function Dashboard() {
   // Analyze items with AI
   const analyzeWithAI = async () => {
     if (loading) return;
+
+    // Check if cooldown is active
+    if (!canRescan) {
+      alert(`Please wait ${cachedFeed?.minutesUntilRescan || 0} more minutes before rescanning.`);
+      return;
+    }
 
     // Check if refreshed recently (within 30 seconds)
     if (lastRefresh) {
@@ -452,6 +469,38 @@ export default function Dashboard() {
       setScanMessage('Analysis complete');
       setScanTip('');
 
+      // Save to cached Alpha Feed
+      try {
+        const analysisDuration = progressInterval ? Math.floor((Date.now() - Date.now()) / 1000) : 60;
+        await fetch('/api/cached-alpha-feed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            opportunities: sorted,
+            filteredStage0: filteredItems,
+            aiRejected: aiRejectedItems,
+            analysisDuration,
+            aiCost: analysisCost?.costUSD || 0,
+          }),
+        });
+
+        // Reload cache info
+        const cacheResponse = await fetch('/api/cached-alpha-feed');
+        const cacheData = await cacheResponse.json();
+        if (cacheData.cached) {
+          setCachedFeed({
+            scannedBy: cacheData.cached.scannedBy,
+            scannedAt: cacheData.cached.scannedAt,
+            expiresAt: cacheData.cached.expiresAt,
+            minutesUntilRescan: cacheData.cached.minutesUntilRescan,
+            isExpired: false,
+          });
+        }
+        setCanRescan(false);
+      } catch (cacheError) {
+        console.error('Failed to cache Alpha Feed:', cacheError);
+      }
+
       console.log(`✅ Found ${sorted.length} mean-reversion opportunities`);
       console.log(`📊 Mean-reversion analysis complete`);
 
@@ -580,6 +629,46 @@ export default function Dashboard() {
   useEffect(() => {
     const cleanup = initDinkWebhookListener();
     return cleanup;
+  }, []);
+
+  // Load cached Alpha Feed on mount
+  useEffect(() => {
+    const loadCachedFeed = async () => {
+      setLoadingCache(true);
+      try {
+        const response = await fetch('/api/cached-alpha-feed');
+        const data = await response.json();
+
+        if (data.cached && !data.cached.isExpired) {
+          // Use cached results
+          setOpportunities(data.cached.opportunities || []);
+          setFilteredItems(data.cached.filteredStage0 || []);
+          setAiRejectedItems(data.cached.aiRejected || []);
+          setCachedFeed({
+            scannedBy: data.cached.scannedBy,
+            scannedAt: data.cached.scannedAt,
+            expiresAt: data.cached.expiresAt,
+            minutesUntilRescan: data.cached.minutesUntilRescan,
+            isExpired: false,
+          });
+          setAnalysisStats({
+            totalAnalyzed: data.cached.totalOpportunities + data.cached.totalRejected,
+            stage0FilteredCount: data.cached.filteredStage0?.length || 0,
+            aiAnalyzedCount: data.cached.totalOpportunities + data.cached.totalRejected,
+            aiApprovedCount: data.cached.totalOpportunities,
+            preFilteredCount: data.cached.filteredStage0?.length || 0,
+          });
+        }
+
+        setCanRescan(data.canRescan);
+      } catch (error) {
+        console.error('Error loading cached feed:', error);
+      } finally {
+        setLoadingCache(false);
+      }
+    };
+
+    loadCachedFeed();
   }, []);
 
   useEffect(() => {
@@ -809,6 +898,20 @@ export default function Dashboard() {
               <div className="flex items-center justify-between gap-6">
                 <div className="flex-1">
                   <div className="text-sm text-blue-200 mb-2">
+                    {/* Cached Feed Banner */}
+                    {!loading && cachedFeed && !cachedFeed.isExpired && (
+                      <div className="mb-2 p-2 bg-blue-900/30 border border-blue-600/30 rounded text-xs">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span>🌐</span>
+                          <span>Shared Feed: Last scanned by <strong>{cachedFeed.scannedBy}</strong></span>
+                          <span className="text-blue-300/70">•</span>
+                          <span>{new Date(cachedFeed.scannedAt).toLocaleTimeString()}</span>
+                          <span className="text-blue-300/70">•</span>
+                          <span className="text-yellow-400">Next scan in {cachedFeed.minutesUntilRescan}m</span>
+                        </span>
+                      </div>
+                    )}
+                    
                     {loading && (
                       <div>
                         <div className="inline-flex items-center gap-2 mb-1">
@@ -822,10 +925,10 @@ export default function Dashboard() {
                         )}
                       </div>
                     )}
-                    {!loading && lastRefresh && (
+                    {!loading && lastRefresh && !cachedFeed && (
                       <span>Last updated: {lastRefresh.toLocaleTimeString()}</span>
                     )}
-                    {!loading && !lastRefresh && <span>Ready to analyze</span>}
+                    {!loading && !lastRefresh && !cachedFeed && <span>Ready to analyze</span>}
                   </div>
                   {!loading && analysisStats && (
                     <div className="text-xs text-blue-200/80">
@@ -858,10 +961,15 @@ export default function Dashboard() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => analyzeWithAI()}
-                    disabled={loading}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 text-white rounded font-medium text-sm transition-colors"
+                    disabled={loading || !canRescan}
+                    className={`px-4 py-2 ${
+                      !canRescan 
+                        ? 'bg-slate-600 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    } disabled:bg-slate-700 text-white rounded font-medium text-sm transition-colors`}
+                    title={!canRescan ? `Wait ${cachedFeed?.minutesUntilRescan || 0} minutes` : ''}
                   >
-                    {loading ? 'Analyzing...' : '🔄 Refresh Analysis'}
+                    {loading ? 'Analyzing...' : !canRescan ? `⏳ ${cachedFeed?.minutesUntilRescan || 0}m` : '🔄 Refresh Analysis'}
                   </button>
                   {!loading && (filteredItems.length > 0 || aiRejectedItems.length > 0) && (
                     <button
