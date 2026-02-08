@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FlipOpportunity } from '@/lib/analysis';
@@ -24,6 +24,22 @@ export default function FlipCard({ opportunity, onSkip }: FlipCardProps) {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [showGraphModal, setShowGraphModal] = useState(false);
   const [feedbackType, setFeedbackType] = useState<'accept' | 'decline' | 'skip' | null>(null);
+  const [showFeedbackMenu, setShowFeedbackMenu] = useState(false);
+  const feedbackMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close feedback menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (feedbackMenuRef.current && !feedbackMenuRef.current.contains(event.target as Node)) {
+        setShowFeedbackMenu(false);
+      }
+    };
+
+    if (showFeedbackMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showFeedbackMenu]);
 
   // Fetch item details for icon
   const { data: itemDetails } = useQuery({
@@ -68,9 +84,10 @@ export default function FlipCard({ opportunity, onSkip }: FlipCardProps) {
     }
   };
 
-  const handleSkip = (e: React.MouseEvent) => {
+  const handleFeedbackSelect = (type: 'accept' | 'decline' | 'skip', e: React.MouseEvent) => {
     e.stopPropagation();
-    setFeedbackType('skip');
+    setFeedbackType(type);
+    setShowFeedbackMenu(false);
   };
 
   const handleFeedbackComplete = () => {
@@ -122,14 +139,42 @@ export default function FlipCard({ opportunity, onSkip }: FlipCardProps) {
               <p className="text-xs text-slate-500 mt-1">ID: {opportunity.itemId}</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleSkip}
-              className="px-3 py-1 bg-yellow-600/80 hover:bg-yellow-600 text-white rounded text-sm font-bold transition-colors"
-              title="Skip for 24h"
-            >
-              ⏭️
-            </button>
+          <div className="flex gap-2 relative">
+            {/* Feedback Menu */}
+            <div className="relative" ref={feedbackMenuRef}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowFeedbackMenu(!showFeedbackMenu);
+                }}
+                className="px-3 py-1 bg-blue-600/80 hover:bg-blue-600 text-white rounded text-sm font-bold transition-colors"
+                title="Give Feedback"
+              >
+                ⚡
+              </button>
+              {showFeedbackMenu && (
+                <div className="absolute right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-10 overflow-hidden min-w-[140px]">
+                  <button
+                    onClick={(e) => handleFeedbackSelect('accept', e)}
+                    className="w-full px-4 py-2 text-left text-sm font-medium text-green-400 hover:bg-slate-700 transition-colors flex items-center gap-2"
+                  >
+                    ✅ Accept
+                  </button>
+                  <button
+                    onClick={(e) => handleFeedbackSelect('decline', e)}
+                    className="w-full px-4 py-2 text-left text-sm font-medium text-red-400 hover:bg-slate-700 transition-colors flex items-center gap-2"
+                  >
+                    ❌ Decline
+                  </button>
+                  <button
+                    onClick={(e) => handleFeedbackSelect('skip', e)}
+                    className="w-full px-4 py-2 text-left text-sm font-medium text-yellow-400 hover:bg-slate-700 transition-colors flex items-center gap-2"
+                  >
+                    ⏭️ Skip
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -284,49 +329,28 @@ export default function FlipCard({ opportunity, onSkip }: FlipCardProps) {
       )}
 
 
+      {/* Feedback Section - Only shows when feedback type selected */}
+      {feedbackType && (
+        <div className="px-4 pt-3 pb-2 bg-slate-800/50 border-b border-slate-700">
+          <div className="text-xs font-semibold text-slate-300 mb-2">
+            {feedbackType === 'accept' && '✅ Why do you accept this recommendation?'}
+            {feedbackType === 'decline' && '❌ Why do you decline this recommendation?'}
+            {feedbackType === 'skip' && '⏭️ Why are you skipping this item?'}
+          </div>
+          <QuickFeedback
+            itemId={opportunity.itemId}
+            itemName={opportunity.itemName}
+            feedbackType={feedbackType}
+            aiConfidence={opportunity.confidence}
+            aiThesis={opportunity.buyWhen}
+            price={opportunity.currentPrice}
+            onComplete={handleFeedbackComplete}
+          />
+        </div>
+      )}
+
       {/* Quick Actions */}
-      <div className="p-3 border-t border-slate-700 bg-slate-900/30 space-y-2">
-        {/* Feedback Actions */}
-        {feedbackType ? (
-          <div className="p-3 bg-slate-800 rounded border border-slate-600">
-            <div className="text-xs font-semibold text-slate-300 mb-2">
-              {feedbackType === 'accept' && '✅ Why do you accept this recommendation?'}
-              {feedbackType === 'decline' && '❌ Why do you decline this recommendation?'}
-              {feedbackType === 'skip' && '⏭️ Why are you skipping this item?'}
-            </div>
-            <QuickFeedback
-              itemId={opportunity.itemId}
-              itemName={opportunity.itemName}
-              feedbackType={feedbackType}
-              aiConfidence={opportunity.confidence}
-              aiThesis={opportunity.buyWhen}
-              price={opportunity.currentPrice}
-              onComplete={handleFeedbackComplete}
-            />
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setFeedbackType('accept');
-              }}
-              className="py-2 px-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded transition-colors"
-            >
-              ✅ Accept
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setFeedbackType('decline');
-              }}
-              className="py-2 px-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded transition-colors"
-            >
-              ❌ Decline
-            </button>
-          </div>
-        )}
-        
+      <div className="p-3 border-t border-slate-700 bg-slate-900/30">
         {/* Utility Actions */}
         <div className="grid grid-cols-3 gap-2">
           <button
