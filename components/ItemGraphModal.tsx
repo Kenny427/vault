@@ -120,6 +120,8 @@ export default function ItemGraphModal({ itemId, itemName, onClose }: ItemGraphM
                 currentPrice={currentPrice}
                 averagePrice={calcStats(historyData).avg}
                 timeframeLabel={timeframeLabel}
+                showLineToggles={true}
+                defaultLinesOn={false}
               />
             ) : (
               <div className="flex items-center justify-center h-[400px] text-slate-400">
