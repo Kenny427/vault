@@ -197,7 +197,7 @@ export async function analyzeFlipsWithAI(
     .join('\n');
 
   const gameUpdatesSection = gameUpdatesContext.length > 0 
-    ? `\n🎮 RECENT GAME UPDATES (Last 14 days):\n${gameUpdatesContext}\n**Consider these updates in your reasoning** - items affected by positive updates may have stronger recovery potential.\n`
+    ? `\n🎮 RECENT GAME UPDATES (Last 14 days):\n${gameUpdatesContext}\n**CRITICAL**: Items with drop rate INCREASES (buff/drop_increase) = MORE COMMON = BEARISH. SKIP these items.\n**Consider positive updates**: Items affected by positive updates (requirements, nerfs to drop rates) may have stronger recovery potential.\n`
     : '';
 
   const prompt = `OSRS mean-reversion analyzer. Find items 10-30% below 90d/365d avg with recovery potential.
@@ -211,6 +211,7 @@ SKIP only if:
 - Declining across all timeframes (structural decline)
 - Bottom 5% + no recovery history
 - Erratic data (anomaly)
+- **Drop rate INCREASED in recent update (more supply = structural decline)**
 ${gameUpdatesSection}
 Format: ID|Name|Cur|Avg[30/90/365]|Dev[30/365]%|Vol|Pctl[30/365]|Sup|Res|RecPot%|Trend|Risk
 

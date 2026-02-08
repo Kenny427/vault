@@ -67,11 +67,17 @@ Return ONLY valid JSON, no explanation:
       "relationship": "requirement",
       "quantity": 100,
       "confidence": 85,
-      "notes": "Required for new quest"
+      "notes": "Required for new quest - bullish"
+    },
+    {
+      "name": "Twisted bow",
+      "relationship": "drop_increase",
+      "confidence": 90,
+      "notes": "Drop rate increased from 1/1000 to 1/750 - bearish, more supply"
     }
   ],
-  "overall_sentiment": "bullish",
-  "impact_level": "medium",
+  "overall_sentiment": "mixed",
+  "impact_level": "high",
   "category": "quest"
 }`;
 
@@ -80,7 +86,7 @@ Return ONLY valid JSON, no explanation:
       messages: [
         {
           role: 'system',
-          content: 'You are an expert OSRS economy analyst. Return only valid JSON responses.',
+          content: 'You are an expert OSRS economy analyst. CRITICAL: Drop rate INCREASES = more supply = BEARISH. Drop rate DECREASES = less supply = BULLISH. Return only valid JSON responses.',
         },
         {
           role: 'user',

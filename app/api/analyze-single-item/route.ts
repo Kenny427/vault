@@ -368,11 +368,15 @@ export async function GET(request: Request) {
     // Check for bearish drop rate increases
     const dropRateIncreases = gameContext.updates.filter(u => 
       u.impact_type === 'drop_rate_increase' || 
-      (u.sentiment === 'bearish' && u.notes?.toLowerCase().includes('drop rate'))
+      (u.sentiment === 'bearish' && u.notes?.toLowerCase().includes('drop rate')) ||
+      (u.notes?.toLowerCase().includes('drop rate') && 
+       (u.notes?.toLowerCase().includes('increase') || 
+        u.notes?.toLowerCase().includes('more common') ||
+        u.notes?.toLowerCase().includes('1/400 to 1/256')))
     );
     
     const dropRateWarning = dropRateIncreases.length > 0
-      ? `\n⚠️ **CRITICAL WARNING**: This item's drop rate was INCREASED in a recent update. This means MORE SUPPLY = FALLING PRICES likely. Exercise extreme caution - this could invalidate mean-reversion thesis.\n${dropRateIncreases.map(u => `   - ${u.title}: ${u.notes}`).join('\n')}\n`
+      ? `\n⚠️ **CRITICAL WARNING - DROP RATE INCREASED**:\nThis item's drop rate was INCREASED (from 1/400 to 1/256 = 56% more common).\n- MORE SUPPLY = STRUCTURAL PRICE DECLINE (not temporary dip)\n- Mean-reversion thesis is INVALID\n- This is NOT a buy opportunity\n${dropRateIncreases.map(u => `   - ${u.title}: ${u.notes}`).join('\n')}\n**YOUR TASK**: Acknowledge this price is falling due to PERMANENT supply increase. Do NOT recommend buying.\n`
       : '';
 
     const strategistPrompt = `You are an expert OSRS market analyst providing DEEP DIVE analysis on this item's flip potential.
@@ -397,7 +401,15 @@ METRICS:
 ${gameContext.hasUpdates ? gameContext.contextText : ''}${updateGuidance}${dropRateWarning}
 TASK: Provide engaging, specific analysis that a trader would actually want to read.
 
-**CRITICAL GAME UPDATE RULE**: If this item had drop rate  INCREASED (more common) in a recent update, the mean-reversion thesis is likely INVALID. Acknowledge this and reduce confidence significantly.
+**MANDATORY DROP RATE RULE**: 
+${dropRateIncreases.length > 0 ? 
+`🚨 THIS ITEM HAD DROP RATE INCREASED - IT IS NOW MORE COMMON. 
+- This is a STRUCTURAL DECLINE, not a temporary dip
+- Mean-reversion does NOT apply (permanent supply increase)
+- You MUST write a BEARISH thesis explaining why this is NOT a buy
+- Set confidenceAdjustment to -25 or lower
+- Your narrative MUST acknowledge this invalidates the opportunity` :
+`If drop rate was INCREASED (item more common), mean-reversion thesis is INVALID. Acknowledge this and reduce confidence.`}
 
 1. **THESIS** (The Core Story):Write 2-3 compelling sentences explaining WHY this is an opportunity NOW. Include:
    - Specific catalysts or market events (bot bans, updates, seasonal patterns)
