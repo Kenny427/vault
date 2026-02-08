@@ -12,11 +12,37 @@ export interface FormattedGameContext {
 }
 
 /**
+ * Determine if an update is still relevant based on age and impact type
+ * Different types of updates have different relevancy windows
+ */
+function isUpdateStillRelevant(update: ItemUpdateHistory): boolean {
+  const updateDate = new Date(update.update_date);
+  const daysOld = Math.floor((Date.now() - updateDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  // Different impact types stay relevant for different durations
+  const expirationDays: Record<string, number> = {
+    'drop_rate_increase': 60,  // Market stabilizes in ~2 months
+    'drop_rate_decrease': 60,   // Market stabilizes in ~2 months
+    'buff': 45,                 // Demand spike settles in ~1.5 months
+    'nerf': 45,                 // Demand drop settles in ~1.5 months
+    'requirement': 90,          // New content stays relevant longer
+    'reward': 60,               // Supply increase stabilizes
+    'new_method': 90,           // New obtaining methods take time to saturate
+    'related': 30,              // Generic updates less impactful
+  };
+  
+  const maxAge = expirationDays[update.impact_type] || 30;
+  
+  // Update is relevant if within its expiration window
+  return daysOld <= maxAge;
+}
+
+/**
  * Fetch recent game updates for an item and format them for AI prompts
  */
 export async function getGameUpdateContext(
   itemId: number,
-  daysBack: number = 14
+  daysBack: number = 90  // Look back 90 days but filter by relevance
 ): Promise<FormattedGameContext> {
   try {
     const supabase = createServerSupabaseClient();
@@ -32,7 +58,7 @@ export async function getGameUpdateContext(
       .eq('item_id', itemId)
       .gte('update_date', cutoffDate.toISOString())
       .order('update_date', { ascending: false })
-      .limit(10);
+      .limit(20);  // Fetch more, then filter by relevance
 
     if (error || !impacts || impacts.length === 0) {
       return {
@@ -42,13 +68,26 @@ export async function getGameUpdateContext(
       };
     }
 
+    // Filter to only relevant updates (not expired)
+    const relevantUpdates = impacts
+      .filter(update => isUpdateStillRelevant(update))
+      .slice(0, 10);  // Max 10 relevant updates
+
+    if (relevantUpdates.length === 0) {
+      return {
+        hasUpdates: false,
+        contextText: '',
+        updates: [],
+      };
+    }
+
     // Format updates for AI prompt
     const contextLines = [
-      `\n🎮 RECENT GAME UPDATES (Last ${daysBack} days):`,
+      `\n🎮 RECENT GAME UPDATES:`,
       '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
     ];
 
-    for (const update of impacts) {
+    for (const update of relevantUpdates) {
       const date = new Date(update.update_date).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -94,7 +133,7 @@ export async function getGameUpdateContext(
     return {
       hasUpdates: true,
       contextText,
-      updates: impacts as ItemUpdateHistory[],
+      updates: relevantUpdates as ItemUpdateHistory[],
     };
 
   } catch (error) {
