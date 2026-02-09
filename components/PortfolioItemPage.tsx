@@ -76,6 +76,8 @@ export default function PortfolioItemPage() {
   });
 
   const currentPrice = priceData ? (priceData.high + priceData.low) / 2 : 0;
+  const highPrice = priceData?.high ?? 0;
+  const lowPrice = priceData?.low ?? 0;
 
   const timeframeSeconds = useMemo(() => {
     return TIMEFRAMES.find((t) => t.value === timeframe)?.seconds ?? TIMEFRAMES[1].seconds;
@@ -246,8 +248,8 @@ export default function PortfolioItemPage() {
             <div className="text-lg font-semibold">{Math.round(stats.avgBuy).toLocaleString()}gp</div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
-            <div className="text-slate-400 text-xs">Current</div>
-            <div className="text-lg font-semibold text-blue-400">{Math.round(stats.currentPrice).toLocaleString()}gp</div>
+            <div className="text-slate-400 text-xs">High / Low</div>
+            <div className="text-lg font-semibold">{Math.round(highPrice).toLocaleString()} / {Math.round(lowPrice).toLocaleString()}gp</div>
           </div>
           <div className="bg-slate-900 border border-slate-800 rounded-lg p-4">
             <div className="text-slate-400 text-xs">Tax (2%)</div>
