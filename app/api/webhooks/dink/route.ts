@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-// Temporary in-memory store for debugging (will be lost on redeploy)
-let allWebhooks: any[] = [];
-let parsedTransactions: any[] = [];
-let seenTransactionIds = new Set<string>();
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } }
+);
+
+// In-memory deduplication cache (short-lived)
 let lastSeenBySignature = new Map<string, number>();
 
 const hashString = (value: string) => {
@@ -26,11 +30,38 @@ const normalizeType = (status?: string) => {
 
 const shouldAcceptSignature = (signature: string, now: number) => {
   const lastSeen = lastSeenBySignature.get(signature);
-  if (!lastSeen || now - lastSeen > 2000) {
+  if (!lastSeen || now - lastSeen > 5000) {
     lastSeenBySignature.set(signature, now);
     return true;
   }
   return false;
+};
+
+// Write transaction to Supabase for all users with matching RSN
+const writeToPendingTransactions = async (transaction: any) => {
+  const username = transaction.username?.toLowerCase();
+  if (!username) return;
+
+  // Find all users with this RSN
+  const { data: users } = await supabase
+    .from('user_rsn_accounts')
+    .select('user_id')
+    .ilike('rsn', username);
+
+  if (!users || users.length === 0) return;
+
+  // Insert transaction for each user
+  const inserts = users.map(u => ({
+    user_id: u.user_id,
+    item_id: transaction.itemId || 0,
+    item_name: transaction.itemName,
+    quantity: transaction.quantity || 0,
+    price: transaction.price || 0,
+    type: transaction.type.toLowerCase(),
+    dink_webhook_id: transaction.id,
+  }));
+
+  await supabase.from('pending_transactions').insert(inserts);
 };
 
 const parseFromPayloadJson = (payload: any) => {
@@ -99,21 +130,10 @@ export async function POST(request: NextRequest) {
 
     console.log('🔔 RAW WEBHOOK RECEIVED:', typeof body === 'string' ? body : JSON.stringify(body, null, 2));
 
-    // Store raw body for debugging
-    allWebhooks.push({
-      received: new Date().toISOString(),
-      raw: body,
-    });
-
     // Parse using DINK payload_json when available
     const payloadTransaction = parseFromPayloadJson(body);
     if (payloadTransaction) {
-      if (!seenTransactionIds.has(payloadTransaction.id)) {
-        parsedTransactions.push(payloadTransaction);
-        seenTransactionIds.add(payloadTransaction.id);
-      }
-      allWebhooks.push({ received: new Date().toISOString(), parsed: payloadTransaction });
-
+      await writeToPendingTransactions(payloadTransaction);
       return NextResponse.json(
         { success: true, transaction: payloadTransaction },
         { status: 200 }
@@ -165,7 +185,7 @@ export async function POST(request: NextRequest) {
         { status: 200 }
       );
     }
-    const bucket = Math.floor(now / 2000);
+    const bucket = Math.floor(now / 5000);
     const transaction = {
       id: createTransactionId(signature, bucket),
       username,
@@ -175,18 +195,7 @@ export async function POST(request: NextRequest) {
       timestamp: now,
     };
 
-    if (!seenTransactionIds.has(transaction.id)) {
-      parsedTransactions.push(transaction);
-      seenTransactionIds.add(transaction.id);
-    }
-
-    // Store parsed transaction
-    allWebhooks.push({
-      received: new Date().toISOString(),
-      parsed: transaction,
-    });
-
-    console.log(`📦 Total transactions: ${allWebhooks.length}`);
+    await writeToPendingTransactions(transaction);
 
     return NextResponse.json(
       {
@@ -197,11 +206,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('❌ Webhook error:', error);
-    
-    allWebhooks.push({
-      received: new Date().toISOString(),
-      error: String(error),
-    });
 
     return NextResponse.json(
       { 
@@ -214,11 +218,24 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Debug endpoint to see what DINK is sending
+// Debug endpoint - returns recent transactions from all users
 export async function GET() {
-  return NextResponse.json({
-    totalReceived: allWebhooks.length,
-    recentWebhooks: allWebhooks.slice(-20),
-    parsedTransactions: parsedTransactions.slice(-200),
-  });
+  try {
+    const { data: transactions } = await supabase
+      .from('pending_transactions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    return NextResponse.json({
+      success: true,
+      parsedTransactions: transactions || [],
+      totalReceived: transactions?.length || 0,
+    });
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      error: String(error),
+    });
+  }
 }

@@ -49,45 +49,41 @@ export function initDinkWebhookListener() {
 
   const pollServer = async () => {
     try {
-      // Get current user's all RSN accounts from Supabase
+      // Get current user's session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) return;
 
-      const { data: rsnAccounts } = await supabase
-        .from('user_rsn_accounts')
-        .select('rsn')
-        .eq('user_id', session.user.id);
+      // Query pending_transactions directly from Supabase (RLS handles filtering)
+      const { data: transactions } = await supabase
+        .from('pending_transactions')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-      const userRsns = new Set((rsnAccounts || []).map((item: any) => item.rsn.toLowerCase()));
-      if (userRsns.size === 0) return;
-
-      const response = await fetch('/api/webhooks/dink');
-      if (!response.ok) return;
-      const data = await response.json();
-
-      const parsed = Array.isArray(data.parsedTransactions) ? data.parsedTransactions : [];
-      if (parsed.length === 0) return;
+      if (!transactions || transactions.length === 0) return;
 
       const store = usePendingTransactionsStore.getState();
       const existingIds = new Set(store.transactions.map((tx) => tx.id));
       const handledIds = new Set(store.handledIds);
 
-      parsed.forEach((tx: any) => {
-        // Only add transactions matching user's RSN accounts (case-insensitive)
-        if (!userRsns.has(tx.username?.toLowerCase())) return;
-        if (!tx?.id || existingIds.has(tx.id) || handledIds.has(tx.id)) return;
-        if (tx.type !== 'BUY' && tx.type !== 'SELL') return;
+      transactions.forEach((tx: any) => {
+        const txId = tx.dink_webhook_id || `db-${tx.id}`;
+        if (existingIds.has(txId) || handledIds.has(txId)) return;
+        
+        const type = tx.type.toUpperCase() as 'BUY' | 'SELL';
+        if (type !== 'BUY' && type !== 'SELL') return;
 
         store.addTransaction({
-          id: tx.id,
-          username: tx.username || 'Unknown',
-          type: tx.type,
-          itemName: tx.itemName || 'Unknown',
-          status: tx.status || 'UNKNOWN',
-          timestamp: typeof tx.timestamp === 'number' ? tx.timestamp : Date.now(),
+          id: txId,
+          username: 'Player', // Username not stored in pending_transactions
+          type: type,
+          itemName: tx.item_name || 'Unknown',
+          status: 'PENDING',
+          timestamp: new Date(tx.created_at).getTime(),
           quantity: tx.quantity,
           price: tx.price,
-          itemId: tx.itemId,
+          itemId: tx.item_id,
         });
       });
     } catch {
@@ -95,7 +91,7 @@ export function initDinkWebhookListener() {
     }
   };
 
-  const intervalId = window.setInterval(pollServer, 15000);
+  const intervalId = window.setInterval(pollServer, 5000);
   pollServer();
 
   window.addEventListener('message', handleMessage);
