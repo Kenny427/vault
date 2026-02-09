@@ -15,20 +15,18 @@ interface QuickFeedbackProps {
 
 const QUICK_TAGS = {
   accept: [
+    'Strong bot dump evidence',
     'Price way below normal',
-    'Clear bot dump happening',
-    'Easy to sell later',
-    'Should bounce back soon',
-    'Good profit potential'
+    'Good liquidity',
+    'Quick rebound likely',
+    'Good risk/reward'
   ],
   decline: [
-    'Price seems stable at this level',
-    'Price target too high',
-    'No clear bot activity',
-    'Takes too long to profit',
-    'Profit too small',
-    'Already going back up',
-    'Hard to buy/sell (low volume)'
+    'Not clear it\'s bots',
+    'Already rebounding',
+    'Long-term declining trend',
+    'Too risky / unclear',
+    'Low volume / hard to trade'
   ],
   skip: [
     'Too expensive for me',

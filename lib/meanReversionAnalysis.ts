@@ -81,6 +81,10 @@ export interface MeanReversionSignal {
   strategicNarrative?: string; // AI-generated detailed analysis
   auditorDecision?: 'approve' | 'caution' | 'reject'; // AI auditor decision
   auditorNotes?: string; // AI auditor's skeptical critique
+  
+  // Yearly trend context
+  yearlyTrend?: number; // % change over 365 days (positive = uptrend, negative = downtrend)
+  yearlyContext?: string; // Human-readable yearly trend assessment
 }
 
 
@@ -937,6 +941,27 @@ export async function analyzeMeanReversionOpportunity(
     botLikelihood
   );
 
+  // Calculate yearly trend (% change from 365d ago to now)
+  const yearlyPrices = priceData.filter(d => d.timestamp >= Math.floor(Date.now() / 1000) - (365 * 24 * 60 * 60));
+  let yearlyTrend = 0;
+  let yearlyContext = 'Neutral long-term trend';
+  if (yearlyPrices.length > 30) {
+    const firstPrice = (yearlyPrices[0].avgHighPrice + yearlyPrices[0].avgLowPrice) / 2;
+    yearlyTrend = firstPrice > 0 ? ((currentPrice - firstPrice) / firstPrice) * 100 : 0;
+    
+    if (yearlyTrend < -20) {
+      yearlyContext = `⚠️ WARNING: Yearly downtrend (${yearlyTrend.toFixed(0)}%)`;
+    } else if (yearlyTrend < -10) {
+      yearlyContext = `⚠️ Caution: Declining yearly (${yearlyTrend.toFixed(0)}%)`;
+    } else if (yearlyTrend > 20) {
+      yearlyContext = `✅ STRONG: Yearly uptrend (+${yearlyTrend.toFixed(0)}%)`;
+    } else if (yearlyTrend > 10) {
+      yearlyContext = `✅ Positive yearly trend (+${yearlyTrend.toFixed(0)}%)`;
+    } else {
+      yearlyContext = `Neutral yearly trend (${yearlyTrend >= 0 ? '+' : ''}${yearlyTrend.toFixed(0)}%)`;
+    }
+  }
+
   const confidenceScore = calculateConfidence({
     mediumDeviation,
     longDeviation,
@@ -1064,6 +1089,10 @@ export async function analyzeMeanReversionOpportunity(
     exitPriceStretch,
     holdNarrative,
     expectedRecoveryWeeks,
+    
+    // Yearly trend context
+    yearlyTrend,
+    yearlyContext,
   };
 }
 
