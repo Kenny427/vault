@@ -196,7 +196,7 @@ export async function GET(request: Request) {
               // Simplified adaptations based on new tags
               const adaptations: string[] = [];
               
-              if (topDeclines.includes('Not clear it\\'s bots')) {
+              if (topDeclines.includes("Not clear it's bots")) {
                 adaptations.push('   → REQUIRE stronger bot evidence: Favor items with clear dump patterns + high bot likelihood');
               }
               if (topDeclines.includes('Already rebounding')) {
@@ -205,10 +205,10 @@ export async function GET(request: Request) {
               if (topDeclines.includes('Long-term declining trend')) {
                 adaptations.push('   → VERIFY yearly context: Be cautious with items showing multi-year decline');
               }
-              if (topDeclines.includes('Too risky') || topDeclines.includes('unclear')) {
+              if (topDeclines.includes('Too risky/unclear')) {
                 adaptations.push('   → INCREASE clarity bar: Provide stronger thesis and clearer setups');
               }
-              if (topDeclines.includes('Low volume') || topDeclines.includes('hard to trade')) {
+              if (topDeclines.includes('Low volume/hard to trade')) {
                 adaptations.push('   → INCREASE liquidity requirement: Favor items with consistent high volume');
               }
               
