@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS cached_alpha_feed (
     -- Metadata
     scanned_by_user_id UUID REFERENCES auth.users(id),
     scanned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '2 hours'),
+    expires_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(), -- No delay, expires immediately
     
     -- Stats
     total_opportunities INTEGER,
@@ -92,7 +92,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Comments
-COMMENT ON TABLE cached_alpha_feed IS 'Global cached Alpha Feed analysis shared across all users with 2-hour cooldown';
+COMMENT ON TABLE cached_alpha_feed IS 'Global cached Alpha Feed analysis shared across all users with no cooldown';
 COMMENT ON COLUMN cached_alpha_feed.opportunities IS 'Approved flip opportunities from AI analysis';
-COMMENT ON COLUMN cached_alpha_feed.expires_at IS 'When this cache expires and allows rescan (2 hours from creation)';
+COMMENT ON COLUMN cached_alpha_feed.expires_at IS 'When this cache expires and allows rescan (expires immediately for no delay)';
 COMMENT ON COLUMN cached_alpha_feed.scanned_by_user_id IS 'User who triggered the scan';
