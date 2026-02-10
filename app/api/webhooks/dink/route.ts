@@ -50,7 +50,7 @@ const writeToPendingTransactions = async (transaction: any) => {
 
   if (!users || users.length === 0) return;
 
-  // Insert transaction for each user
+  // Insert transaction for each user (ignore if already exists)
   const inserts = users.map(u => ({
     user_id: u.user_id,
     item_id: transaction.itemId || 0,
@@ -61,7 +61,13 @@ const writeToPendingTransactions = async (transaction: any) => {
     dink_webhook_id: transaction.id,
   }));
 
-  await supabase.from('pending_transactions').insert(inserts);
+  // Use upsert to prevent duplicates
+  await supabase
+    .from('pending_transactions')
+    .upsert(inserts, { 
+      onConflict: 'user_id,dink_webhook_id',
+      ignoreDuplicates: true 
+    });
 };
 
 const parseFromPayloadJson = (payload: any) => {
