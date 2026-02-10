@@ -67,25 +67,35 @@ export function initDinkWebhookListener() {
       const existingIds = new Set(store.transactions.map((tx) => tx.id));
       const handledIds = new Set(store.handledIds);
 
-      transactions.forEach((tx: any) => {
-        const txId = tx.dink_webhook_id || `db-${tx.id}`;
-        if (existingIds.has(txId) || handledIds.has(txId)) return;
-        
-        const type = tx.type.toUpperCase() as 'BUY' | 'SELL';
-        if (type !== 'BUY' && type !== 'SELL') return;
+      const newTransactions = transactions
+        .map((tx: any) => {
+          const txId = tx.dink_webhook_id || `db-${tx.id}`;
+          if (existingIds.has(txId) || handledIds.has(txId)) return null;
+          
+          const type = tx.type.toUpperCase() as 'BUY' | 'SELL';
+          if (type !== 'BUY' && type !== 'SELL') return null;
 
-        store.addTransaction({
-          id: txId,
-          username: 'Player', // Username not stored in pending_transactions
-          type: type,
-          itemName: tx.item_name || 'Unknown',
-          status: 'PENDING',
-          timestamp: new Date(tx.created_at).getTime(),
-          quantity: tx.quantity,
-          price: tx.price,
-          itemId: tx.item_id,
-        });
-      });
+          return {
+            id: txId,
+            username: 'Player', // Username not stored in pending_transactions
+            type: type,
+            itemName: tx.item_name || 'Unknown',
+            status: 'PENDING',
+            timestamp: new Date(tx.created_at).getTime(),
+            quantity: tx.quantity,
+            price: tx.price,
+            itemId: tx.item_id,
+            synced: true, // Already in Supabase
+          };
+        })
+        .filter((tx): tx is NonNullable<typeof tx> => tx !== null);
+
+      if (newTransactions.length > 0) {
+        // Update state directly without triggering Supabase insert
+        usePendingTransactionsStore.setState((state) => ({
+          transactions: [...newTransactions, ...state.transactions],
+        }));
+      }
     } catch {
       // Ignore polling errors
     }
