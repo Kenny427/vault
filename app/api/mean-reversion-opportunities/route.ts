@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
+import { getItemHistoryWithVolumes, getItemPrice } from '@/lib/api/osrs';
 import {
   analyzeMeanReversionOpportunity,
   rankInvestmentOpportunities,
@@ -98,6 +98,19 @@ export async function GET(request: Request) {
           }
 
           const result = await analyzeMeanReversionOpportunity(item.id, item.name, priceData);
+          
+          // Get real-time current price from /latest endpoint (timeseries can be hours old)
+          if (result) {
+            try {
+              const latestPrice = await getItemPrice(item.id);
+              if (latestPrice) {
+                const realtimePrice = (latestPrice.high + latestPrice.low) / 2;
+                result.currentPrice = Math.round(realtimePrice);
+              }
+            } catch (e) {
+              // Keep timeseries price if /latest fails
+            }
+          }
           if (!result) {
             filteredOutItems.push({ itemId: item.id, itemName: item.name, reason: 'Analysis logic failed (unknown error)' });
             return null;
