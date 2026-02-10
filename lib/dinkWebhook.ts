@@ -88,7 +88,7 @@ export function initDinkWebhookListener() {
             synced: true, // Already in Supabase
           };
         })
-        .filter((tx): tx is NonNullable<typeof tx> => tx !== null);
+        .filter((tx: any): tx is NonNullable<typeof tx> => tx !== null);
 
       if (newTransactions.length > 0) {
         // Update state directly without triggering Supabase insert
