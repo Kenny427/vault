@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { getOpenRouterClient } from '@/lib/ai/openrouter';
 import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
 import { getCustomPoolItems } from '@/lib/poolManagement';
 import { getItemPrice, getItemHistoryWithVolumes } from '@/lib/api/osrs';
+
+const client = getOpenRouterClient();
 
 // Type for pool scores
 interface PoolItemScore {
@@ -32,10 +34,6 @@ interface AiItemResult {
   reasoning: string;
   riskFlags: string[];
 }
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 const aiCache = new Map<number, { timestamp: number; result: AiItemResult }>();
 

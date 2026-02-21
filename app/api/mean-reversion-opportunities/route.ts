@@ -1,5 +1,4 @@
 ﻿import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
 import {
   analyzeMeanReversionOpportunity,
@@ -10,13 +9,12 @@ import { EXPANDED_ITEM_POOL } from '@/lib/expandedItemPool';
 import { getCustomPoolItems } from '@/lib/poolManagement';
 import { trackEvent, calculateAICost } from '@/lib/adminAnalytics';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
+import { getOpenRouterClient } from '@/lib/ai/openrouter';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const client = getOpenRouterClient();
 
 function chunkArray<T>(items: T[], size: number) {
   const chunks: T[][] = [];
@@ -576,7 +574,7 @@ Is bot activity likely driving this? Would mean-reversion be reasonable within 2
 
               totalInputTokens += usage.prompt_tokens;
               totalOutputTokens += usage.completion_tokens;
-              totalTokens += usage.total_tokens;
+              totalTokens += (usage.prompt_tokens || 0) + (usage.completion_tokens || 0);
               accTotalCost += batchCost;
 
               // Track analytics event (fire and forget - non-critical)
@@ -589,7 +587,7 @@ Is bot activity likely driving this? Would mean-reversion be reasonable within 2
                   successfulItems: (parsed.items || []).length
                 },
                 costUsd: batchCost,
-                tokensUsed: usage.total_tokens
+                tokensUsed: (usage.prompt_tokens || 0) + (usage.completion_tokens || 0)
               }).catch(() => {}); // Silently ignore analytics errors
             }
 

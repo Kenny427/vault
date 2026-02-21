@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { getOpenRouterClient } from '@/lib/ai/openrouter';
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const client = getOpenRouterClient();
 
 export const runtime = 'nodejs';
 
@@ -78,7 +76,8 @@ Be concise, actionable, and focus on what a trader should do TODAY.`;
       const inputCost = (usage.prompt_tokens / 1000) * 0.00015;
       const outputCost = (usage.completion_tokens / 1000) * 0.0006;
       const totalCost = inputCost + outputCost;
-      console.log(`💰 Daily briefing: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${usage.total_tokens} tokens | Cost: $${totalCost.toFixed(4)}`);
+      const totalTokens = (usage.prompt_tokens || 0) + (usage.completion_tokens || 0);
+      console.log(`💰 Daily briefing: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${totalTokens} tokens | Cost: $${totalCost.toFixed(4)}`);
     }
 
     // Cache the result

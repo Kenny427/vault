@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { getOpenRouterClient } from '@/lib/ai/openrouter';
 import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
 import { analyzeMeanReversionOpportunity, MeanReversionSignal } from '@/lib/meanReversionAnalysis';
 import { trackEvent, calculateAICost } from '@/lib/adminAnalytics';
@@ -9,9 +9,7 @@ import { getGameUpdateContext, generateUpdateGuidance } from '@/lib/gameUpdateCo
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const client = getOpenRouterClient();
 
 /**
  * General market analysis for items that don't fit mean-reversion criteria
@@ -20,20 +18,9 @@ const client = new OpenAI({
 async function performGeneralMarketAnalysis(
   itemId: number,
   priceData: any[],
-  openaiClient: OpenAI
+  openaiClient: any
 ) {
   console.log('🌐 Starting general market analysis...');
-
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'AI analysis unavailable',
-        details: 'OpenAI API key not configured'
-      },
-      { status: 503 }
-    );
-  }
 
   // Get user for tracking
   const supabase = createServerSupabaseClient();
@@ -257,7 +244,7 @@ Valid values:
       analysisType: 'general'
     },
     costUsd,
-    tokensUsed: response.usage?.total_tokens
+    tokensUsed: (response.usage?.prompt_tokens || 0) + (response.usage?.completion_tokens || 0)
   });
 
   return NextResponse.json({
@@ -594,13 +581,16 @@ Return ONLY valid JSON:
     console.log(`✅ Deep analysis complete: decision=${enhancedSignal.auditorDecision}, final confidence=${enhancedSignal.confidenceScore}%`);
 
     // Calculate token usage for cost tracking
+    const inputTokens = (strategistResponse.usage?.prompt_tokens || 0) + (auditorResponse.usage?.prompt_tokens || 0);
+    const outputTokens = (strategistResponse.usage?.completion_tokens || 0) + (auditorResponse.usage?.completion_tokens || 0);
+    
     const tokenUsage = {
       strategist: strategistResponse.usage,
       auditor: auditorResponse.usage,
       total: {
-        inputTokens: (strategistResponse.usage?.prompt_tokens || 0) + (auditorResponse.usage?.prompt_tokens || 0),
-        outputTokens: (strategistResponse.usage?.completion_tokens || 0) + (auditorResponse.usage?.completion_tokens || 0),
-        totalTokens: (strategistResponse.usage?.total_tokens || 0) + (auditorResponse.usage?.total_tokens || 0),
+        inputTokens,
+        outputTokens,
+        totalTokens: inputTokens + outputTokens,
       }
     };
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { getOpenRouterClient } from '@/lib/ai/openrouter';
 import { MeanReversionSignal } from '@/lib/meanReversionAnalysis';
 
 interface ExecutionPlan {
@@ -26,9 +26,7 @@ interface ExecutionPlan {
   catalysts: string[];
 }
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const client = getOpenRouterClient();
 
 /**
  * Execution Plan Generator

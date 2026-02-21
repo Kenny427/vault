@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { getItemHistoryWithVolumes } from '@/lib/api/osrs';
 import { analyzeMeanReversionOpportunity } from '@/lib/meanReversionAnalysis';
+import { getOpenRouterClient } from '@/lib/ai/openrouter';
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const client = getOpenRouterClient();
 
 export const runtime = 'nodejs';
 
@@ -288,7 +286,8 @@ Return JSON array. Base ALL decisions on THEIR specific position + REAL market d
       const inputCost = (usage.prompt_tokens / 1000) * 0.00015;
       const outputCost = (usage.completion_tokens / 1000) * 0.0006;
       const totalCost = inputCost + outputCost;
-      console.log(`💰 Portfolio advisor: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${usage.total_tokens} tokens | Cost: $${totalCost.toFixed(4)}`);
+      const totalTokens = (usage.prompt_tokens || 0) + (usage.completion_tokens || 0);
+      console.log(`💰 Portfolio advisor: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${totalTokens} tokens | Cost: $${totalCost.toFixed(4)}`);
     }
 
     console.log(`✅ Portfolio analysis complete: ${actionCounts.hold} hold, ${actionCounts.sell_soon} sell soon, ${actionCounts.sell_asap} sell ASAP, ${actionCounts.hold_for_rebound} rebound play`);

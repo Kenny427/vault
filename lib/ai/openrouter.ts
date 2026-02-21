@@ -61,6 +61,7 @@ class OpenRouterClient {
         top_p?: number;
         frequency_penalty?: number;
         presence_penalty?: number;
+        response_format?: { type: string };
       }): Promise<{
         choices: Array<{
           message: {
@@ -88,6 +89,7 @@ class OpenRouterClient {
     top_p?: number;
     frequency_penalty?: number;
     presence_penalty?: number;
+    response_format?: { type: string };
   }): Promise<any> {
     const payload = {
       model: params.model,
@@ -97,6 +99,7 @@ class OpenRouterClient {
       ...(params.top_p !== undefined && { top_p: params.top_p }),
       ...(params.frequency_penalty !== undefined && { frequency_penalty: params.frequency_penalty }),
       ...(params.presence_penalty !== undefined && { presence_penalty: params.presence_penalty }),
+      ...(params.response_format !== undefined && { response_format: params.response_format }),
     };
 
     try {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { getOpenRouterClient } from '@/lib/ai/openrouter';
 import { getItemPrice, getItemHistoryWithVolumes } from '@/lib/api/osrs';
 
 interface PortfolioItem {
@@ -22,9 +22,7 @@ interface PriceForecast {
   projectedProfit: number; // percentage
 }
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const client = getOpenRouterClient();
 
 /**
  * Portfolio Forecast API
