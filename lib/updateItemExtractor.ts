@@ -1,14 +1,12 @@
 /**
  * AI-powered item extraction from game updates
- * Uses GPT-4o mini to identify items affected by updates
+ * Uses OpenRouter with intelligent model selection to identify items affected by updates
  */
 
-import OpenAI from 'openai';
+import { getOpenRouterClient } from './ai/openrouter';
+import { selectModel, ROUTING_STRATEGIES } from './ai/modelRouter';
+import { getCostTracker } from './ai/costs';
 import type { AIExtractionResult } from '@/lib/types/gameUpdates';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 /**
  * Extract items and impacts from update content using AI
@@ -19,6 +17,10 @@ export async function extractItemsFromUpdate(
 ): Promise<AIExtractionResult> {
   try {
     console.log(`🤖 Analyzing update: "${title.slice(0, 50)}..."`);
+
+    const aiClient = getOpenRouterClient();
+    const model = selectModel('item-lookup', ROUTING_STRATEGIES['cost-optimized']);
+    const costTracker = getCostTracker();
 
     const prompt = `You are an OSRS (Old School RuneScape) game economy analyst. Analyze this game update and identify ALL items that will be affected.
 
@@ -81,8 +83,8 @@ Return ONLY valid JSON, no explanation:
   "category": "quest"
 }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const response = await aiClient.chat.completions.create({
+      model: model.alias,
       messages: [
         {
           role: 'system',
@@ -93,15 +95,26 @@ Return ONLY valid JSON, no explanation:
           content: prompt,
         },
       ],
-      temperature: 0.3, // Lower temperature for more consistent extraction
+      temperature: 0.3,
       max_tokens: 2000,
-      response_format: { type: 'json_object' },
     });
 
     const resultText = response.choices[0]?.message?.content;
     if (!resultText) {
       throw new Error('No response from AI');
     }
+
+    // Track cost
+    const promptTokens = response.usage?.prompt_tokens || 0;
+    const completionTokens = response.usage?.completion_tokens || 0;
+    costTracker.recordCall(
+      model.name,
+      'item-lookup',
+      promptTokens,
+      completionTokens,
+      ((promptTokens / 1000) * model.costPer1kPrompt) + ((completionTokens / 1000) * model.costPer1kCompletion),
+      `item-extraction-${Date.now()}`,
+    );
 
     const result: AIExtractionResult = JSON.parse(resultText);
 

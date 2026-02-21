@@ -1,23 +1,9 @@
-import OpenAI from 'openai';
+import { getOpenRouterClient } from './ai/openrouter';
+import { selectModel, ROUTING_STRATEGIES } from './ai/modelRouter';
+import { getCostTracker } from './ai/costs';
 import { FlipOpportunity, PricePoint } from './analysis';
 import type { MeanReversionSignal } from '@/lib/meanReversionAnalysis';
 import { getGameUpdateContext } from '@/lib/gameUpdateContext';
-
-
-// Lazy-loaded OpenAI client - only initialized when needed
-let client: OpenAI | null = null;
-
-function getClient(): OpenAI {
-  if (!client) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY not configured');
-    }
-    client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-  }
-  return client;
-}
 
 // Cache AI analysis results - longer duration to prevent API spam
 const analysisCache = new Map<string, { data: FlipOpportunity[]; timestamp: number }>();
@@ -44,8 +30,10 @@ export async function analyzeFlipsWithAI(
     history365: PricePoint[];
   }>
 ): Promise<FlipOpportunity[]> {
-  // Get lazy-loaded client
-  const aiClient = getClient();
+  // Get OpenRouter client and select best model for complex analysis
+  const aiClient = getOpenRouterClient();
+  const model = selectModel('complex-analysis', ROUTING_STRATEGIES['balanced']);
+  const costTracker = getCostTracker();
 
   // Fetch game updates for all items in parallel
   const gameUpdatePromises = items.map(item => getGameUpdateContext(item.id, 14));
@@ -221,10 +209,12 @@ Return JSON (include borderline cases, min conf 25%):
 [{"itemId":123,"recommendation":"buy","confidence":72,"timeframe":"medium-term","reasoning":"brief reason"}]`;
 
   try {
+    console.log(`🤖 Using ${model.name} for flip analysis (${items.length} items)`);
+    
     const message = await aiClient.chat.completions.create({
-      model: 'gpt-4o',
+      model: model.alias,
       temperature: 0,
-      max_tokens: 1200, // Reduced from 2000 - compressed format
+      max_tokens: 1200,
       messages: [
         {
           role: 'user',
@@ -234,6 +224,18 @@ Return JSON (include borderline cases, min conf 25%):
     });
 
     const responseText = message.choices[0].message.content || '';
+
+    // Track cost
+    const promptTokens = message.usage?.prompt_tokens || 0;
+    const completionTokens = message.usage?.completion_tokens || 0;
+    costTracker.recordCall(
+      model.name,
+      'complex-analysis',
+      promptTokens,
+      completionTokens,
+      ((promptTokens / 1000) * model.costPer1kPrompt) + ((completionTokens / 1000) * model.costPer1kCompletion),
+      `flip-analysis-${Date.now()}`,
+    );
 
     // Parse AI response
     const jsonMatch = responseText.match(/\[[\s\S]*\]/);
@@ -436,7 +438,9 @@ export interface PoolAIReview {
 }
 
 export async function analyzePoolWithAI(items: string[]): Promise<PoolAIReview> {
-  const aiClient = getClient();
+  const aiClient = getOpenRouterClient();
+  const model = selectModel('item-lookup', ROUTING_STRATEGIES['cost-optimized']);
+  const costTracker = getCostTracker();
 
   if (items.length === 0) {
     return { add: [], remove: [], notes: ['Pool is empty. Add core trading items first.'] };
@@ -461,12 +465,26 @@ Return valid JSON only:
 }`;
 
   try {
+    console.log(`🤖 Using ${model.name} to review pool (${trimmed.length} items)`);
+    
     const completion = await aiClient.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: model.alias,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
-      response_format: { type: 'json_object' },
+      max_tokens: model.maxTokens,
     });
+
+    // Track cost
+    const promptTokens = completion.usage?.prompt_tokens || 0;
+    const completionTokens = completion.usage?.completion_tokens || 0;
+    costTracker.recordCall(
+      model.name,
+      'item-lookup',
+      promptTokens,
+      completionTokens,
+      ((promptTokens / 1000) * model.costPer1kPrompt) + ((completionTokens / 1000) * model.costPer1kCompletion),
+      `pool-review-${Date.now()}`,
+    );
 
     const result = JSON.parse(completion.choices[0].message.content || '{}');
     return {
@@ -533,7 +551,9 @@ export async function analyzePortfolioWithAI(
   }>
 ): Promise<PortfolioSummaryAI> {
 
-  const aiClient = getClient();
+  const aiClient = getOpenRouterClient();
+  const model = selectModel('recommendation', ROUTING_STRATEGIES['quality-focused']);
+  const costTracker = getCostTracker();
 
   if (portfolioItems.length === 0) {
     return {
@@ -752,9 +772,12 @@ Return valid JSON only:
 }`;
 
   try {
+    console.log(`🤖 Using ${model.name} for portfolio analysis (${portfolioItems.length} positions)`);
+    
     const completion = await aiClient.chat.completions.create({
-      model: 'gpt-4o',
+      model: model.alias,
       temperature: 0.5,
+      max_tokens: model.maxTokens,
       messages: [
         { 
           role: 'system', 
@@ -762,19 +785,24 @@ Return valid JSON only:
         },
         { role: 'user', content: prompt }
       ],
-      response_format: { type: 'json_object' },
     });
 
-    const result = JSON.parse(completion.choices[0].message.content || '{}');
+    // Track cost
+    const promptTokens = completion.usage?.prompt_tokens || 0;
+    const completionTokens = completion.usage?.completion_tokens || 0;
+    const cost = ((promptTokens / 1000) * model.costPer1kPrompt) + ((completionTokens / 1000) * model.costPer1kCompletion);
+    costTracker.recordCall(
+      model.name,
+      'recommendation',
+      promptTokens,
+      completionTokens,
+      cost,
+      `portfolio-analysis-${Date.now()}`,
+    );
 
-    // Log token usage for cost tracking
-    const usage = completion.usage;
-    if (usage) {
-      const inputCost = (usage.prompt_tokens / 1000) * 0.0025;
-      const outputCost = (usage.completion_tokens / 1000) * 0.01;
-      const totalCost = inputCost + outputCost;
-      console.log(`💰 Portfolio Review: ${usage.prompt_tokens} in + ${usage.completion_tokens} out = ${usage.total_tokens} tokens | Cost: $${totalCost.toFixed(4)}`);
-    }
+    console.log(`💰 Portfolio Analysis: ${promptTokens} tokens in, ${completionTokens} out | Cost: $${cost.toFixed(4)}`);
+
+    const result = JSON.parse(completion.choices[0].message.content || '{}');
 
     return result as PortfolioSummaryAI;
   } catch (error) {
