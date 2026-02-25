@@ -64,13 +64,12 @@ function buildWhy(opportunity: TradingDeskOpportunity): string[] {
   return bullets.slice(0, 3);
 }
 
-async function fetchOpportunities(strategy: 'liquidity' | 'mean-reversion'): Promise<TradingDeskOpportunity[]> {
+async function fetchOpportunities(): Promise<TradingDeskOpportunity[]> {
   const params = new URLSearchParams({
     budgetGp: '10000000000',
     slots: '8',
     limit: '25',
     risk: 'med',
-    strategy,
   });
 
   const response = await fetch(`/api/trading-desk/opportunities?${params.toString()}`);
@@ -82,13 +81,12 @@ async function fetchOpportunities(strategy: 'liquidity' | 'mean-reversion'): Pro
 }
 
 export default function AlphaFeedV2() {
-  const [strategy, setStrategy] = useState<'liquidity' | 'mean-reversion'>('liquidity');
   const [ignoredItems, setIgnoredItems] = useState<Set<number>>(new Set());
   const [sessionItems, setSessionItems] = useState<Set<number>>(new Set());
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ['alpha-feed-v2', strategy, 10_000_000_000, 8, 25, 'med'],
-    queryFn: () => fetchOpportunities(strategy),
+    queryKey: ['alpha-feed-v2', 10_000_000_000, 8, 25, 'med'],
+    queryFn: fetchOpportunities,
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -103,33 +101,14 @@ export default function AlphaFeedV2() {
       <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-100">Alpha Feed v2</h2>
-          <p className="text-xs text-slate-400">Trading Desk opportunities (budget 10b, 8 slots, med risk).</p>
+          <p className="text-xs text-slate-400">Balanced picks from Trading Desk signal scoring (budget 10b, 8 slots, med risk).</p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-400">Strategy</label>
-          <select
-            value={strategy}
-            onChange={(e) => {
-              const v = e.target.value;
-              const next: 'liquidity' | 'mean-reversion' = v === 'mean-reversion' ? 'mean-reversion' : 'liquidity';
-              setStrategy(next);
-              // Different strategies change the universe; clear ignores.
-              setIgnoredItems(new Set());
-            }}
-            className="text-sm bg-slate-950/70 border border-slate-700 text-slate-200 rounded px-2 py-2"
-          >
-            <option value="liquidity">Liquidity-first</option>
-            <option value="mean-reversion">Mean-reversion</option>
-          </select>
-
-          <button
-            onClick={() => refetch()}
-            className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-          >
-            {isFetching ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
+        <button
+          onClick={() => refetch()}
+          className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+        >
+          {isFetching ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
 
       {isLoading && (
@@ -165,7 +144,11 @@ export default function AlphaFeedV2() {
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div className="flex items-center gap-3 min-w-0">
                     {o.icon ? (
-                      <img src={`https://prices.runescape.wiki${o.icon}`} alt="" className="w-8 h-8" />
+                      <img
+                        src={`https://prices.runescape.wiki${o.icon}`}
+                        alt=""
+                        className="w-8 h-8"
+                      />
                     ) : (
                       <div className="w-8 h-8 rounded bg-slate-800" />
                     )}
@@ -240,7 +223,9 @@ export default function AlphaFeedV2() {
                       })
                     }
                     className={`px-3 py-2 text-sm rounded transition-colors ${
-                      inSession ? 'bg-green-700 text-green-100' : 'bg-green-600 hover:bg-green-700 text-white'
+                      inSession
+                        ? 'bg-green-700 text-green-100'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
                     }`}
                   >
                     {inSession ? 'Added to Session' : 'Add to Session'}
