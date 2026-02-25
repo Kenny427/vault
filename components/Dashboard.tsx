@@ -14,6 +14,7 @@ import FilteredItemsModal from './FilteredItemsModal';
 import SettingsModal from './SettingsModal';
 import AlphaFeedInfoModal from './AlphaFeedInfoModal';
 import KeyboardShortcuts from './KeyboardShortcuts';
+import PositionsV2 from './PositionsV2';
 import { FlipOpportunity, FlipType } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
@@ -21,7 +22,7 @@ import { usePriceAlertsStore } from '@/lib/priceAlertsStore';
 import { initDinkWebhookListener } from '@/lib/dinkWebhook';
 import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 
-type TabType = 'portfolio' | 'opportunities' | 'alpha-v2' | 'favorites' | 'performance' | 'alerts';
+type TabType = 'portfolio' | 'positions-v2' | 'opportunities' | 'alpha-v2' | 'favorites' | 'performance' | 'alerts';
 
 
 /**
@@ -183,7 +184,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-active-tab');
-      const validTabs: TabType[] = ['portfolio', 'opportunities', 'alpha-v2', 'favorites', 'performance', 'alerts'];
+      const validTabs: TabType[] = ['portfolio', 'positions-v2', 'opportunities', 'alpha-v2', 'favorites', 'performance', 'alerts'];
       if (saved && validTabs.includes(saved as TabType)) {
         return saved as TabType;
       }
@@ -838,6 +839,18 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => {
+              setActiveTab('positions-v2');
+            }}
+            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
+              activeTab === 'positions-v2'
+                ? 'text-osrs-accent border-b-2 border-osrs-accent'
+                : 'text-slate-400 hover:text-slate-300'
+              }`}
+          >
+            📒 Positions v2
+          </button>
+          <button
+            onClick={() => {
               setActiveTab('opportunities');
             }}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
@@ -901,6 +914,9 @@ export default function Dashboard() {
 
         {/* Portfolio Tab Content */}
         {activeTab === 'portfolio' && <Portfolio />}
+
+        {/* Positions v2 Tab Content */}
+        {activeTab === 'positions-v2' && <PositionsV2 />}
 
         {/* Opportunities Tab Content */}
         {activeTab === 'opportunities' && (
