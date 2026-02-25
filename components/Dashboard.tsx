@@ -794,6 +794,12 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => router.push('/trading-desk')}
+                className="px-4 py-2 text-sm text-yellow-300 hover:text-yellow-200 hover:bg-slate-800 rounded transition-colors"
+              >
+                Trading Desk
+              </button>
+              <button
                 onClick={() => setShowSettings(true)}
                 className="px-4 py-2 text-sm text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
               >
