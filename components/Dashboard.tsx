@@ -8,7 +8,6 @@ import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
 import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
-import AlphaFeedV2 from './AlphaFeedV2';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
 import FilteredItemsModal from './FilteredItemsModal';
 import SettingsModal from './SettingsModal';
@@ -21,7 +20,7 @@ import { usePriceAlertsStore } from '@/lib/priceAlertsStore';
 import { initDinkWebhookListener } from '@/lib/dinkWebhook';
 import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 
-type TabType = 'portfolio' | 'opportunities' | 'alpha-v2' | 'favorites' | 'performance' | 'alerts';
+type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
 
 
 /**
@@ -183,7 +182,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-active-tab');
-      const validTabs: TabType[] = ['portfolio', 'opportunities', 'alpha-v2', 'favorites', 'performance', 'alerts'];
+      const validTabs: TabType[] = ['portfolio', 'opportunities', 'favorites', 'performance', 'alerts'];
       if (saved && validTabs.includes(saved as TabType)) {
         return saved as TabType;
       }
@@ -848,18 +847,6 @@ export default function Dashboard() {
           >
             ⚡ Alpha Feed
           </button>
-          <button
-            onClick={() => {
-              setActiveTab('alpha-v2');
-            }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'alpha-v2'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-              }`}
-          >
-            🧭 Alpha Feed v2
-          </button>
 
           <button
             onClick={() => {
@@ -1117,9 +1104,6 @@ export default function Dashboard() {
             </div>
           </>
         )}
-
-        {/* Alpha Feed v2 Tab Content */}
-        {activeTab === 'alpha-v2' && <AlphaFeedV2 />}
 
         {/* Favorites Tab Content */}
         {activeTab === 'favorites' && (
