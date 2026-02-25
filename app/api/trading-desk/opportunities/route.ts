@@ -48,6 +48,10 @@ export async function GET(req: Request) {
       const lastTime = Math.max(l?.highTime ?? 0, l?.lowTime ?? 0);
       const recencyMinutes = lastTime ? Math.round((now - lastTime * 1000) / 60000) : null;
 
+      // Skip items without a GE buy limit. In practice these are often untradeable / non-standard,
+      // and they also break sizing (recommendedQty becomes unrealistic).
+      if (it.limit == null || it.limit <= 0) continue;
+
       const scored = scoreBalanced({
         mid,
         spreadGp,
@@ -61,9 +65,18 @@ export async function GET(req: Request) {
 
       // Hard filters for MVP Balanced (reduce garbage)
       if (scored.recommendedQty <= 0) continue;
-      if (volume1h < 3000) continue;
-      if (spreadGp < 10) continue;
-      if (spreadPct > 0.20) continue;
+
+      // Liquidity: volume must be high enough to plausibly fill our suggested size.
+      // (Still a proxy, but kills the "latterlig lavt volum" traps.)
+      const minVolume1h = Math.max(12_000, Math.min(250_000, scored.recommendedQty * 3));
+      if (volume1h < minVolume1h) continue;
+
+      // Avoid micro-spreads and extreme spread% (often unstable / stale or bait)
+      if (spreadGp < 30) continue;
+      if (spreadPct > 0.15) continue;
+
+      // Avoid ultra-cheap items where 10b budget makes sizing silly and fill-risk huge
+      if (mid < 800) continue;
 
       opportunities.push({
         itemId: it.id,
