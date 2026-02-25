@@ -343,9 +343,7 @@ export async function GET(request: Request) {
     const batches = chunkArray(signalsForAI, 10);
     const CONCURRENCY_LIMIT = 5;
 
-    const hasAIKey = Boolean(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY);
-
-    if (completedSignals.length > 0 && hasAIKey) {
+    if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
       for (let i = 0; i < batches.length; i += CONCURRENCY_LIMIT) {
         const batchSet = batches.slice(i, i + CONCURRENCY_LIMIT);
         console.log(`[AI] Processing batches ${i + 1} to ${Math.min(i + CONCURRENCY_LIMIT, batches.length)}...`);
@@ -692,8 +690,6 @@ Is bot activity likely driving this? Would mean-reversion be reasonable within 2
       aiRejectedItems: aiRejectedItems, // NEW: All items AI rejected with full reasoning
       detailedReasonings: [], // Placeholder for frontend
       summary,
-      aiEnabled: hasAIKey,
-      aiKeySource: process.env.OPENROUTER_API_KEY ? 'OPENROUTER_API_KEY' : process.env.OPENAI_API_KEY ? 'OPENAI_API_KEY' : null,
       filteredItems: filteredOutItems.map(i => ({ itemId: i.itemId, itemName: i.itemName, reason: i.reason })),
       filterStats: [], // Placeholder for frontend
       timestamp: new Date().toISOString()
