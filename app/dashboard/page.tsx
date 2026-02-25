@@ -1,15 +1,14 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import TradingHome from '@/components/TradingHome';
+import Dashboard from '@/components/Dashboard';
 import Auth from '@/components/Auth';
 import { useAuth } from '@/lib/authContext';
 import { usePortfolioStore } from '@/lib/portfolioStore';
 import { useDashboardStore } from '@/lib/store';
 import { useEffect, useRef, useState } from 'react';
-import { initializeVisibilityHandler } from '@/lib/visibilityHandler';
 
-export default function Home() {
+export default function DashboardPage() {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
@@ -19,18 +18,13 @@ export default function Home() {
       },
     },
   }));
+
   const { session, loading } = useAuth();
   const { loadFromSupabase: loadPortfolio } = usePortfolioStore();
   const { loadFavoritesFromSupabase: loadFavorites } = useDashboardStore();
   const [syncing, setSyncing] = useState(false);
   const lastSyncedUserId = useRef<string | null>(null);
 
-  // Initialize visibility handler once
-  useEffect(() => {
-    initializeVisibilityHandler();
-  }, []);
-
-  // Load data from Supabase when user logs in (only once)
   useEffect(() => {
     if (!session || loading) return;
 
@@ -39,10 +33,7 @@ export default function Home() {
 
     lastSyncedUserId.current = userId;
     setSyncing(true);
-    Promise.all([
-      loadPortfolio(),
-      loadFavorites(),
-    ]).finally(() => setSyncing(false));
+    Promise.all([loadPortfolio(), loadFavorites()]).finally(() => setSyncing(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, loading]);
 
@@ -60,7 +51,7 @@ export default function Home() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TradingHome />
+      <Dashboard />
     </QueryClientProvider>
   );
 }
