@@ -56,13 +56,8 @@ export type WikiMappingItem = {
 
 export async function getMapping(): Promise<WikiMappingItem[]> {
   // mapping changes rarely
-  // NOTE: the OSRS Wiki `/mapping` endpoint may return either:
-  // - an array of items (current behavior)
-  // - or an object `{ data: [...] }` (older behavior / some clients)
-  const raw = await wikiFetch<any>("/mapping", 1000 * 60 * 60);
-  const items: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-
-  return items.map((it) => ({
+  const data = await wikiFetch<{ data: any[] }>("/mapping", 1000 * 60 * 60);
+  return (data.data || []).map((it) => ({
     id: Number(it.id),
     name: String(it.name),
     members: Boolean(it.members),
