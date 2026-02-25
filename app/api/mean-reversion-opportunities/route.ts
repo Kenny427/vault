@@ -661,14 +661,8 @@ Is bot activity likely driving this? Would mean-reversion be reasonable within 2
 
     // Final global filtering by requested thresholds
     const beforeThresholdCount = topOpportunities.length;
-    const thresholdFiltered = topOpportunities.filter(s => s.confidenceScore >= minConfidence && s.reversionPotential >= minPotential);
-
-    // If AI is disabled and the thresholds eliminate everything, fall back to the top-ranked list
-    // so the user still sees candidates (with the option to tighten thresholds manually).
-    const afterThresholdCount = thresholdFiltered.length;
-    topOpportunities = (afterThresholdCount === 0 && !hasAIKey)
-      ? topOpportunities.slice(0, 15)
-      : thresholdFiltered;
+    topOpportunities = topOpportunities.filter(s => s.confidenceScore >= minConfidence && s.reversionPotential >= minPotential);
+    const afterThresholdCount = topOpportunities.length;
 
     const finalCostUSD = parseFloat(accTotalCost.toFixed(4));
 
