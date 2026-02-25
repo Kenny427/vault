@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+const supabase = (supabaseUrl && supabaseAnonKey)
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
 
 export async function GET() {
     try {
+        if (!supabase) {
+            return NextResponse.json(
+                { error: 'Supabase env vars missing' },
+                { status: 500 }
+            );
+        }
+
         const { count, error } = await supabase
             .from('custom_pool_items')
             .select('*', { count: 'exact', head: true });
