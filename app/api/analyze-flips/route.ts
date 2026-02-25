@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     let opportunities = scoreOpportunitiesByMeanReversion(itemsWithData);
 
     // Optional AI enhancement for top candidates (cost-controlled)
-    if (enableAi && process.env.OPENAI_API_KEY) {
+    if (enableAi) {
       const topCandidates = opportunities
         .filter(op => op.opportunityScore >= aiMinScore)
         .sort((a, b) => b.opportunityScore - a.opportunityScore)

@@ -136,7 +136,7 @@ Valid values:
 - All price targets must be positive integers`;
 
   const response = await openaiClient.chat.completions.create({
-    model: 'gpt-4o',
+    model: 'openai/gpt-4o',
     max_tokens: 1000,
     temperature: 0.4,
     response_format: { type: "json_object" },
@@ -240,7 +240,7 @@ Valid values:
     eventType: 'ai_analysis_general',
     metadata: {
       itemId,
-      model: 'gpt-4o',
+      model: 'openai/gpt-4o',
       analysisType: 'general'
     },
     costUsd,
@@ -333,17 +333,6 @@ export async function GET(request: Request) {
     const userId = user?.id;
 
     console.log(`✓ Mean-reversion analysis complete: confidence=${baseSignal.confidenceScore}%, potential=${baseSignal.reversionPotential.toFixed(1)}%`);
-
-    // Check if OpenAI is available for deep analysis
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('⚠️ OpenAI API key not found - returning base analysis only');
-      return NextResponse.json({
-        success: true,
-        signal: baseSignal,
-        aiEnhanced: false,
-        timestamp: new Date().toISOString()
-      });
-    }
 
     // Step 2: STRATEGIST PASS - Deep dive behavioral analysis
     console.log('🧠 Running AI Strategist Pass...');
@@ -438,7 +427,7 @@ Return ONLY valid JSON:
 }`;
 
     const strategistResponse = await client.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'openai/gpt-4o',
       max_tokens: 900,
       temperature: 0.4,
       messages: [
@@ -491,7 +480,7 @@ Return ONLY valid JSON:
 }`;
 
     const auditorResponse = await client.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'openai/gpt-4o',
       max_tokens: 250,
       temperature: 0.4,
       messages: [
@@ -603,7 +592,7 @@ Return ONLY valid JSON:
       metadata: {
         itemId,
         itemName: enhancedSignal.itemName,
-        model: 'gpt-4o',
+        model: 'openai/gpt-4o',
         analysisType: 'deep'
       },
       costUsd,

@@ -159,7 +159,7 @@ FORMAT OUTPUT AS JSON:
 }`;
 
     const aiResponse = await client.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'openai/gpt-4o',
       max_tokens: 1500,
       messages: [
         {

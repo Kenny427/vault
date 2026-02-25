@@ -213,7 +213,7 @@ For each holding return JSON:
 Return JSON array. Base ALL decisions on THEIR specific position + REAL market data.`;
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'openai/gpt-4o',
       temperature: 0.4,
       max_tokens: 2500,
       messages: [

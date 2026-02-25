@@ -125,7 +125,7 @@ FORMAT AS JSON ARRAY:
 ]`;
 
     const aiResponse = await client.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'openai/gpt-4o',
       max_tokens: 2000,
       messages: [
         {

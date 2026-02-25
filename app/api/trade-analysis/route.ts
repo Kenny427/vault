@@ -72,7 +72,7 @@ Return JSON array in this exact format:
 Be specific, actionable, and constructive. Focus on what they did right AND what to improve.`;
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'openai/gpt-4o-mini',
       max_tokens: 2500,
       messages: [
         {

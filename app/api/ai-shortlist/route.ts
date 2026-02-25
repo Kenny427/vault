@@ -12,10 +12,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ opportunities: [] });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ opportunities: [], error: 'AI disabled: OPENAI_API_KEY not configured' });
-    }
-
     const mapping = await fetchItemMapping();
     const mapByName = new Map(mapping.map(item => [item.name.toLowerCase(), item]));
 

@@ -269,7 +269,7 @@ ${batch
 `;
 
         const aiResponse = await client.chat.completions.create({
-          model: 'gpt-4o-mini',
+          model: 'openai/gpt-4o-mini',
           max_tokens: 1200,
           messages: [
             {

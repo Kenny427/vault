@@ -343,7 +343,7 @@ export async function GET(request: Request) {
     const batches = chunkArray(signalsForAI, 10);
     const CONCURRENCY_LIMIT = 5;
 
-    if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
+    if (completedSignals.length > 0) {
       for (let i = 0; i < batches.length; i += CONCURRENCY_LIMIT) {
         const batchSet = batches.slice(i, i + CONCURRENCY_LIMIT);
         console.log(`[AI] Processing batches ${i + 1} to ${Math.min(i + CONCURRENCY_LIMIT, batches.length)}...`);
@@ -559,7 +559,7 @@ Is bot activity likely driving this? Would mean-reversion be reasonable within 2
 }).join('\n')}`;
 
             const aiResponse = await client.chat.completions.create({
-              model: 'gpt-4o-mini',
+              model: 'openai/gpt-4o-mini',
               temperature: 0.3,
               response_format: { type: 'json_object' },
               messages: [{ role: 'user', content: prompt }],
@@ -583,7 +583,7 @@ Is bot activity likely driving this? Would mean-reversion be reasonable within 2
                 eventType: 'ai_scan_batch',
                 metadata: {
                   batchSize: batch.length,
-                  model: 'gpt-4o-mini',
+                  model: 'openai/gpt-4o-mini',
                   successfulItems: (parsed.items || []).length
                 },
                 costUsd: batchCost,
@@ -675,7 +675,7 @@ Is bot activity likely driving this? Would mean-reversion be reasonable within 2
         outputTokens: totalOutputTokens,
         costUSD: finalCostUSD,
         breakdown: {
-          model: 'gpt-4o-mini',
+          model: 'openai/gpt-4o-mini',
           inputCostUSD: parseFloat((totalInputTokens / 1000 * 0.00015).toFixed(4)),
           outputCostUSD: parseFloat((totalOutputTokens / 1000 * 0.0006).toFixed(4))
         }

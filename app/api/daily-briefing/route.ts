@@ -58,7 +58,7 @@ Provide:
 Be concise, actionable, and focus on what a trader should do TODAY.`;
 
     const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'openai/gpt-4o-mini',
       max_tokens: 500,
       messages: [
         {
