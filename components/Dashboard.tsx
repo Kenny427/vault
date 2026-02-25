@@ -8,14 +8,11 @@ import Portfolio from './Portfolio';
 import FavoritesList from './FavoritesList';
 import PerformanceDashboard from './PerformanceDashboard';
 import PriceAlerts from './PriceAlerts';
-import AlphaFeedV2 from './AlphaFeedV2';
-import ThesesFeed from './ThesesFeed';
 import DetailedAnalysisModal from './DetailedAnalysisModal';
 import FilteredItemsModal from './FilteredItemsModal';
 import SettingsModal from './SettingsModal';
 import AlphaFeedInfoModal from './AlphaFeedInfoModal';
 import KeyboardShortcuts from './KeyboardShortcuts';
-import PositionsV2 from './PositionsV2';
 import { FlipOpportunity, FlipType } from '@/lib/analysis';
 import { useDashboardStore } from '@/lib/store';
 import { useAuth } from '@/lib/authContext';
@@ -23,7 +20,7 @@ import { usePriceAlertsStore } from '@/lib/priceAlertsStore';
 import { initDinkWebhookListener } from '@/lib/dinkWebhook';
 import { getAllAnalysisItems } from '@/lib/expandedItemPool';
 
-type TabType = 'portfolio' | 'positions-v2' | 'opportunities' | 'alpha-v2' | 'theses' | 'favorites' | 'performance' | 'alerts';
+type TabType = 'portfolio' | 'opportunities' | 'favorites' | 'performance' | 'alerts';
 
 
 /**
@@ -185,7 +182,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osrs-active-tab');
-      const validTabs: TabType[] = ['portfolio', 'positions-v2', 'opportunities', 'alpha-v2', 'theses', 'favorites', 'performance', 'alerts'];
+      const validTabs: TabType[] = ['portfolio', 'opportunities', 'favorites', 'performance', 'alerts'];
       if (saved && validTabs.includes(saved as TabType)) {
         return saved as TabType;
       }
@@ -797,12 +794,6 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => router.push('/trading-desk')}
-                className="px-4 py-2 text-sm text-yellow-300 hover:text-yellow-200 hover:bg-slate-800 rounded transition-colors"
-              >
-                Trading Desk
-              </button>
-              <button
                 onClick={() => setShowSettings(true)}
                 className="px-4 py-2 text-sm text-slate-400 hover:text-slate-300 hover:bg-slate-800 rounded transition-colors"
               >
@@ -840,18 +831,6 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => {
-              setActiveTab('positions-v2');
-            }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'positions-v2'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-              }`}
-          >
-            📒 Positions v2
-          </button>
-          <button
-            onClick={() => {
               setActiveTab('opportunities');
             }}
             className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
@@ -862,31 +841,7 @@ export default function Dashboard() {
           >
             ⚡ Alpha Feed
           </button>
-          <button
-            onClick={() => {
-              setActiveTab('alpha-v2');
-            }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'alpha-v2'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-              }`}
-          >
-            🧭 Alpha Feed v2
-          </button>
 
-          <button
-            onClick={() => {
-              setActiveTab('theses');
-            }}
-            className={`px-4 py-3 font-semibold transition-all whitespace-nowrap ${
-              activeTab === 'theses'
-                ? 'text-osrs-accent border-b-2 border-osrs-accent'
-                : 'text-slate-400 hover:text-slate-300'
-              }`}
-          >
-            🧠 Theses
-          </button>
           <button
             onClick={() => {
               setActiveTab('performance');
@@ -927,9 +882,6 @@ export default function Dashboard() {
 
         {/* Portfolio Tab Content */}
         {activeTab === 'portfolio' && <Portfolio />}
-
-        {/* Positions v2 Tab Content */}
-        {activeTab === 'positions-v2' && <PositionsV2 />}
 
         {/* Opportunities Tab Content */}
         {activeTab === 'opportunities' && (
@@ -1146,12 +1098,6 @@ export default function Dashboard() {
             </div>
           </>
         )}
-
-        {/* Alpha Feed v2 Tab Content */}
-        {activeTab === 'alpha-v2' && <AlphaFeedV2 />}
-
-        {/* Theses Tab Content */}
-        {activeTab === 'theses' && <ThesesFeed />}
 
         {/* Favorites Tab Content */}
         {activeTab === 'favorites' && (

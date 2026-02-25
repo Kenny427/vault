@@ -1,7 +1,7 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import TradingHome from '@/components/TradingHome';
+import Dashboard from '@/components/Dashboard';
 import Auth from '@/components/Auth';
 import { useAuth } from '@/lib/authContext';
 import { usePortfolioStore } from '@/lib/portfolioStore';
@@ -60,7 +60,7 @@ export default function Home() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TradingHome />
+      <Dashboard />
     </QueryClientProvider>
   );
 }
