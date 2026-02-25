@@ -653,6 +653,12 @@ Is bot activity likely driving this? Would mean-reversion be reasonable within 2
 
     let topOpportunities = Array.from(uniqueOpportunities.values());
 
+    // Fallback: if AI is disabled (missing API key), still return best-effort opportunities
+    // using the deterministic system ranking. This avoids the UI showing "0 candidates".
+    if (!hasAIKey) {
+      topOpportunities = rankInvestmentOpportunities(signalsForAI);
+    }
+
     // Final global filtering by requested thresholds
     const beforeThresholdCount = topOpportunities.length;
     topOpportunities = topOpportunities.filter(s => s.confidenceScore >= minConfidence && s.reversionPotential >= minPotential);
