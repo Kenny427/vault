@@ -12,8 +12,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ opportunities: [] });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ opportunities: [], error: 'AI disabled: OPENAI_API_KEY not configured' });
+    if (!process.env.OPENROUTER_API_KEY) {
+      return NextResponse.json({ opportunities: [], error: 'AI disabled: OPENROUTER_API_KEY not configured' });
     }
 
     const mapping = await fetchItemMapping();

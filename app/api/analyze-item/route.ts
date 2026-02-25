@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { getItemPrice, getItemHistory, getPopularItems, getItemDetails, searchItems } from '@/lib/api/osrs';
 import { calculateMean, calculateStdDev } from '@/lib/analysis';
 import { analyzeItemLimiter } from '@/lib/rateLimiter';
+import { getOpenRouterClient } from '@/lib/ai/openrouter';
 
 async function getGPTAnalysis(itemName: string, itemData: string): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY not configured');
+  if (!process.env.OPENROUTER_API_KEY) {
+    throw new Error('OPENROUTER_API_KEY not configured');
   }
 
   const prompt = `You are an expert OSRS Grand Exchange flipper specializing in MEAN-REVERSION strategy. A user is asking about: "${itemName}"
@@ -94,33 +94,25 @@ ${itemData}
 
 Be specific with numbers, percentages, and GP values. DO NOT confuse buying and selling questions - read the user's original question carefully.`;
 
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.7,
-      max_tokens: 1000,
-    }),
+  const client = getOpenRouterClient();
+  const response = await client.chat.completions.create({
+    model: 'openai/gpt-4o-mini',
+    temperature: 0.7,
+    max_tokens: 1000,
+    messages: [
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenAI API error: ${error}`);
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('OpenRouter API returned an empty response');
   }
 
-  const data = await response.json();
-  return data.choices[0].message.content;
+  return content;
 }
 
 export async function POST(request: Request) {

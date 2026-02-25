@@ -343,7 +343,7 @@ export async function GET(request: Request) {
     const batches = chunkArray(signalsForAI, 10);
     const CONCURRENCY_LIMIT = 5;
 
-    if (completedSignals.length > 0 && process.env.OPENAI_API_KEY) {
+    if (completedSignals.length > 0 && process.env.OPENROUTER_API_KEY) {
       for (let i = 0; i < batches.length; i += CONCURRENCY_LIMIT) {
         const batchSet = batches.slice(i, i + CONCURRENCY_LIMIT);
         console.log(`[AI] Processing batches ${i + 1} to ${Math.min(i + CONCURRENCY_LIMIT, batches.length)}...`);

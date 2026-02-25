@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabaseServer';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 // GET: Retrieve cached Alpha Feed
 export async function GET() {

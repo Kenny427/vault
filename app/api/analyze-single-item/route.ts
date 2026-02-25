@@ -335,8 +335,8 @@ export async function GET(request: Request) {
     console.log(`✓ Mean-reversion analysis complete: confidence=${baseSignal.confidenceScore}%, potential=${baseSignal.reversionPotential.toFixed(1)}%`);
 
     // Check if OpenAI is available for deep analysis
-    if (!process.env.OPENAI_API_KEY) {
-      console.warn('⚠️ OpenAI API key not found - returning base analysis only');
+    if (!process.env.OPENROUTER_API_KEY) {
+      console.warn('⚠️ OpenRouter API key not found - returning base analysis only');
       return NextResponse.json({
         success: true,
         signal: baseSignal,
