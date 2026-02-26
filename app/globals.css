@@ -11,6 +11,61 @@
   --border: #c8d8c5;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #06130d;
+    --surface: #0b1d14;
+    --surface-2: #0f2a1c;
+    --text: #e6f4ec;
+    --muted: #9bc7ae;
+    --accent: #31d06f;
+    --accent-2: #22c55e;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --border: rgba(155, 199, 174, 0.22);
+  }
+
+  html,
+  body {
+    background:
+      radial-gradient(circle at 20% 0%, rgba(49, 208, 111, 0.18) 0%, transparent 45%),
+      radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.12) 0%, transparent 40%),
+      var(--bg);
+  }
+
+  .card {
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  }
+
+  .tabbar {
+    background: rgba(6, 19, 13, 0.9);
+  }
+
+  .tab.active {
+    background: rgba(49, 208, 111, 0.14);
+    color: var(--text);
+  }
+
+  .btn-secondary {
+    background: rgba(15, 42, 28, 0.9);
+  }
+
+  .badge-high {
+    background: rgba(49, 208, 111, 0.18);
+    color: #bbf7d0;
+  }
+
+  .badge-medium {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fde68a;
+  }
+
+  .badge-low {
+    background: rgba(148, 163, 184, 0.14);
+    color: #e2e8f0;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -173,7 +228,8 @@ select {
   border-radius: 8px;
   padding: 0.5rem 0.55rem;
   font: inherit;
-  background: #fff;
+  background: var(--surface);
+  color: var(--text);
 }
 
 @media (min-width: 800px) {
