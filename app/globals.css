@@ -10,6 +10,7 @@
   --danger: #b91c1c;
   --border: #c8d8c5;
 
+  /* semantic helpers */
   --shadow: 0 8px 18px rgba(16, 32, 21, 0.06);
   --ring: 0 0 0 3px rgba(31, 138, 66, 0.28);
   --tabbar-bg: rgba(245, 250, 245, 0.96);
@@ -22,23 +23,23 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #070b0a;
-    --surface: rgba(18, 28, 24, 0.92);
-    --surface-2: rgba(26, 44, 36, 0.85);
-    --text: #e8f2ed;
-    --muted: rgba(232, 242, 237, 0.72);
-    --accent: #2bd46b;
-    --accent-2: #22c55e;
+    --surface: #0d1513;
+    --surface-2: #101d19;
+    --text: #e7f3ee;
+    --muted: #9ab4aa;
+    --accent: #27c267;
+    --accent-2: #9ff0c4;
     --warn: #f59e0b;
-    --danger: #f87171;
-    --border: rgba(112, 166, 138, 0.22);
+    --danger: #fb7185;
+    --border: rgba(231, 243, 238, 0.12);
 
     --shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
-    --ring: 0 0 0 3px rgba(43, 212, 107, 0.24);
-    --tabbar-bg: rgba(7, 11, 10, 0.8);
-    --tab-active-bg: rgba(43, 212, 107, 0.14);
-    --input-bg: rgba(7, 11, 10, 0.55);
-    --page-grad-1: rgba(43, 212, 107, 0.22);
-    --page-grad-2: rgba(34, 197, 94, 0.18);
+    --ring: 0 0 0 3px rgba(39, 194, 103, 0.22);
+    --tabbar-bg: rgba(9, 14, 13, 0.75);
+    --tab-active-bg: rgba(39, 194, 103, 0.14);
+    --input-bg: rgba(13, 21, 19, 0.9);
+    --page-grad-1: rgba(39, 194, 103, 0.18);
+    --page-grad-2: rgba(159, 240, 196, 0.12);
   }
 }
 
@@ -56,6 +57,7 @@ body {
     var(--bg);
   color: var(--text);
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color-scheme: light dark;
 }
 
 a {
@@ -139,20 +141,20 @@ p {
 
 @media (prefers-color-scheme: dark) {
   .badge-high {
-    background: rgba(34, 197, 94, 0.16);
-    color: #bbf7d0;
-    border: 1px solid rgba(34, 197, 94, 0.25);
+    background: rgba(39, 194, 103, 0.16);
+    color: #bdf6d8;
+    border: 1px solid rgba(39, 194, 103, 0.22);
   }
 
   .badge-medium {
     background: rgba(245, 158, 11, 0.14);
     color: #fde68a;
-    border: 1px solid rgba(245, 158, 11, 0.22);
+    border: 1px solid rgba(245, 158, 11, 0.2);
   }
 
   .badge-low {
     background: rgba(148, 163, 184, 0.12);
-    color: rgba(232, 242, 237, 0.82);
+    color: rgba(231, 243, 238, 0.85);
     border: 1px solid rgba(148, 163, 184, 0.18);
   }
 }
@@ -174,11 +176,6 @@ p {
 
 .btn:active:not(:disabled) {
   transform: translateY(1px);
-}
-
-.btn:focus-visible {
-  outline: 2px solid rgba(34, 197, 94, 0.55);
-  outline-offset: 2px;
 }
 
 .btn:disabled {
@@ -224,11 +221,6 @@ p {
 
 .tab:active {
   transform: translateY(1px);
-}
-
-.tab:focus-visible {
-  outline: 2px solid rgba(34, 197, 94, 0.55);
-  outline-offset: 2px;
 }
 
 .tab.active {
@@ -278,7 +270,6 @@ select {
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: none;
   border-color: rgba(34, 197, 94, 0.5);
   box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
 }
