@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
 type ActionPriority = 'high' | 'medium' | 'low';
@@ -72,6 +72,7 @@ export default function PassiveApp() {
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [theses, setTheses] = useState<Thesis[]>([]);
   const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
+  const [inboxFilter, setInboxFilter] = useState<'pending' | 'all'>('pending');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
@@ -119,6 +120,10 @@ export default function PassiveApp() {
   }, [supabase]);
 
   const highPriorityCount = useMemo(() => actions.filter((a) => a.priority === 'high').length, [actions]);
+  const pendingInboxCount = useMemo(
+    () => reconciliationTasks.filter((task) => task.status === 'pending').length,
+    [reconciliationTasks]
+  );
 
   useEffect(() => {
     if (activeTab !== 'More') return;
@@ -127,8 +132,24 @@ export default function PassiveApp() {
       return;
     }
 
-    void loadReconciliationTasks();
-  }, [activeTab, isAuthed]);
+    void (async () => {
+      const qs = new URLSearchParams({ status: inboxFilter });
+      const res = await fetch(`/api/reconciliation/tasks?${qs.toString()}`, { method: 'GET' });
+      if (!res.ok) {
+        const details = (await res.json().catch(() => null)) as { error?: string } | null;
+        if (res.status === 401) {
+          setIsAuthed(false);
+          setReconciliationTasks([]);
+          return;
+        }
+        setError(`Failed to load inbox (${res.status})${details?.error ? `: ${details.error}` : ''}`);
+        return;
+      }
+
+      const payload = (await res.json()) as { tasks: ReconciliationTask[] };
+      setReconciliationTasks(payload.tasks ?? []);
+    })();
+  }, [activeTab, isAuthed, inboxFilter]);
 
   async function loadDashboard() {
     setLoading(true);
@@ -179,8 +200,9 @@ export default function PassiveApp() {
     setTheses(payload.theses);
   }
 
-  async function loadReconciliationTasks() {
-    const res = await fetch('/api/reconciliation/tasks', { method: 'GET' });
+  const loadReconciliationTasks = useCallback(async (filter: 'pending' | 'all') => {
+    const qs = new URLSearchParams({ status: filter });
+    const res = await fetch(`/api/reconciliation/tasks?${qs.toString()}`, { method: 'GET' });
     if (!res.ok) {
       const details = await res.json().catch(() => null) as { error?: string } | null;
       if (res.status === 401) {
@@ -193,7 +215,7 @@ export default function PassiveApp() {
 
     const payload = (await res.json()) as { tasks: ReconciliationTask[] };
     setReconciliationTasks(payload.tasks ?? []);
-  }
+  }, []);
 
   async function resolveReconciliationTask(id: string, status: 'approved' | 'rejected') {
     setLoading(true);
@@ -214,7 +236,7 @@ export default function PassiveApp() {
         throw new Error(`Failed to update task (${res.status})${details?.error ? `: ${details.error}` : ''}`);
       }
 
-      await loadReconciliationTasks();
+      await loadReconciliationTasks(inboxFilter);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update task.');
     } finally {
@@ -265,7 +287,7 @@ export default function PassiveApp() {
           <h1 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Passive Copilot</h1>
           <p className="muted">OSRS decision support for 1-2 hour sessions.</p>
         </div>
-        <button className="btn btn-secondary" disabled={loading} onClick={() => { void loadDashboard(); void loadTheses(); void loadReconciliationTasks(); }}>
+        <button className="btn btn-secondary" disabled={loading} onClick={() => { void loadDashboard(); void loadTheses(); void loadReconciliationTasks(inboxFilter); }}>
           {loading ? 'Loading...' : 'Sync'}
         </button>
       </div>
@@ -385,7 +407,33 @@ export default function PassiveApp() {
       {activeTab === 'More' ? (
         <section className="grid" style={{ gap: '0.75rem' }}>
           <article className="card">
-            <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.65rem' }}>Inbox</h2>
+            <div className="row-between" style={{ marginBottom: '0.65rem' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Inbox</h2>
+              {isAuthed ? (
+                <div className="row" style={{ gap: '0.35rem' }}>
+                  <button
+                    className={`btn btn-secondary ${inboxFilter === 'pending' ? 'active' : ''}`}
+                    disabled={loading}
+                    onClick={() => {
+                      setInboxFilter('pending');
+                      void loadReconciliationTasks('pending');
+                    }}
+                  >
+                    Pending
+                  </button>
+                  <button
+                    className={`btn btn-secondary ${inboxFilter === 'all' ? 'active' : ''}`}
+                    disabled={loading}
+                    onClick={() => {
+                      setInboxFilter('all');
+                      void loadReconciliationTasks('all');
+                    }}
+                  >
+                    All
+                  </button>
+                </div>
+              ) : null}
+            </div>
             {!isAuthed ? (
               <p className="muted">Sign in to view reconciliation tasks.</p>
             ) : reconciliationTasks.length === 0 ? (
@@ -396,7 +444,10 @@ export default function PassiveApp() {
                   <li key={task.id} className="card" style={{ padding: '0.7rem' }}>
                     <div className="row-between">
                       <strong>{task.item_name ?? `Item ${task.item_id ?? ''}`}</strong>
-                      <span className="muted">{task.side.toUpperCase()}</span>
+                      <span className="muted">
+                        {task.side.toUpperCase()}
+                        {inboxFilter === 'all' ? ` · ${String(task.status).toUpperCase()}` : ''}
+                      </span>
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>
                       Qty: {Number(task.quantity ?? 0).toLocaleString()} | Price: {Math.round(Number(task.price ?? 0)).toLocaleString()} gp
@@ -409,22 +460,24 @@ export default function PassiveApp() {
                         Reason: {task.reason}
                       </p>
                     ) : null}
-                    <div className="row" style={{ marginTop: '0.5rem' }}>
-                      <button
-                        className="btn btn-secondary"
-                        disabled={loading}
-                        onClick={() => void resolveReconciliationTask(task.id, 'approved')}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        className="btn btn-secondary"
-                        disabled={loading}
-                        onClick={() => void resolveReconciliationTask(task.id, 'rejected')}
-                      >
-                        Reject
-                      </button>
-                    </div>
+                    {task.status === 'pending' ? (
+                      <div className="row" style={{ marginTop: '0.5rem' }}>
+                        <button
+                          className="btn btn-secondary"
+                          disabled={loading}
+                          onClick={() => void resolveReconciliationTask(task.id, 'approved')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          disabled={loading}
+                          onClick={() => void resolveReconciliationTask(task.id, 'rejected')}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -575,6 +628,9 @@ export default function PassiveApp() {
             aria-current={activeTab === tab ? 'page' : undefined}
           >
             {tab}
+            {tab === 'More' && pendingInboxCount > 0 ? (
+              <span className="badge badge-high" style={{ marginLeft: '0.35rem' }}>{pendingInboxCount}</span>
+            ) : null}
           </button>
         ))}
       </nav>

@@ -16,7 +16,7 @@ type Task = {
   created_at: string;
 };
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = createServerSupabaseClient();
   const { data: auth } = await supabase.auth.getUser();
   const userId = auth.user?.id;
@@ -25,12 +25,24 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data, error } = await supabase
+  const statusParam = request.nextUrl.searchParams.get('status')?.toLowerCase() ?? 'pending';
+  const wantsAll = statusParam === 'all';
+
+  if (!wantsAll && statusParam !== 'pending' && !ALLOWED_STATUSES.has(statusParam)) {
+    return NextResponse.json({ error: 'Invalid status filter' }, { status: 400 });
+  }
+
+  let query = supabase
     .from('reconciliation_tasks')
     .select('id,item_id,item_name,side,quantity,price,occurred_at,reason,status,created_at')
     .eq('user_id', userId)
-    .eq('status', 'pending')
     .order('created_at', { ascending: false });
+
+  if (!wantsAll) {
+    query = query.eq('status', statusParam);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
