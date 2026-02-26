@@ -787,6 +787,24 @@ export default function PassiveApp() {
               <div style={{ display: 'grid', gap: '0.2rem' }}>
                 <h2 style={{ fontSize: '1rem', fontWeight: 900 }}>{selectedItem.name}</h2>
                 <p className="muted" style={{ fontSize: '0.85rem' }}>Recent {sparklineStep} highs/lows (OSRS Wiki)</p>
+                <div className="row" style={{ gap: '0.6rem', flexWrap: 'wrap' }}>
+                  <a
+                    className="muted"
+                    href={`https://prices.runescape.wiki/osrs/item/${selectedItem.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Prices wiki ↗
+                  </a>
+                  <a
+                    className="muted"
+                    href={`https://oldschool.runescape.wiki/w/Special:Lookup?type=item&id=${selectedItem.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    OSRS Wiki ↗
+                  </a>
+                </div>
                 {sparkStats ? (
                   <p className="muted" style={{ fontSize: '0.8rem' }}>
                     Range: {Math.round(sparkStats.min).toLocaleString()} → {Math.round(sparkStats.max).toLocaleString()} gp · Last: {Math.round(sparkStats.last).toLocaleString()} gp
