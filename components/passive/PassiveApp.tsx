@@ -76,6 +76,7 @@ export default function PassiveApp() {
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [theses, setTheses] = useState<Thesis[]>([]);
   const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
+  const [inboxBootstrapped, setInboxBootstrapped] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
@@ -127,6 +128,14 @@ export default function PassiveApp() {
     () => reconciliationTasks.filter((task) => task.status === 'pending').length,
     [reconciliationTasks]
   );
+
+  useEffect(() => {
+    if (activeTab !== 'More') return;
+    if (!isAuthed) return;
+    if (inboxBootstrapped) return;
+    void loadReconciliationTasks();
+    setInboxBootstrapped(true);
+  }, [activeTab, inboxBootstrapped, isAuthed]);
 
   async function loadDashboard() {
     setLoading(true);
@@ -596,16 +605,19 @@ export default function PassiveApp() {
       ) : null}
 
       <nav className="tabbar" aria-label="Primary">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            className={`tab ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-            aria-current={activeTab === tab ? 'page' : undefined}
-          >
-            {tab}
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const label = tab === 'More' && pendingReconCount > 0 ? `More (${pendingReconCount})` : tab;
+          return (
+            <button
+              key={tab}
+              className={`tab ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+              aria-current={activeTab === tab ? 'page' : undefined}
+            >
+              {label}
+            </button>
+          );
+        })}
       </nav>
     </main>
   );
