@@ -51,6 +51,15 @@ export async function GET(request: NextRequest) {
   }
 
   const [mapping, latest, fiveMinute, oneHour] = await Promise.all([getMapping(), getLatest(), getFiveMinute(), getOneHour()]);
+
+  // Best-effort raw store for debugging/scoring iterations.
+  // This should never break the cron tick itself.
+  const rawStoreInsert = await supabase.from('osrs_wiki_latest_ingests').insert({
+    source: 'prices.runescape.wiki/api/v1/osrs/latest',
+    payload: latest,
+  });
+  const rawStoreError = rawStoreInsert.error?.message ?? null;
+
   const mappingById = new Map<number, MappingItem>();
   for (const entry of mapping as MappingItem[]) {
     mappingById.set(entry.id, entry);
@@ -111,5 +120,9 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 
-  return NextResponse.json({ refreshed: watchItemIdList.length, at: nowIso });
+  return NextResponse.json({
+    refreshed: watchItemIdList.length,
+    at: nowIso,
+    raw_latest_store: rawStoreError ? { ok: false, error: rawStoreError } : { ok: true },
+  });
 }
