@@ -368,8 +368,9 @@ export default function PassiveApp() {
     <main>
       <div className="row-between" style={{ marginBottom: '0.85rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Passive Copilot</h1>
-          <p className="muted">OSRS decision support for 1-2 hour sessions.</p>
+          <h1 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Vault</h1>
+          <p className="muted">OSRS invest/hold engine (1–8 weeks).
+Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
         </div>
         <button
           className="btn btn-secondary"
