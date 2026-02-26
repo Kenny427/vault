@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
-import { getFiveMinute, getLatestPayload, getMapping, getOneHour } from '@/lib/market/osrsWiki';
+import { getFiveMinute, getLatest, getMapping, getOneHour } from '@/lib/market/osrsWiki';
 
 type MappingItem = {
   id: number;
