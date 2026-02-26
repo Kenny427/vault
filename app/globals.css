@@ -145,7 +145,7 @@ p {
 
 .badge-low {
   background: var(--badge-low-bg);
-  color: var(--badge-low-fg;
+  color: var(--badge-low-fg);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -280,14 +280,4 @@ select {
   padding: 0.5rem 0.55rem;
   font: inherit;
   background: var(--surface);
-}
-
-@media (min-width: 800px) {
-  main {
-    padding: 1.25rem 1.25rem 6rem;
-  }
-
-  .grid-2 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
