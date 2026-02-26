@@ -94,6 +94,7 @@ export default function PassiveApp() {
   const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
   const [inboxFilter, setInboxFilter] = useState<'pending' | 'all'>('pending');
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [inboxBootstrapped, setInboxBootstrapped] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
@@ -205,7 +206,6 @@ export default function PassiveApp() {
   }, [supabase]);
 
   const highPriorityCount = useMemo(() => actions.filter((a) => a.priority === 'high').length, [actions]);
-<<<<<<< HEAD
   const pendingInboxCount = useMemo(
     () => reconciliationTasks.filter((task) => task.status === 'pending').length,
     [reconciliationTasks]
@@ -215,6 +215,7 @@ export default function PassiveApp() {
     if (activeTab !== 'More') return;
     if (!isAuthed) {
       setReconciliationTasks([]);
+      setInboxBootstrapped(false);
       return;
     }
 
@@ -226,6 +227,7 @@ export default function PassiveApp() {
         if (res.status === 401) {
           setIsAuthed(false);
           setReconciliationTasks([]);
+          setInboxBootstrapped(false);
           return;
         }
         setError(`Failed to load inbox (${res.status})${details?.error ? `: ${details.error}` : ''}`);
@@ -234,14 +236,9 @@ export default function PassiveApp() {
 
       const payload = (await res.json()) as { tasks: ReconciliationTask[] };
       setReconciliationTasks(payload.tasks ?? []);
+      setInboxBootstrapped(true);
     })();
   }, [activeTab, isAuthed, inboxFilter]);
-=======
-  const pendingReconCount = useMemo(
-    () => reconciliationTasks.filter((task) => task.status === 'pending').length,
-    [reconciliationTasks]
-  );
->>>>>>> 7fce932 (feat: add reconciliation approval gate for suspicious DINK sells)
 
   async function loadDashboard() {
     setLoading(true);
@@ -292,7 +289,6 @@ export default function PassiveApp() {
     setTheses(payload.theses);
   }
 
-<<<<<<< HEAD
   const loadReconciliationTasks = useCallback(async (filter: 'pending' | 'all') => {
     const qs = new URLSearchParams({ status: filter });
     const res = await fetch(`/api/reconciliation/tasks?${qs.toString()}`, { method: 'GET' });
@@ -339,27 +335,16 @@ export default function PassiveApp() {
 
   async function loadOpportunities() {
     const res = await fetch('/api/opportunities', { method: 'GET' });
-=======
-  async function loadReconciliationTasks() {
-    const res = await fetch('/api/reconciliation-tasks', { method: 'GET' });
->>>>>>> 7fce932 (feat: add reconciliation approval gate for suspicious DINK sells)
     if (!res.ok) {
       const details = await res.json().catch(() => null) as { error?: string } | null;
       if (res.status === 401) {
         setIsAuthed(false);
         throw new Error('Not signed in. Go to More → Sign in.');
       }
-<<<<<<< HEAD
       throw new Error(`Failed to load opportunities (${res.status})${details?.error ? `: ${details.error}` : ''}`);
     }
     const payload = (await res.json()) as { opportunities: Opportunity[] };
     setOpportunities(payload.opportunities ?? []);
-=======
-      throw new Error(`Failed to load inbox (${res.status})${details?.error ? `: ${details.error}` : ''}`);
-    }
-    const payload = (await res.json()) as { tasks: ReconciliationTask[] };
-    setReconciliationTasks(payload.tasks);
->>>>>>> 7fce932 (feat: add reconciliation approval gate for suspicious DINK sells)
   }
 
   async function addThesis() {
@@ -412,12 +397,8 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
           onClick={() => {
             void loadDashboard();
             void loadTheses();
-<<<<<<< HEAD
             void loadOpportunities();
             void loadReconciliationTasks(inboxFilter);
-=======
-            void loadReconciliationTasks();
->>>>>>> 7fce932 (feat: add reconciliation approval gate for suspicious DINK sells)
           }}
         >
           {loading ? 'Loading...' : 'Sync'}
