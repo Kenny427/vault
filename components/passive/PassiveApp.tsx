@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
 type ActionPriority = 'high' | 'medium' | 'low';
 
@@ -60,11 +61,48 @@ export default function PassiveApp() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
+  const [authChecked, setAuthChecked] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [supabase, setSupabase] = useState<ReturnType<typeof createBrowserSupabaseClient> | null>(null);
 
   const actions = dashboard?.actions ?? [];
   const queue = dashboard?.queue ?? [];
   const positions = dashboard?.positions ?? [];
   const summary = dashboard?.summary;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setSupabase(createBrowserSupabaseClient());
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const sb = supabase;
+    let mounted = true;
+
+    async function bootstrapAuth() {
+      try {
+        const { data } = await sb.auth.getUser();
+        if (!mounted) return;
+        setIsAuthed(Boolean(data.user));
+      } finally {
+        if (mounted) setAuthChecked(true);
+      }
+    }
+
+    const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      setIsAuthed(Boolean(session?.user));
+    });
+
+    void bootstrapAuth();
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   const highPriorityCount = useMemo(() => actions.filter((a) => a.priority === 'high').length, [actions]);
 
@@ -74,6 +112,10 @@ export default function PassiveApp() {
     try {
       const res = await fetch('/api/nba', { method: 'GET' });
       if (!res.ok) {
+        if (res.status === 401) {
+          setIsAuthed(false);
+          throw new Error('Not signed in. Go to More → Sign in.');
+        }
         throw new Error(`Failed to load actions (${res.status})`);
       }
       const payload = (await res.json()) as DashboardPayload;
@@ -128,6 +170,10 @@ export default function PassiveApp() {
       });
 
       if (!res.ok) {
+        if (res.status === 401) {
+          setIsAuthed(false);
+          throw new Error('Not signed in. Go to More → Sign in.');
+        }
         throw new Error('Failed to save thesis.');
       }
 
@@ -267,6 +313,56 @@ export default function PassiveApp() {
 
       {activeTab === 'More' ? (
         <section className="grid" style={{ gap: '0.75rem' }}>
+          <article className="card">
+            <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.65rem' }}>Account</h2>
+            {!authChecked ? (
+              <p className="muted">Checking session...</p>
+            ) : isAuthed ? (
+              <div className="row-between">
+                <p className="muted">Signed in</p>
+                <button
+                  className="btn btn-secondary"
+                  disabled={loading}
+                  onClick={() => (supabase ? void supabase.auth.signOut() : undefined)}
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <div className="grid" style={{ gap: '0.5rem' }}>
+                <p className="muted">Sign in to enable Sync/Scan and save theses.</p>
+                <input
+                  placeholder="Email"
+                  value={userEmail}
+                  onChange={(event) => setUserEmail(event.target.value)}
+                />
+                <button
+                  className="btn"
+                  disabled={loading || !userEmail}
+                  onClick={async () => {
+                    if (!supabase) return;
+                    setLoading(true);
+                    setError(null);
+                    try {
+                      const { error: signInError } = await supabase.auth.signInWithOtp({
+                        email: userEmail,
+                        options: { emailRedirectTo: window.location.origin },
+                      });
+                      if (signInError) throw signInError;
+                      setError('Magic link sent. Check your email and open the link.');
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Failed to send magic link.');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                >
+                  Send magic link
+                </button>
+              </div>
+            )}
+          </article>
+
           <article className="card">
             <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.65rem' }}>Theses</h2>
             <div className="grid" style={{ gap: '0.5rem', marginBottom: '0.75rem' }}>
