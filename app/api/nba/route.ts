@@ -104,6 +104,7 @@ export async function GET() {
     const snapshot = snapshotByItem.get(itemId);
     if (!snapshot?.last_price) continue;
 
+    // If user configured explicit targets, use them.
     if (thesis.target_buy && snapshot.last_price <= thesis.target_buy) {
       const score = 76;
       actions.push({
@@ -114,6 +115,23 @@ export async function GET() {
         priority: computePriority(score),
         score,
       });
+      continue;
+    }
+
+    // If no targets yet, still surface a "watch / consider" action based on current spread.
+    if (!thesis.target_buy && !thesis.target_sell && snapshot.margin && snapshot.margin > 0) {
+      const spreadPct = Math.min(100, (snapshot.margin / Math.max(snapshot.last_price, 1)) * 100);
+      if (spreadPct >= 1.0) {
+        const score = Math.max(50, Math.min(78, Math.round(spreadPct * 10)));
+        actions.push({
+          type: 'consider_entry',
+          item_id: itemId,
+          item_name: thesis.item_name,
+          reason: `Spread looks tradable (~${spreadPct.toFixed(1)}%). Consider setting targets or placing a small test order.`,
+          priority: computePriority(score),
+          score,
+        });
+      }
     }
   }
 
