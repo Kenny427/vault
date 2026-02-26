@@ -15,20 +15,52 @@ type TimeframeEntry = {
   lowPriceVolume?: number | null;
 };
 
-async function cachedFetch(path: string, revalidate: number) {
-  const res = await fetch(`${WIKI_API_ROOT}${path}`, {
-    method: 'GET',
-    headers: {
-      'User-Agent': USER_AGENT,
-    },
-    next: { revalidate },
-  });
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  if (!res.ok) {
-    throw new Error(`OSRS Wiki request failed (${res.status}) for ${path}`);
+async function cachedFetch(path: string, revalidate: number) {
+  const url = `${WIKI_API_ROOT}${path}`;
+
+  // Wiki API is occasionally rate limited (429) or returns transient 5xx.
+  // Retry a few times with small exponential backoff.
+  const maxAttempts = 3;
+
+  let lastStatus: number | null = null;
+  let lastBody: string | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': USER_AGENT,
+      },
+      next: { revalidate },
+    });
+
+    if (res.ok) {
+      return res.json();
+    }
+
+    lastStatus = res.status;
+    lastBody = await res.text().catch(() => null);
+
+    const isRetryable = res.status === 429 || res.status >= 500;
+    if (!isRetryable || attempt === maxAttempts) {
+      break;
+    }
+
+    const retryAfterHeader = res.headers.get('retry-after');
+    const retryAfterMs = retryAfterHeader ? Number(retryAfterHeader) * 1000 : NaN;
+    const backoffMs = Number.isFinite(retryAfterMs)
+      ? Math.max(250, retryAfterMs)
+      : 250 * Math.pow(2, attempt - 1);
+
+    await sleep(backoffMs);
   }
 
-  return res.json();
+  const bodyPreview = lastBody ? ` Body: ${lastBody.slice(0, 200)}` : '';
+  throw new Error(`OSRS Wiki request failed (${lastStatus ?? 'unknown'}) for ${path}.${bodyPreview}`);
 }
 
 export async function getMapping() {

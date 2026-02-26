@@ -77,6 +77,8 @@ export default function PassiveApp() {
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [theses, setTheses] = useState<Thesis[]>([]);
   const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
+  const [decisionNotes, setDecisionNotes] = useState<Record<string, string>>({});
+  const [inboxBootstrapped, setInboxBootstrapped] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
@@ -182,6 +184,14 @@ export default function PassiveApp() {
     () => reconciliationTasks.filter((task) => task.status === 'pending').length,
     [reconciliationTasks]
   );
+
+  useEffect(() => {
+    if (activeTab !== 'More') return;
+    if (!isAuthed) return;
+    if (inboxBootstrapped) return;
+    void loadReconciliationTasks();
+    setInboxBootstrapped(true);
+  }, [activeTab, inboxBootstrapped, isAuthed]);
 
   async function loadDashboard() {
     setLoading(true);
@@ -558,11 +568,16 @@ export default function PassiveApp() {
                                 const res = await fetch('/api/reconciliation-tasks', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ id: task.id, status: 'approved' }),
+                                  body: JSON.stringify({ id: task.id, status: 'approved', decision_note: decisionNotes[task.id] || undefined }),
                                 });
                                 const payload = (await res.json().catch(() => null)) as { error?: string } | null;
                                 if (!res.ok) throw new Error(payload?.error ? payload.error : `Approve failed (${res.status})`);
                                 await loadReconciliationTasks();
+                                setDecisionNotes((prev) => {
+                                  const next = { ...prev };
+                                  delete next[task.id];
+                                  return next;
+                                });
                               } catch (err) {
                                 setError(err instanceof Error ? err.message : 'Approve failed.');
                               } finally {
@@ -582,11 +597,16 @@ export default function PassiveApp() {
                                 const res = await fetch('/api/reconciliation-tasks', {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ id: task.id, status: 'rejected' }),
+                                  body: JSON.stringify({ id: task.id, status: 'rejected', decision_note: decisionNotes[task.id] || undefined }),
                                 });
                                 const payload = (await res.json().catch(() => null)) as { error?: string } | null;
                                 if (!res.ok) throw new Error(payload?.error ? payload.error : `Reject failed (${res.status})`);
                                 await loadReconciliationTasks();
+                                setDecisionNotes((prev) => {
+                                  const next = { ...prev };
+                                  delete next[task.id];
+                                  return next;
+                                });
                               } catch (err) {
                                 setError(err instanceof Error ? err.message : 'Reject failed.');
                               } finally {
@@ -601,6 +621,24 @@ export default function PassiveApp() {
                       {task.details?.reason ? (
                         <p className="muted" style={{ marginTop: '0.35rem' }}>{String(task.details.reason)}</p>
                       ) : null}
+
+                      <div style={{ marginTop: '0.45rem' }}>
+                        <input
+                          placeholder="Decision note (optional)"
+                          value={decisionNotes[task.id] ?? ''}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setDecisionNotes((prev) => ({ ...prev, [task.id]: value }));
+                          }}
+                        />
+                      </div>
+
+                      <details style={{ marginTop: '0.35rem' }}>
+                        <summary className="muted" style={{ cursor: 'pointer' }}>Details</summary>
+                        <pre style={{ marginTop: '0.35rem', fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>
+{JSON.stringify(task.details ?? {}, null, 2)}
+                        </pre>
+                      </details>
                     </li>
                   ))
               )}
@@ -749,16 +787,19 @@ export default function PassiveApp() {
       ) : null}
 
       <nav className="tabbar" aria-label="Primary">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            className={`tab ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-            aria-current={activeTab === tab ? 'page' : undefined}
-          >
-            {tab}
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const label = tab === 'More' && pendingReconCount > 0 ? `More (${pendingReconCount})` : tab;
+          return (
+            <button
+              key={tab}
+              className={`tab ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+              aria-current={activeTab === tab ? 'page' : undefined}
+            >
+              {label}
+            </button>
+          );
+        })}
       </nav>
     </main>
   );
