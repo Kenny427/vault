@@ -134,6 +134,7 @@ export default function ItemPage() {
   const stats90 = useMemo(() => calcStats(history90 || undefined), [history90, currentPrice]);
   const stats180 = useMemo(() => calcStats(history180 || undefined), [history180, currentPrice]);
   const stats365 = useMemo(() => calcStats(history365 || undefined), [history365, currentPrice]);
+  const statsSelected = useMemo(() => calcStats(historyData || undefined), [historyData, currentPrice]);
 
   const iconUrl = resolveIconUrl(itemDetails?.icon);
 
@@ -333,6 +334,27 @@ export default function ItemPage() {
               <div className="flex justify-between text-slate-300">
                 <span>Price Percentile (365D)</span>
                 <span>{stats365 ? `${stats365.percentile.toFixed(0)}th` : '—'}</span>
+              </div>
+
+              <div className="pt-2">
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span>{statsSelected ? `${formatNumber(statsSelected.min)}gp` : '—'}</span>
+                  <span className="text-slate-400">Range ({timeframeLabel})</span>
+                  <span>{statsSelected ? `${formatNumber(statsSelected.max)}gp` : '—'}</span>
+                </div>
+                <div className="mt-1 relative h-2 rounded bg-slate-800 overflow-hidden border border-slate-700">
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-osrs-accent/20 to-rose-500/20" />
+                  {statsSelected ? (
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-osrs-accent shadow-[0_0_12px_rgba(250,204,21,0.35)]"
+                      style={{ left: `calc(${Math.max(0, Math.min(100, statsSelected.percentile)).toFixed(2)}% - 5px)` }}
+                      title={`${statsSelected.percentile.toFixed(0)}th percentile`}
+                    />
+                  ) : null}
+                </div>
+                <div className="mt-1 text-[11px] text-slate-400">
+                  Current: {statsSelected ? `${statsSelected.percentile.toFixed(0)}th percentile` : '—'}
+                </div>
               </div>
             </div>
           </div>
