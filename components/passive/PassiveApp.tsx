@@ -24,6 +24,20 @@ type Position = {
   unrealized_profit: number | null;
 };
 
+type Opportunity = {
+  item_id: number;
+  item_name: string;
+  last_price: number;
+  margin: number;
+  spread_pct: number;
+  volume_1h: number | null;
+  buy_limit: number | null;
+  suggested_qty: number;
+  est_profit: number;
+  score: number;
+  snapshot_at: string | null;
+};
+
 type DashboardPayload = {
   actions: NextBestAction[];
   queue: NextBestAction[];
@@ -58,6 +72,7 @@ export default function PassiveApp() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [theses, setTheses] = useState<Thesis[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
@@ -156,6 +171,7 @@ export default function PassiveApp() {
       }
       await loadDashboard();
       await loadTheses();
+      await loadOpportunities();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Refresh failed.');
       setLoading(false);
@@ -170,6 +186,20 @@ export default function PassiveApp() {
     }
     const payload = (await res.json()) as { theses: Thesis[] };
     setTheses(payload.theses);
+  }
+
+  async function loadOpportunities() {
+    const res = await fetch('/api/opportunities', { method: 'GET' });
+    if (!res.ok) {
+      const details = await res.json().catch(() => null) as { error?: string } | null;
+      if (res.status === 401) {
+        setIsAuthed(false);
+        throw new Error('Not signed in. Go to More → Sign in.');
+      }
+      throw new Error(`Failed to load opportunities (${res.status})${details?.error ? `: ${details.error}` : ''}`);
+    }
+    const payload = (await res.json()) as { opportunities: Opportunity[] };
+    setOpportunities(payload.opportunities ?? []);
   }
 
   async function addThesis() {
@@ -215,7 +245,7 @@ export default function PassiveApp() {
           <h1 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Passive Copilot</h1>
           <p className="muted">OSRS decision support for 1-2 hour sessions.</p>
         </div>
-        <button className="btn btn-secondary" disabled={loading} onClick={() => { void loadDashboard(); void loadTheses(); }}>
+        <button className="btn btn-secondary" disabled={loading} onClick={() => { void loadDashboard(); void loadTheses(); void loadOpportunities(); }}>
           {loading ? 'Loading...' : 'Sync'}
         </button>
       </div>
@@ -274,9 +304,49 @@ export default function PassiveApp() {
             <p className="muted" style={{ marginBottom: '0.65rem' }}>
               Pull latest snapshots for items in active theses and current positions.
             </p>
-            <button className="btn" onClick={() => void refreshScan()} disabled={loading}>
-              {loading ? 'Refreshing...' : 'Refresh Watchlists'}
-            </button>
+            <div className="row" style={{ gap: '0.5rem', alignItems: 'stretch' }}>
+              <button className="btn" onClick={() => void refreshScan()} disabled={loading}>
+                {loading ? 'Refreshing...' : 'Refresh Watchlists'}
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setLoading(true);
+                  setError(null);
+                  void loadOpportunities().catch((err) => setError(err instanceof Error ? err.message : 'Failed to load opportunities.')).finally(() => setLoading(false));
+                }}
+                disabled={loading}
+              >
+                Load opportunities
+              </button>
+            </div>
+          </article>
+
+          <article className="card">
+            <div className="row-between" style={{ marginBottom: '0.65rem' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Opportunities (Top 20)</h2>
+              <span className="muted">Spread + margin + liquidity</span>
+            </div>
+            <ul className="list">
+              {opportunities.length === 0 ? (
+                <li className="muted">No opportunities loaded yet. Refresh watchlists or tap Load opportunities.</li>
+              ) : (
+                opportunities.map((opp) => (
+                  <li key={opp.item_id} className="card" style={{ padding: '0.7rem' }}>
+                    <div className="row-between">
+                      <strong>{opp.item_name}</strong>
+                      <span className="muted">Score {Math.round(opp.score)}</span>
+                    </div>
+                    <p className="muted" style={{ marginTop: '0.25rem' }}>
+                      Last: {Math.round(opp.last_price).toLocaleString()} gp | Margin: {Math.round(opp.margin).toLocaleString()} gp | Spread: {opp.spread_pct.toFixed(1)}% | 1h vol: {(opp.volume_1h ?? 0).toLocaleString()}
+                    </p>
+                    <p className="muted" style={{ marginTop: '0.25rem' }}>
+                      Suggested qty: {opp.suggested_qty.toLocaleString()}{opp.buy_limit ? ` (limit ${opp.buy_limit.toLocaleString()})` : ''} | Est profit: {Math.round(opp.est_profit).toLocaleString()} gp
+                    </p>
+                  </li>
+                ))
+              )}
+            </ul>
           </article>
         </section>
       ) : null}
