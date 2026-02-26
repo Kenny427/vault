@@ -32,6 +32,7 @@
     --shadow: rgba(0, 0, 0, 0.35);
     --shadow-strong: rgba(0, 0, 0, 0.55);
   }
+
 }
 
 * {
@@ -123,6 +124,28 @@ p {
 .badge-low {
   background: #e2e8f0;
   color: #334155;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Dark-mode badge palette (keep contrast, avoid light-mode pastels) */
+  .badge {
+    border: 1px solid var(--border);
+  }
+
+  .badge-high {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+  }
+
+  .badge-medium {
+    background: color-mix(in srgb, var(--warn) 18%, transparent);
+    color: var(--warn);
+  }
+
+  .badge-low {
+    background: color-mix(in srgb, #94a3b8 18%, transparent);
+    color: #cbd5e1;
+  }
 }
 
 .btn {
