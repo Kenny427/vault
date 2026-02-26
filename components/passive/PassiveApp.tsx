@@ -445,11 +445,15 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                 <p className="muted">Current Value</p>
                 <p className="kpi">{Math.round(portfolioStats.currentValue).toLocaleString()} gp</p>
               </article>
-              <article className="card" style={{ gridColumn: 'span 2' }}>
+              <article className="card">
                 <p className="muted">Portfolio ROI</p>
                 <p className="kpi" style={{ color: portfolioStats.roi >= 0 ? 'var(--accent-2)' : 'var(--danger)' }}>
                   {portfolioStats.roi >= 0 ? '+' : ''}{portfolioStats.roi.toFixed(2)}%
                 </p>
+              </article>
+              <article className="card">
+                <p className="muted">Positions</p>
+                <p className="kpi">{positions.length}</p>
               </article>
             </div>
           ) : null}
