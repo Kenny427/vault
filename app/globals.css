@@ -79,6 +79,16 @@ main {
   border-radius: 14px;
   padding: 0.9rem;
   box-shadow: 0 8px 18px var(--shadow);
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px var(--shadow);
+}
+
+.card:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
 
 .row {
@@ -162,6 +172,20 @@ p {
   border-radius: 10px;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+}
+
+.btn:hover {
+  filter: brightness(1.03);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 2px;
 }
 
 .btn:disabled {
@@ -192,18 +216,33 @@ p {
 .tab {
   border: 0;
   border-radius: 10px;
-  padding: 0.5rem 0.25rem;
+  padding: 0.55rem 0.25rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--muted);
   background: transparent;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.tab:hover {
+  background: color-mix(in srgb, var(--surface) 40%, transparent);
+}
+
+.tab:active {
+  transform: translateY(1px);
+}
+
+.tab:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.tab.active {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: color-mix(in srgb, var(--accent) 70%, var(--text));
 }
 
 @media (prefers-color-scheme: dark) {
-  .tab {
-    color: var(--muted);
-  }
-
   .tab.active {
     background: rgba(39, 194, 103, 0.14);
     color: var(--accent-2);
@@ -233,6 +272,15 @@ select {
   font: inherit;
   background: var(--input-bg);
   color: var(--text);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 @media (min-width: 800px) {
