@@ -1,0 +1,164 @@
+import { NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { sendDiscordAlert } from '@/lib/server/discord';
+
+type ActionPriority = 'high' | 'medium' | 'low';
+
+type NextBestAction = {
+  type: string;
+  item_id?: number;
+  item_name: string;
+  reason: string;
+  priority: ActionPriority;
+  score: number;
+};
+
+function computePriority(score: number): ActionPriority {
+  if (score >= 85) return 'high';
+  if (score >= 55) return 'medium';
+  return 'low';
+}
+
+export async function GET() {
+  const supabase = createServerSupabaseClient();
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const [snapshotsRes, positionsRes, thesesRes, alertsRes, staleOrdersRes] = await Promise.all([
+    supabase.from('market_snapshots').select('item_id,last_price,last_high,last_low,margin,snapshot_at').eq('user_id', userId),
+    supabase.from('positions').select('id,item_id,item_name,quantity,avg_buy_price,last_price,unrealized_profit').eq('user_id', userId).neq('quantity', 0),
+    supabase.from('theses').select('id,item_id,item_name,target_buy,target_sell,priority,active').eq('user_id', userId).eq('active', true),
+    supabase.from('alerts').select('id,item_id,severity,title,resolved_at').eq('user_id', userId).is('resolved_at', null),
+    supabase.from('order_attempts').select('id,item_id,item_name,created_at,status,side').eq('user_id', userId).eq('status', 'open').lt('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()),
+  ]);
+
+  const firstError = snapshotsRes.error ?? positionsRes.error ?? thesesRes.error ?? alertsRes.error ?? staleOrdersRes.error;
+  if (firstError) {
+    return NextResponse.json({ error: firstError.message }, { status: 500 });
+  }
+
+  const snapshotByItem = new Map<number, { last_price: number | null; margin: number | null; snapshot_at: string | null }>();
+  for (const snapshot of snapshotsRes.data ?? []) {
+    snapshotByItem.set(Number(snapshot.item_id), {
+      last_price: snapshot.last_price,
+      margin: snapshot.margin,
+      snapshot_at: snapshot.snapshot_at,
+    });
+  }
+
+  const actions: NextBestAction[] = [];
+  const criticalMessages: string[] = [];
+
+  for (const staleOrder of staleOrdersRes.data ?? []) {
+    const score = 92;
+    actions.push({
+      type: 'adjust_stale_order',
+      item_id: Number(staleOrder.item_id),
+      item_name: staleOrder.item_name ?? `Item ${staleOrder.item_id}`,
+      reason: `Order has been open since ${new Date(staleOrder.created_at).toLocaleTimeString()}. Reprice or cancel.`,
+      priority: computePriority(score),
+      score,
+    });
+    criticalMessages.push(`Stale order: ${staleOrder.item_name ?? staleOrder.item_id}`);
+  }
+
+  for (const position of positionsRes.data ?? []) {
+    const itemId = Number(position.item_id);
+    const snapshot = snapshotByItem.get(itemId);
+    const matchingThesis = (thesesRes.data ?? []).find((thesis) => Number(thesis.item_id) === itemId);
+    const lastPrice = snapshot?.last_price ?? position.last_price ?? null;
+
+    if (matchingThesis?.target_sell && lastPrice && lastPrice >= matchingThesis.target_sell) {
+      const score = 90;
+      actions.push({
+        type: 'take_profit',
+        item_id: itemId,
+        item_name: position.item_name,
+        reason: `Target sell hit (${Math.round(lastPrice).toLocaleString()} >= ${matchingThesis.target_sell.toLocaleString()}).`,
+        priority: computePriority(score),
+        score,
+      });
+      criticalMessages.push(`Exit target hit: ${position.item_name}`);
+      continue;
+    }
+
+    if (position.quantity > 0 && snapshot?.margin && snapshot.margin > 0) {
+      const score = Math.min(82, Math.max(52, Math.floor(snapshot.margin / Math.max((lastPrice ?? 1) * 0.005, 1)) + 50));
+      actions.push({
+        type: 'manage_position',
+        item_id: itemId,
+        item_name: position.item_name,
+        reason: `Open position with est. margin ${Math.round(snapshot.margin).toLocaleString()} gp.`,
+        priority: computePriority(score),
+        score,
+      });
+    }
+  }
+
+  for (const thesis of thesesRes.data ?? []) {
+    const itemId = Number(thesis.item_id);
+    const snapshot = snapshotByItem.get(itemId);
+    if (!snapshot?.last_price) continue;
+
+    if (thesis.target_buy && snapshot.last_price <= thesis.target_buy) {
+      const score = 76;
+      actions.push({
+        type: 'entry_window',
+        item_id: itemId,
+        item_name: thesis.item_name,
+        reason: `Entry window detected (${Math.round(snapshot.last_price).toLocaleString()} <= ${thesis.target_buy.toLocaleString()}).`,
+        priority: computePriority(score),
+        score,
+      });
+    }
+  }
+
+  for (const alert of alertsRes.data ?? []) {
+    const score = alert.severity === 'high' ? 88 : 62;
+    actions.push({
+      type: 'alert',
+      item_id: alert.item_id ?? undefined,
+      item_name: alert.title,
+      reason: `Open ${alert.severity} alert requires review.`,
+      priority: computePriority(score),
+      score,
+    });
+  }
+
+  const deduped = new Map<string, NextBestAction>();
+  for (const action of actions) {
+    const key = `${action.type}:${action.item_id ?? action.item_name}`;
+    const existing = deduped.get(key);
+    if (!existing || existing.score < action.score) {
+      deduped.set(key, action);
+    }
+  }
+
+  const sortedActions = Array.from(deduped.values()).sort((a, b) => b.score - a.score);
+  const queue = sortedActions.slice(0, 5);
+
+  const positionRows = positionsRes.data ?? [];
+  const estimatedUnrealizedProfit = positionRows.reduce((sum, row) => sum + Number(row.unrealized_profit ?? 0), 0);
+  const highPriorityActions = sortedActions.filter((action) => action.priority === 'high').length;
+
+  if (criticalMessages.length > 0) {
+    const preview = criticalMessages.slice(0, 4).join(' | ');
+    await sendDiscordAlert(`Action required: ${preview}`);
+  }
+
+  return NextResponse.json({
+    actions: sortedActions,
+    queue,
+    positions: positionRows,
+    summary: {
+      open_positions: positionRows.length,
+      queued_actions: queue.length,
+      high_priority_actions: highPriorityActions,
+      estimated_unrealized_profit: estimatedUnrealizedProfit,
+    },
+  });
+}
