@@ -19,9 +19,23 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function parseRetryAfterMs(res: Response): number | null {
+  const v = res.headers.get('retry-after');
+  if (!v) return null;
+
+  // Retry-After can be seconds or an HTTP-date.
+  const seconds = Number(v);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+
+  const at = Date.parse(v);
+  if (!Number.isFinite(at)) return null;
+
+  return Math.max(0, at - Date.now());
+}
+
 async function cachedFetch(path: string, revalidate: number) {
   const url = `${WIKI_API_ROOT}${path}`;
-  const maxAttempts = 3;
+  const maxAttempts = 4;
 
   let lastErr: unknown = null;
 
@@ -45,7 +59,12 @@ async function cachedFetch(path: string, revalidate: number) {
       }
 
       // OSRS Wiki can intermittently respond with 429/5xx. Retry a few times.
-      const retryable = res.status === 429 || (res.status >= 500 && res.status <= 599);
+      const retryable =
+        res.status === 429 ||
+        res.status === 502 ||
+        res.status === 503 ||
+        res.status === 504 ||
+        (res.status >= 500 && res.status <= 599);
 
       if (!retryable || attempt === maxAttempts) {
         const text = await res.text().catch(() => '');
@@ -54,16 +73,13 @@ async function cachedFetch(path: string, revalidate: number) {
         );
       }
 
-      const retryAfter = Number(res.headers.get('retry-after') ?? '');
-      const backoffMs = Number.isFinite(retryAfter) && retryAfter > 0
-        ? Math.min(retryAfter * 1000, 5000)
-        : 250 * Math.pow(2, attempt - 1);
-
-      await sleep(backoffMs);
+      const retryAfterMs = parseRetryAfterMs(res);
+      const backoffMs = 250 * 2 ** (attempt - 1);
+      await sleep(retryAfterMs ?? backoffMs);
     } catch (err) {
       lastErr = err;
       if (attempt === maxAttempts) break;
-      await sleep(250 * Math.pow(2, attempt - 1));
+      await sleep(250 * 2 ** (attempt - 1));
     } finally {
       clearTimeout(timeout);
     }
