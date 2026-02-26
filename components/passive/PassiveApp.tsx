@@ -103,6 +103,16 @@ export default function PassiveApp() {
   const [sparklineLoading, setSparklineLoading] = useState(false);
   const [sparklineError, setSparklineError] = useState<string | null>(null);
 
+  // Close modal on Escape key
+  useEffect(() => {
+    if (!selectedItem) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedItem(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedItem]);
+
   const actions = useMemo(() => dashboard?.actions ?? [], [dashboard]);
   const queue = useMemo(() => dashboard?.queue ?? [], [dashboard]);
   const positions = useMemo(() => dashboard?.positions ?? [], [dashboard]);
@@ -809,8 +819,8 @@ export default function PassiveApp() {
                   <option value="6h">6h</option>
                   <option value="24h">24h</option>
                 </select>
-                <button className="btn btn-secondary" type="button" onClick={() => setSelectedItem(null)}>
-                  Close
+                <button className="btn-close" type="button" onClick={() => setSelectedItem(null)} aria-label="Close">
+                  ✕
                 </button>
               </div>
             </div>
