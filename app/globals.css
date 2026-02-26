@@ -110,6 +110,20 @@ p {
   border-radius: 10px;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease, background 120ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(1.03);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline: 2px solid rgba(34, 197, 94, 0.55);
+  outline-offset: 2px;
 }
 
 .btn:disabled {
@@ -145,6 +159,21 @@ p {
   font-weight: 700;
   color: var(--muted);
   background: transparent;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.tab:hover {
+  background: rgba(16, 32, 21, 0.04);
+}
+
+.tab:active {
+  transform: translateY(1px);
+}
+
+.tab:focus-visible {
+  outline: 2px solid rgba(34, 197, 94, 0.55);
+  outline-offset: 2px;
 }
 
 .tab.active {
@@ -175,6 +204,15 @@ select {
   font: inherit;
   background: var(--surface);
   color: var(--text);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
 }
 
 .modal-overlay {
@@ -226,6 +264,10 @@ select {
   .tab.active {
     background: rgba(34, 197, 94, 0.15);
     color: #86efac;
+  }
+
+  .tab:hover {
+    background: rgba(148, 163, 184, 0.08);
   }
 
   .badge-high {
