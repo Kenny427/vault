@@ -1,0 +1,21 @@
+name: Vault tick
+
+on:
+  schedule:
+    - cron: '*/15 8-23 * * *'
+    - cron: '0 */2 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call tick endpoint
+        env:
+          VAULT_URL: ${{ secrets.VAULT_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$VAULT_URL" ]; then echo "Missing VAULT_URL secret"; exit 1; fi
+          if [ -z "$CRON_SECRET" ]; then echo "Missing CRON_SECRET secret"; exit 1; fi
+          curl -fsS "$VAULT_URL/api/cron/tick?secret=$CRON_SECRET"
