@@ -1,5 +1,7 @@
 :root {
   --bg: #f3f7f2;
+  --bg-grad-1: #d5e9d2;
+  --bg-grad-2: #d8f0df;
   --surface: #ffffff;
   --surface-2: #e6efe3;
   --text: #102015;
@@ -16,13 +18,13 @@
   --tabbar-bg: rgba(245, 250, 245, 0.96);
   --tab-active-bg: #dff3e3;
   --input-bg: #ffffff;
-  --page-grad-1: #d5e9d2;
-  --page-grad-2: #d8f0df;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #070b0a;
+    --bg-grad-1: rgba(39, 194, 103, 0.18);
+    --bg-grad-2: rgba(159, 240, 196, 0.12);
     --surface: #0d1513;
     --surface-2: #101d19;
     --text: #e7f3ee;
@@ -38,8 +40,6 @@
     --tabbar-bg: rgba(9, 14, 13, 0.75);
     --tab-active-bg: rgba(39, 194, 103, 0.14);
     --input-bg: rgba(13, 21, 19, 0.9);
-    --page-grad-1: rgba(39, 194, 103, 0.18);
-    --page-grad-2: rgba(159, 240, 196, 0.12);
   }
 }
 
@@ -52,8 +52,8 @@ body {
   margin: 0;
   padding: 0;
   background:
-    radial-gradient(circle at 20% 0%, var(--page-grad-1) 0%, transparent 40%),
-    radial-gradient(circle at 80% 20%, var(--page-grad-2) 0%, transparent 35%),
+    radial-gradient(circle at 20% 0%, var(--bg-grad-1) 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, var(--bg-grad-2) 0%, transparent 35%),
     var(--bg);
   color: var(--text);
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
