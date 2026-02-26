@@ -12,6 +12,11 @@ type NextBestAction = {
   reason: string;
   priority: ActionPriority;
   score: number;
+  suggested_buy?: number;
+  suggested_sell?: number;
+  spread_pct?: number;
+  suggested_qty?: number;
+  est_profit?: number;
 };
 
 type Position = {
@@ -241,7 +246,20 @@ export default function PassiveApp() {
                       <strong>{action.item_name}</strong>
                       <PriorityBadge priority={action.priority} />
                     </div>
-                    <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
+                    {action.type === 'consider_entry' && (action.suggested_buy || action.suggested_sell || action.spread_pct || action.suggested_qty || action.est_profit) ? (
+                      <div style={{ marginTop: '0.35rem' }}>
+                        <div className="row" style={{ gap: '0.6rem', flexWrap: 'wrap' }}>
+                          {typeof action.suggested_buy === 'number' ? <span className="muted">Buy ~{Math.round(action.suggested_buy).toLocaleString()} gp</span> : null}
+                          {typeof action.suggested_sell === 'number' ? <span className="muted">Sell ~{Math.round(action.suggested_sell).toLocaleString()} gp</span> : null}
+                          {typeof action.spread_pct === 'number' ? <span className="muted">Spread ~{action.spread_pct.toFixed(1)}%</span> : null}
+                          {typeof action.suggested_qty === 'number' ? <span className="muted">Qty {action.suggested_qty.toLocaleString()}</span> : null}
+                          {typeof action.est_profit === 'number' ? <span className="muted">Est ~{Math.round(action.est_profit).toLocaleString()} gp</span> : null}
+                        </div>
+                        <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
+                      </div>
+                    ) : (
+                      <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
+                    )}
                   </li>
                 ))
               )}

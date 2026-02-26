@@ -11,6 +11,12 @@ type NextBestAction = {
   reason: string;
   priority: ActionPriority;
   score: number;
+  // Optional structured fields for rendering opportunity cards.
+  suggested_buy?: number;
+  suggested_sell?: number;
+  spread_pct?: number;
+  suggested_qty?: number;
+  est_profit?: number;
 };
 
 const PER_FLIP_CAP_GP = 50_000_000; // Ray choice: option 4 (30M+). Keep conservative but useful.
@@ -164,9 +170,14 @@ export async function GET() {
           type: 'consider_entry',
           item_id: itemId,
           item_name: thesis.item_name,
-          reason: `Buy ~${buyAt?.toLocaleString() ?? '?'} | Sell ~${sellAt?.toLocaleString() ?? '?'} | Spread ~${spreadPct.toFixed(1)}% | Qty ${suggestedQty.toLocaleString()} | Est profit ~${estProfit?.toLocaleString() ?? '?'} gp.`,
+          reason: 'Opportunity detected based on current spread.',
           priority: computePriority(score),
           score,
+          suggested_buy: buyAt ?? undefined,
+          suggested_sell: sellAt ?? undefined,
+          spread_pct: Number(spreadPct.toFixed(2)),
+          suggested_qty: suggestedQty,
+          est_profit: estProfit ?? undefined,
         });
       }
     }
