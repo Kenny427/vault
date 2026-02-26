@@ -23,44 +23,62 @@ async function cachedFetch(path: string, revalidate: number) {
   const url = `${WIKI_API_ROOT}${path}`;
 
   // Wiki API is occasionally rate limited (429) or returns transient 5xx.
-  // Retry a few times with small exponential backoff.
+  // Retry a few times with small exponential backoff + a hard timeout.
   const maxAttempts = 3;
 
   let lastStatus: number | null = null;
   let lastBody: string | null = null;
+  let lastErr: unknown = null;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'User-Agent': USER_AGENT,
-      },
-      next: { revalidate },
-    });
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
 
-    if (res.ok) {
-      return res.json();
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': USER_AGENT,
+          Accept: 'application/json',
+        },
+        next: { revalidate },
+        signal: controller.signal,
+      });
+
+      if (res.ok) {
+        return res.json();
+      }
+
+      lastStatus = res.status;
+      lastBody = await res.text().catch(() => null);
+
+      const retryable = res.status === 429 || (res.status >= 500 && res.status <= 599);
+      if (!retryable || attempt === maxAttempts) {
+        const bodyPreview = lastBody ? `: ${lastBody.slice(0, 200)}` : '';
+        throw new Error(`OSRS Wiki request failed (${res.status}) for ${path}${bodyPreview}`);
+      }
+
+      const retryAfter = Number(res.headers.get('retry-after') ?? '');
+      const backoffMs = Number.isFinite(retryAfter) && retryAfter > 0
+        ? Math.min(retryAfter * 1000, 5000)
+        : 250 * Math.pow(2, attempt - 1);
+
+      await sleep(backoffMs);
+    } catch (err) {
+      lastErr = err;
+      if (attempt === maxAttempts) break;
+      await sleep(250 * Math.pow(2, attempt - 1));
+    } finally {
+      clearTimeout(timeout);
     }
-
-    lastStatus = res.status;
-    lastBody = await res.text().catch(() => null);
-
-    const isRetryable = res.status === 429 || res.status >= 500;
-    if (!isRetryable || attempt === maxAttempts) {
-      break;
-    }
-
-    const retryAfterHeader = res.headers.get('retry-after');
-    const retryAfterMs = retryAfterHeader ? Number(retryAfterHeader) * 1000 : NaN;
-    const backoffMs = Number.isFinite(retryAfterMs)
-      ? Math.max(250, retryAfterMs)
-      : 250 * Math.pow(2, attempt - 1);
-
-    await sleep(backoffMs);
   }
 
-  const bodyPreview = lastBody ? ` Body: ${lastBody.slice(0, 200)}` : '';
-  throw new Error(`OSRS Wiki request failed (${lastStatus ?? 'unknown'}) for ${path}.${bodyPreview}`);
+  if (lastErr instanceof Error) {
+    return Promise.reject(lastErr);
+  }
+
+  const bodyPreview = lastBody ? `: ${lastBody.slice(0, 200)}` : '';
+  throw new Error(`OSRS Wiki request failed (${lastStatus ?? 'unknown'}) for ${path}${bodyPreview}`);
 }
 
 export async function getMapping() {
@@ -99,6 +117,9 @@ export type TimeSeriesStep = '5m' | '1h' | '6h' | '24h';
 
 export async function getTimeSeries(params: { id: number; timestep: TimeSeriesStep }) {
   const { id, timestep } = params;
-  const payload = await cachedFetch(`/timeseries?timestep=${encodeURIComponent(timestep)}&id=${encodeURIComponent(String(id))}`, 60);
+  const payload = await cachedFetch(
+    `/timeseries?timestep=${encodeURIComponent(timestep)}&id=${encodeURIComponent(String(id))}`,
+    60,
+  );
   return (payload?.data ?? []) as TimeSeriesPoint[];
 }
