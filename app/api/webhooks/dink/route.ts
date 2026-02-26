@@ -49,10 +49,30 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createServiceRoleSupabaseClient();
+  const nowIso = new Date().toISOString();
+
+  // Ensure FK targets exist even when the market ingest pipeline hasn't seen this item_id yet.
+  // (DINK can send item_ids we haven't upserted via OSRS Wiki mapping.)
+  const uniqueItemIds = Array.from(new Set(events.map((event) => event.item_id).filter(Boolean))) as number[];
+  const itemsUpsert = await admin.from('items').upsert(
+    uniqueItemIds.map((itemId) => {
+      const firstMatch = events.find((event) => event.item_id === itemId);
+      return {
+        item_id: itemId,
+        name: firstMatch?.item_name ?? `Item ${itemId}`,
+        updated_at: nowIso,
+      };
+    }),
+    { onConflict: 'item_id' }
+  );
+
+  if (itemsUpsert.error) {
+    return NextResponse.json({ error: itemsUpsert.error.message }, { status: 500 });
+  }
 
   const geEventsInsert = await admin.from('ge_events').insert(
     events.map((event) => ({
-      user_id: event.user_id,
+      user_id: event.user_id ?? null,
       profile_id: event.profile_id,
       rsn: event.rsn,
       item_id: event.item_id,
@@ -70,75 +90,85 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: geEventsInsert.error.message }, { status: 500 });
   }
 
-  const orderAttemptsInsert = await admin.from('order_attempts').insert(
-    events.map((event) => ({
-      user_id: event.user_id,
-      item_id: event.item_id,
-      item_name: event.item_name,
-      side: event.side,
-      quantity: event.quantity,
-      price: event.price,
-      status: event.status,
-      source: 'dink',
-      placed_at: event.timestamp,
-      raw_payload: event,
-    }))
-  );
+  // Only user-linked events can flow into order_attempts (user_id is NOT NULL) + position calculations.
+  const linkedEvents = events.filter((event) => Boolean(event.user_id));
+  const unlinkedCount = events.length - linkedEvents.length;
 
-  if (orderAttemptsInsert.error) {
-    return NextResponse.json({ error: orderAttemptsInsert.error.message }, { status: 500 });
-  }
-
-  for (const event of events) {
-    if (!event.user_id || !event.item_id || !event.quantity || !event.price) {
-      continue;
-    }
-
-    const { data: existingPosition } = await admin
-      .from('positions')
-      .select('id,quantity,avg_buy_price,realized_profit,item_name')
-      .eq('user_id', event.user_id)
-      .eq('item_id', event.item_id)
-      .maybeSingle();
-
-    const previousQty = Number(existingPosition?.quantity ?? 0);
-    const existingAvg = Number(existingPosition?.avg_buy_price ?? 0);
-    const realizedProfit = Number(existingPosition?.realized_profit ?? 0);
-
-    let nextQty = previousQty;
-    let nextAvg = existingAvg;
-    let nextRealized = realizedProfit;
-
-    if (event.side === 'buy') {
-      const totalCost = previousQty * existingAvg + event.quantity * event.price;
-      nextQty = previousQty + event.quantity;
-      nextAvg = nextQty > 0 ? totalCost / nextQty : 0;
-    } else {
-      const sellQty = Math.min(event.quantity, previousQty);
-      nextQty = previousQty - sellQty;
-      nextRealized = realizedProfit + sellQty * (event.price - existingAvg);
-      if (nextQty <= 0) {
-        nextQty = 0;
-        nextAvg = 0;
-      }
-    }
-
-    await admin.from('positions').upsert(
-      {
-        id: existingPosition?.id,
+  if (linkedEvents.length > 0) {
+    const orderAttemptsInsert = await admin.from('order_attempts').insert(
+      linkedEvents.map((event) => ({
         user_id: event.user_id,
         item_id: event.item_id,
-        item_name: event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`,
-        quantity: nextQty,
-        avg_buy_price: nextAvg,
-        last_price: event.price,
-        realized_profit: nextRealized,
-        unrealized_profit: nextQty > 0 ? (event.price - nextAvg) * nextQty : 0,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,item_id' }
+        item_name: event.item_name,
+        side: event.side,
+        quantity: event.quantity,
+        price: event.price,
+        status: event.status,
+        source: 'dink',
+        placed_at: event.timestamp,
+        raw_payload: event,
+      }))
     );
+
+    if (orderAttemptsInsert.error) {
+      return NextResponse.json({ error: orderAttemptsInsert.error.message }, { status: 500 });
+    }
+
+    for (const event of linkedEvents) {
+      if (!event.user_id || !event.item_id || !event.quantity || !event.price) {
+        continue;
+      }
+
+      const { data: existingPosition } = await admin
+        .from('positions')
+        .select('id,quantity,avg_buy_price,realized_profit,item_name')
+        .eq('user_id', event.user_id)
+        .eq('item_id', event.item_id)
+        .maybeSingle();
+
+      const previousQty = Number(existingPosition?.quantity ?? 0);
+      const existingAvg = Number(existingPosition?.avg_buy_price ?? 0);
+      const realizedProfit = Number(existingPosition?.realized_profit ?? 0);
+
+      let nextQty = previousQty;
+      let nextAvg = existingAvg;
+      let nextRealized = realizedProfit;
+
+      if (event.side === 'buy') {
+        const totalCost = previousQty * existingAvg + event.quantity * event.price;
+        nextQty = previousQty + event.quantity;
+        nextAvg = nextQty > 0 ? totalCost / nextQty : 0;
+      } else {
+        const sellQty = Math.min(event.quantity, previousQty);
+        nextQty = previousQty - sellQty;
+        nextRealized = realizedProfit + sellQty * (event.price - existingAvg);
+        if (nextQty <= 0) {
+          nextQty = 0;
+          nextAvg = 0;
+        }
+      }
+
+      await admin.from('positions').upsert(
+        {
+          id: existingPosition?.id,
+          user_id: event.user_id,
+          item_id: event.item_id,
+          item_name: event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`,
+          quantity: nextQty,
+          avg_buy_price: nextAvg,
+          last_price: event.price,
+          realized_profit: nextRealized,
+          unrealized_profit: nextQty > 0 ? (event.price - nextAvg) * nextQty : 0,
+          updated_at: nowIso,
+        },
+        { onConflict: 'user_id,item_id' }
+      );
+    }
   }
 
-  return NextResponse.json({ ingested: events.length });
+  return NextResponse.json({
+    ingested: events.length,
+    linked: linkedEvents.length,
+    unlinked: unlinkedCount,
+  });
 }
