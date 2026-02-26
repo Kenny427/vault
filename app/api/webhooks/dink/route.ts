@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createServiceRoleSupabaseClient } from '@/lib/supabase/service';
+import { sendDiscordAlert } from '@/lib/server/discord';
 
 type DinkEvent = {
   user_id?: string;
@@ -193,10 +194,12 @@ export async function POST(request: NextRequest) {
     // Approval gate: if DINK reports a sell larger than our known position, create a reconciliation task
     // and do NOT mutate positions until someone approves.
     if (event.side === 'sell' && event.quantity > previousQty) {
-      await admin.from('reconciliation_tasks').insert({
+      const taskItemName = event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`;
+
+      const insertRes = await admin.from('reconciliation_tasks').insert({
         user_id: event.user_id,
         item_id: event.item_id,
-        item_name: event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`,
+        item_name: taskItemName,
         side: 'sell',
         quantity: event.quantity,
         price: event.price,
@@ -206,6 +209,14 @@ export async function POST(request: NextRequest) {
         raw_payload: event,
         updated_at: new Date().toISOString(),
       });
+
+      // Proactive alert so Ray sees approvals waiting without having to open the app.
+      if (!insertRes.error) {
+        await sendDiscordAlert(
+          `Approval needed: sell exceeds position · ${taskItemName} · sell ${event.quantity?.toLocaleString()} @ ${event.price?.toLocaleString()} (tracked ${previousQty.toLocaleString()})`
+        );
+      }
+
       continue;
     }
 
