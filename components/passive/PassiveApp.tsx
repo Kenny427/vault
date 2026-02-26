@@ -112,11 +112,12 @@ export default function PassiveApp() {
     try {
       const res = await fetch('/api/nba', { method: 'GET' });
       if (!res.ok) {
+        const details = await res.json().catch(() => null) as { error?: string } | null;
         if (res.status === 401) {
           setIsAuthed(false);
           throw new Error('Not signed in. Go to More → Sign in.');
         }
-        throw new Error(`Failed to load actions (${res.status})`);
+        throw new Error(`Failed to load actions (${res.status})${details?.error ? `: ${details.error}` : ''}`);
       }
       const payload = (await res.json()) as DashboardPayload;
       setDashboard(payload);
@@ -133,7 +134,8 @@ export default function PassiveApp() {
     try {
       const refreshRes = await fetch('/api/market/refresh-watchlists', { method: 'POST' });
       if (!refreshRes.ok) {
-        throw new Error(`Refresh failed (${refreshRes.status})`);
+        const details = await refreshRes.json().catch(() => null) as { error?: string } | null;
+        throw new Error(`Refresh failed (${refreshRes.status})${details?.error ? `: ${details.error}` : ''}`);
       }
       await loadDashboard();
       await loadTheses();
@@ -146,7 +148,8 @@ export default function PassiveApp() {
   async function loadTheses() {
     const res = await fetch('/api/theses', { method: 'GET' });
     if (!res.ok) {
-      throw new Error('Failed to load theses.');
+      const details = await res.json().catch(() => null) as { error?: string } | null;
+      throw new Error(`Failed to load theses (${res.status})${details?.error ? `: ${details.error}` : ''}`);
     }
     const payload = (await res.json()) as { theses: Thesis[] };
     setTheses(payload.theses);
@@ -170,11 +173,12 @@ export default function PassiveApp() {
       });
 
       if (!res.ok) {
+        const details = await res.json().catch(() => null) as { error?: string } | null;
         if (res.status === 401) {
           setIsAuthed(false);
           throw new Error('Not signed in. Go to More → Sign in.');
         }
-        throw new Error('Failed to save thesis.');
+        throw new Error(`Failed to save thesis (${res.status})${details?.error ? `: ${details.error}` : ''}`);
       }
 
       setNewThesis({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' });
