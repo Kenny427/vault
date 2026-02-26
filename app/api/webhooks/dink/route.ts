@@ -172,11 +172,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: orderAttemptsInsert.error.message }, { status: 500 });
   }
 
-  for (const event of events) {
-    if (!event.user_id || !event.item_id || !event.quantity || !event.price) {
-      continue;
-    }
+  const actionableEvents = events.filter((event) => event.user_id);
 
+  if (actionableEvents.length === 0) {
+    return NextResponse.json({ ingested: events.length, processed: 0, warning: 'No user_id found; nothing to apply.' });
+  }
+
+  for (const event of actionableEvents) {
     const { data: existingPosition } = await admin
       .from('positions')
       .select('id,quantity,avg_buy_price,realized_profit,item_name')
@@ -193,15 +195,16 @@ export async function POST(request: NextRequest) {
     if (event.side === 'sell' && event.quantity > previousQty) {
       await admin.from('reconciliation_tasks').insert({
         user_id: event.user_id,
-        task_type: 'sell_exceeds_position',
         item_id: event.item_id,
         item_name: event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`,
+        side: 'sell',
+        quantity: event.quantity,
+        price: event.price,
+        occurred_at: event.timestamp,
+        reason: 'Sell event quantity exceeds tracked position. Needs manual review.',
         status: 'pending',
-        details: {
-          reason: 'Sell event quantity exceeds tracked position. Needs manual review.',
-          previous_qty: previousQty,
-          event,
-        },
+        raw_payload: event,
+        updated_at: new Date().toISOString(),
       });
       continue;
     }
@@ -220,9 +223,10 @@ export async function POST(request: NextRequest) {
 
       if (reconciliationNeeded) {
         const shortfall = Math.max(event.quantity - previousQty, 0);
-        const reason = previousQty <= 0
-          ? 'Sell event received but no open position exists in Vault ledger.'
-          : `Sell event exceeds position quantity by ${shortfall}.`;
+        const reason =
+          previousQty <= 0
+            ? 'Sell event received but no open position exists in Vault ledger.'
+            : `Sell event exceeds position quantity by ${shortfall}.`;
 
         await admin.from('reconciliation_tasks').insert({
           user_id: event.user_id,
@@ -264,5 +268,5 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ingested: events.length });
+  return NextResponse.json({ ingested: events.length, processed: actionableEvents.length });
 }
