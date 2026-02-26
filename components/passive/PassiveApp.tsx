@@ -66,9 +66,9 @@ export default function PassiveApp() {
   const [isAuthed, setIsAuthed] = useState(false);
   const [supabase, setSupabase] = useState<ReturnType<typeof createBrowserSupabaseClient> | null>(null);
 
-  const actions = dashboard?.actions ?? [];
-  const queue = dashboard?.queue ?? [];
-  const positions = dashboard?.positions ?? [];
+  const actions = useMemo(() => dashboard?.actions ?? [], [dashboard]);
+  const queue = useMemo(() => dashboard?.queue ?? [], [dashboard]);
+  const positions = useMemo(() => dashboard?.positions ?? [], [dashboard]);
   const summary = dashboard?.summary;
 
   useEffect(() => {
@@ -365,6 +365,36 @@ export default function PassiveApp() {
                 </button>
               </div>
             )}
+          </article>
+
+          <article className="card">
+            <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.65rem' }}>Quick setup</h2>
+            <p className="muted" style={{ marginBottom: '0.65rem' }}>
+              Seed your watchlist from the curated pool (recommended for MVP).
+            </p>
+            <button
+              className="btn"
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true);
+                setError(null);
+                try {
+                  const res = await fetch('/api/theses/seed', { method: 'POST' });
+                  const payload = (await res.json().catch(() => null)) as { inserted?: number; error?: string } | null;
+                  if (!res.ok) {
+                    throw new Error(payload?.error ? payload.error : `Seed failed (${res.status})`);
+                  }
+                  setError(`Seeded ${payload?.inserted ?? 0} items into Theses.`);
+                  await loadTheses();
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Failed to seed theses.');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              Seed watchlist (113)
+            </button>
           </article>
 
           <article className="card">

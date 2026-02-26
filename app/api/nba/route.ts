@@ -13,6 +13,8 @@ type NextBestAction = {
   score: number;
 };
 
+const PER_FLIP_CAP_GP = 50_000_000; // Ray choice: option 4 (30M+). Keep conservative but useful.
+
 function computePriority(score: number): ActionPriority {
   if (score >= 85) return 'high';
   if (score >= 55) return 'medium';
@@ -52,6 +54,17 @@ export async function GET() {
 
   const actions: NextBestAction[] = [];
   const criticalMessages: string[] = [];
+
+  const watchItemIds = Array.from(new Set<number>((thesesRes.data ?? []).map((t) => Number(t.item_id))));
+  const buyLimitByItem = new Map<number, number>();
+  if (watchItemIds.length > 0) {
+    const itemsRes = await supabase.from('items').select('item_id,buy_limit').in('item_id', watchItemIds);
+    if (!itemsRes.error) {
+      for (const row of itemsRes.data ?? []) {
+        buyLimitByItem.set(Number(row.item_id), Number(row.buy_limit ?? 0));
+      }
+    }
+  }
 
   for (const staleOrder of staleOrdersRes.data ?? []) {
     const score = 92;
@@ -122,12 +135,15 @@ export async function GET() {
     if (!thesis.target_buy && !thesis.target_sell && snapshot.margin && snapshot.margin > 0) {
       const spreadPct = Math.min(100, (snapshot.margin / Math.max(snapshot.last_price, 1)) * 100);
       if (spreadPct >= 1.0) {
+        const buyLimit = buyLimitByItem.get(itemId) ?? 0;
+        const qtyByCap = Math.floor(PER_FLIP_CAP_GP / Math.max(snapshot.last_price, 1));
+        const suggestedQty = buyLimit > 0 ? Math.max(1, Math.min(buyLimit, qtyByCap)) : Math.max(1, qtyByCap);
         const score = Math.max(50, Math.min(78, Math.round(spreadPct * 10)));
         actions.push({
           type: 'consider_entry',
           item_id: itemId,
           item_name: thesis.item_name,
-          reason: `Spread looks tradable (~${spreadPct.toFixed(1)}%). Consider setting targets or placing a small test order.`,
+          reason: `Spread ~${spreadPct.toFixed(1)}%. Suggested test size: ${suggestedQty.toLocaleString()} (cap ~${Math.round(PER_FLIP_CAP_GP / 1_000_000)}M gp${buyLimit ? `, limit ${buyLimit.toLocaleString()}` : ''}).`,
           priority: computePriority(score),
           score,
         });
