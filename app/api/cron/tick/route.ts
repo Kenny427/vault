@@ -24,19 +24,30 @@ export async function GET(request: NextRequest) {
 
   const supabase = createSupabaseAdmin();
 
-  const thesesRes = await supabase
-    .from('theses')
-    .select('item_id')
-    .eq('user_id', userId)
-    .eq('active', true);
+  const [thesesRes, positionsRes] = await Promise.all([
+    supabase
+      .from('theses')
+      .select('item_id')
+      .eq('user_id', userId)
+      .eq('active', true),
+    supabase
+      .from('positions')
+      .select('item_id')
+      .eq('user_id', userId)
+      .neq('quantity', 0),
+  ]);
 
-  if (thesesRes.error) {
-    return NextResponse.json({ error: thesesRes.error.message }, { status: 500 });
+  if (thesesRes.error || positionsRes.error) {
+    return NextResponse.json({ error: thesesRes.error?.message ?? positionsRes.error?.message ?? 'Failed to load watchlists' }, { status: 500 });
   }
 
-  const watchItemIds = Array.from(new Set<number>((thesesRes.data ?? []).map((r) => Number(r.item_id))));
-  if (watchItemIds.length === 0) {
-    return NextResponse.json({ refreshed: 0, skipped: true, reason: 'No active theses' });
+  const watchItemIds = new Set<number>();
+  for (const row of thesesRes.data ?? []) watchItemIds.add(Number(row.item_id));
+  for (const row of positionsRes.data ?? []) watchItemIds.add(Number(row.item_id));
+
+  const watchItemIdList = Array.from(watchItemIds);
+  if (watchItemIdList.length === 0) {
+    return NextResponse.json({ refreshed: 0, skipped: true, reason: 'No active theses or positions' });
   }
 
   const [mapping, latest, fiveMinute, oneHour] = await Promise.all([getMapping(), getLatest(), getFiveMinute(), getOneHour()]);
@@ -47,7 +58,7 @@ export async function GET(request: NextRequest) {
 
   const nowIso = new Date().toISOString();
 
-  const items = watchItemIds.map((itemId) => {
+  const items = watchItemIdList.map((itemId) => {
     const mapped = mappingById.get(itemId);
     return {
       item_id: itemId,
@@ -60,10 +71,10 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  const snapshots = watchItemIds.map((itemId) => {
-    const latestRow = (latest as any)[String(itemId)] ?? {};
-    const fiveMinuteRow = (fiveMinute as any)[String(itemId)] ?? {};
-    const oneHourRow = (oneHour as any)[String(itemId)] ?? {};
+  const snapshots = watchItemIdList.map((itemId) => {
+    const latestRow = latest[String(itemId)] ?? {};
+    const fiveMinuteRow = fiveMinute[String(itemId)] ?? {};
+    const oneHourRow = oneHour[String(itemId)] ?? {};
 
     const lastHigh = Number(latestRow.high ?? 0);
     const lastLow = Number(latestRow.low ?? 0);
@@ -100,5 +111,5 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 
-  return NextResponse.json({ refreshed: watchItemIds.length, at: nowIso });
+  return NextResponse.json({ refreshed: watchItemIdList.length, at: nowIso });
 }

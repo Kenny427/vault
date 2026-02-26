@@ -72,6 +72,7 @@ create table if not exists public.order_attempts (
   source text not null default 'manual',
   placed_at timestamptz,
   created_at timestamptz not null default now(),
+  event_hash text,
   raw_payload jsonb
 );
 
@@ -107,6 +108,7 @@ create table if not exists public.ge_events (
   status text,
   occurred_at timestamptz,
   created_at timestamptz not null default now(),
+  event_hash text,
   raw_payload jsonb not null default '{}'::jsonb
 );
 
@@ -116,6 +118,8 @@ create index if not exists idx_theses_user_active on public.theses(user_id, acti
 create index if not exists idx_order_attempts_user_created on public.order_attempts(user_id, created_at desc);
 create index if not exists idx_alerts_user_resolved on public.alerts(user_id, resolved_at);
 create index if not exists idx_ge_events_user_time on public.ge_events(user_id, occurred_at desc);
+create unique index if not exists ge_events_event_hash_uq on public.ge_events(event_hash) where event_hash is not null;
+create unique index if not exists order_attempts_event_hash_uq on public.order_attempts(event_hash) where event_hash is not null;
 
 alter table public.market_snapshots enable row level security;
 alter table public.theses enable row level security;
