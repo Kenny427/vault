@@ -11,7 +11,7 @@ type NextBestAction = {
   reason: string;
   priority: ActionPriority;
   score: number;
-  // Optional structured fields for rendering opportunity cards.
+    // Optional structured fields for rendering opportunity cards.
   suggested_buy?: number;
   suggested_sell?: number;
   spread_pct?: number;
@@ -123,6 +123,7 @@ export async function GET() {
         reason: `Target sell hit (${Math.round(lastPrice).toLocaleString()} >= ${matchingThesis.target_sell.toLocaleString()}).`,
         priority: computePriority(score),
         score,
+        suggested_sell: matchingThesis.target_sell,
       });
       criticalMessages.push(`Exit target hit: ${position.item_name}`);
       continue;
@@ -156,6 +157,7 @@ export async function GET() {
         reason: `Entry window detected (${Math.round(snapshot.last_price).toLocaleString()} <= ${thesis.target_buy.toLocaleString()}).`,
         priority: computePriority(score),
         score,
+        suggested_buy: Math.round(snapshot.last_price),
       });
       continue;
     }

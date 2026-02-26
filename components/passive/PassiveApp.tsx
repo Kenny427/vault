@@ -419,6 +419,7 @@ export default function PassiveApp() {
                       )}
                       <PriorityBadge priority={action.priority} />
                     </div>
+<<<<<<< HEAD
 
                     {typeof action.item_id === 'number' ? (
                       <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.45rem' }}>
@@ -462,6 +463,50 @@ export default function PassiveApp() {
                     ) : (
                       <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
                     )}
+=======
+                    {typeof action.item_id === 'number' ? (
+                      <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.45rem' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => window.open(`https://prices.runescape.wiki/osrs/item/${action.item_id}`, '_blank', 'noopener,noreferrer')}
+                        >
+                          Wiki Prices
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => window.open(`https://oldschool.runescape.wiki/w/Special:Lookup?type=item&id=${action.item_id}`, '_blank', 'noopener,noreferrer')}
+                        >
+                          OSRS Wiki
+                        </button>
+                        {hasFlipPlan ? (
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => void copyFlipPlan(action)}
+                          >
+                            {copiedKey === actionKey ? 'Copied!' : 'Copy flip'}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {hasFlipPlan ? (
+                      <div style={{ marginTop: '0.35rem' }}>
+                        <div className="row" style={{ gap: '0.6rem', flexWrap: 'wrap' }}>
+                          {typeof action.suggested_buy === 'number' ? <span className="muted">Buy ~{Math.round(action.suggested_buy).toLocaleString()} gp</span> : null}
+                          {typeof action.suggested_sell === 'number' ? <span className="muted">Sell ~{Math.round(action.suggested_sell).toLocaleString()} gp</span> : null}
+                          {typeof action.spread_pct === 'number' ? <span className="muted">Spread ~{action.spread_pct.toFixed(1)}%</span> : null}
+                          {typeof action.suggested_qty === 'number' ? <span className="muted">Qty {action.suggested_qty.toLocaleString()}</span> : null}
+                          {typeof action.est_profit === 'number' ? <span className="muted">Est ~{Math.round(action.est_profit).toLocaleString()} gp</span> : null}
+                        </div>
+                        <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
+                      </div>
+                    ) : (
+                      <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
+                    )}
+>>>>>>> origin/feat/opportunity-card-metrics
                   </li>
                   );
                 })
@@ -522,6 +567,7 @@ export default function PassiveApp() {
                       <PriorityBadge priority={action.priority} />
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
+<<<<<<< HEAD
                     {action.suggested_buy || action.suggested_sell || action.spread_pct || action.suggested_qty || action.est_profit ? (
                       <div className="muted" style={{ marginTop: '0.35rem', display: 'grid', gap: '0.15rem' }}>
                         <div className="row-between">
@@ -544,6 +590,15 @@ export default function PassiveApp() {
                           <span>Est profit</span>
                           <strong>{typeof action.est_profit === 'number' ? `${action.est_profit.toLocaleString()} gp` : '?'}</strong>
                         </div>
+=======
+                    {action.buy_at || action.sell_at || action.suggested_qty || action.est_profit || action.spread_pct ? (
+                      <div className="row" style={{ gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+                        {action.buy_at ? <span className="chip">Buy {Math.round(action.buy_at).toLocaleString()}</span> : null}
+                        {action.sell_at ? <span className="chip">Sell {Math.round(action.sell_at).toLocaleString()}</span> : null}
+                        {typeof action.spread_pct === 'number' ? <span className="chip">Spread {action.spread_pct.toFixed(2)}%</span> : null}
+                        {action.suggested_qty ? <span className="chip">Qty {Math.round(action.suggested_qty).toLocaleString()}</span> : null}
+                        {action.est_profit ? <span className="chip">Est {Math.round(action.est_profit).toLocaleString()} gp</span> : null}
+>>>>>>> origin/feat/opportunity-card-metrics
                       </div>
                     ) : null}
                   </li>
