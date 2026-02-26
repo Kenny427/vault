@@ -42,6 +42,16 @@ export default function PriceChart({
   showLineToggles = false,
   defaultLinesOn = true,
 }: PriceChartProps) {
+  const formatCompact = (value: number) => {
+    const abs = Math.abs(value);
+    if (abs < 100_000) return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    if (abs < 1_000_000) return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+    if (abs < 1_000_000_000) return `${(value / 1_000_000).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '')}M`;
+    return `${(value / 1_000_000_000).toFixed(2).replace(/\.00$/, '').replace(/\.0$/, '')}B`;
+  };
+
+  const formatGp = (value: number) => `${formatCompact(Math.round(value))}gp`;
+
   const chartData = data.map(point => ({
     ...point,
     date: format(new Date(point.timestamp * 1000), 'MMM dd'),
@@ -118,7 +128,7 @@ export default function PriceChart({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
               <div className="text-slate-400 text-xs font-medium mb-1">CURRENT PRICE</div>
-              <div className="text-2xl font-bold text-osrs-accent">{currentPrice.toLocaleString()}gp</div>
+              <div className="text-2xl font-bold text-osrs-accent">{formatGp(currentPrice)}</div>
             </div>
             
             <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
@@ -146,19 +156,19 @@ export default function PriceChart({
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div>
                 <div className="text-slate-400 text-xs mb-1">{timeframeLabel} Average</div>
-                <div className="text-slate-100 font-semibold">{Math.round(averagePrice).toLocaleString()}gp</div>
+                <div className="text-slate-100 font-semibold">{formatGp(averagePrice)}</div>
               </div>
               <div>
                 <div className="text-slate-400 text-xs mb-1">7D Average</div>
-                <div className="text-slate-100 font-semibold">{Math.round(avg7d).toLocaleString()}gp</div>
+                <div className="text-slate-100 font-semibold">{formatGp(avg7d)}</div>
               </div>
               <div>
                 <div className="text-slate-400 text-xs mb-1">{timeframeLabel} High</div>
-                <div className="text-green-400 font-semibold">{max.toLocaleString()}gp</div>
+                <div className="text-green-400 font-semibold">{formatGp(max)}</div>
               </div>
               <div>
                 <div className="text-slate-400 text-xs mb-1">{timeframeLabel} Low</div>
-                <div className="text-red-400 font-semibold">{min.toLocaleString()}gp</div>
+                <div className="text-red-400 font-semibold">{formatGp(min)}</div>
               </div>
               <div>
                 <div className="text-slate-400 text-xs mb-1">Trading Activity</div>
@@ -243,7 +253,7 @@ export default function PriceChart({
                 stroke="#94a3b8"
                 style={{ fontSize: '12px' }}
                 domain={[min * 0.95, max * 1.05]}
-                tickFormatter={(value) => `${value.toLocaleString()}gp`}
+                tickFormatter={(value) => formatCompact(value)}
               />
               <Tooltip
                 contentStyle={{
@@ -253,7 +263,7 @@ export default function PriceChart({
                   padding: '12px',
                 }}
                 labelStyle={{ color: '#e2e8f0', fontWeight: 'bold', marginBottom: '4px' }}
-                formatter={(value: number) => [`${value.toLocaleString()}gp`, 'Price']}
+                formatter={(value: number) => [formatGp(value), 'Price']}
                 labelFormatter={(label) => chartData.find(d => d.date === label)?.fullDate || label}
               />
               {visibleLines.avg30d && (
@@ -263,7 +273,7 @@ export default function PriceChart({
                   strokeDasharray="5 5"
                   strokeWidth={2}
                   label={{ 
-                    value: `30D Avg: ${Math.round(averagePrice).toLocaleString()}gp`, 
+                    value: `30D Avg: ${formatGp(averagePrice)}`, 
                     position: 'insideTopRight', 
                     fill: '#d4a574', 
                     fontSize: 13,
@@ -278,7 +288,7 @@ export default function PriceChart({
                   strokeDasharray="3 3"
                   strokeWidth={2}
                   label={{ 
-                    value: `7D Avg: ${Math.round(avg7d).toLocaleString()}gp`, 
+                    value: `7D Avg: ${formatGp(avg7d)}`, 
                     position: 'insideBottomRight', 
                     fill: '#fbbf24', 
                     fontSize: 13,
@@ -292,7 +302,7 @@ export default function PriceChart({
                   stroke="#10b981"
                   strokeWidth={2}
                   label={{ 
-                    value: `Current: ${currentPrice.toLocaleString()}gp`, 
+                    value: `Current: ${formatGp(currentPrice)}`, 
                     position: 'insideTopLeft', 
                     fill: '#10b981', 
                     fontSize: 13,
