@@ -51,6 +51,18 @@ type Thesis = {
   active: boolean;
 };
 
+type ReconciliationTask = {
+  id: string;
+  task_type: string;
+  item_id: number | null;
+  item_name: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  details: any;
+  created_at: string;
+  decided_at: string | null;
+  decision_note: string | null;
+};
+
 const tabs = ['Home', 'Scan', 'Queue', 'Positions', 'More'] as const;
 type Tab = (typeof tabs)[number];
 
@@ -63,6 +75,7 @@ export default function PassiveApp() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [theses, setTheses] = useState<Thesis[]>([]);
+  const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
@@ -110,6 +123,10 @@ export default function PassiveApp() {
   }, [supabase]);
 
   const highPriorityCount = useMemo(() => actions.filter((a) => a.priority === 'high').length, [actions]);
+  const pendingReconCount = useMemo(
+    () => reconciliationTasks.filter((task) => task.status === 'pending').length,
+    [reconciliationTasks]
+  );
 
   async function loadDashboard() {
     setLoading(true);
@@ -160,6 +177,20 @@ export default function PassiveApp() {
     setTheses(payload.theses);
   }
 
+  async function loadReconciliationTasks() {
+    const res = await fetch('/api/reconciliation-tasks', { method: 'GET' });
+    if (!res.ok) {
+      const details = await res.json().catch(() => null) as { error?: string } | null;
+      if (res.status === 401) {
+        setIsAuthed(false);
+        throw new Error('Not signed in. Go to More → Sign in.');
+      }
+      throw new Error(`Failed to load inbox (${res.status})${details?.error ? `: ${details.error}` : ''}`);
+    }
+    const payload = (await res.json()) as { tasks: ReconciliationTask[] };
+    setReconciliationTasks(payload.tasks);
+  }
+
   async function addThesis() {
     setLoading(true);
     setError(null);
@@ -203,7 +234,15 @@ export default function PassiveApp() {
           <h1 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Passive Copilot</h1>
           <p className="muted">OSRS decision support for 1-2 hour sessions.</p>
         </div>
-        <button className="btn btn-secondary" disabled={loading} onClick={() => { void loadDashboard(); void loadTheses(); }}>
+        <button
+          className="btn btn-secondary"
+          disabled={loading}
+          onClick={() => {
+            void loadDashboard();
+            void loadTheses();
+            void loadReconciliationTasks();
+          }}
+        >
           {loading ? 'Loading...' : 'Sync'}
         </button>
       </div>
@@ -383,6 +422,92 @@ export default function PassiveApp() {
                 </button>
               </div>
             )}
+          </article>
+
+          <article className="card">
+            <div className="row-between" style={{ marginBottom: '0.65rem' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Inbox (Approvals)</h2>
+              <button className="btn btn-secondary" disabled={loading} onClick={() => void loadReconciliationTasks()}>
+                Refresh
+              </button>
+            </div>
+            <p className="muted" style={{ marginBottom: '0.65rem' }}>
+              Pending: <strong>{pendingReconCount}</strong>
+            </p>
+            <ul className="list">
+              {reconciliationTasks.filter((task) => task.status === 'pending').length === 0 ? (
+                <li className="muted">Nothing pending.</li>
+              ) : (
+                reconciliationTasks
+                  .filter((task) => task.status === 'pending')
+                  .slice(0, 10)
+                  .map((task) => (
+                    <li key={task.id} className="card" style={{ padding: '0.7rem' }}>
+                      <div className="row-between" style={{ gap: '0.75rem' }}>
+                        <div>
+                          <strong>{task.item_name ?? `Item ${task.item_id ?? ''}`}</strong>
+                          <p className="muted" style={{ marginTop: '0.2rem' }}>
+                            {task.task_type.split('_').join(' ')} · {new Date(task.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="row" style={{ gap: '0.4rem' }}>
+                          <button
+                            className="btn"
+                            disabled={loading}
+                            onClick={async () => {
+                              setLoading(true);
+                              setError(null);
+                              try {
+                                const res = await fetch('/api/reconciliation-tasks', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ id: task.id, status: 'approved' }),
+                                });
+                                const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+                                if (!res.ok) throw new Error(payload?.error ? payload.error : `Approve failed (${res.status})`);
+                                await loadReconciliationTasks();
+                              } catch (err) {
+                                setError(err instanceof Error ? err.message : 'Approve failed.');
+                              } finally {
+                                setLoading(false);
+                              }
+                            }}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            className="btn btn-secondary"
+                            disabled={loading}
+                            onClick={async () => {
+                              setLoading(true);
+                              setError(null);
+                              try {
+                                const res = await fetch('/api/reconciliation-tasks', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ id: task.id, status: 'rejected' }),
+                                });
+                                const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+                                if (!res.ok) throw new Error(payload?.error ? payload.error : `Reject failed (${res.status})`);
+                                await loadReconciliationTasks();
+                              } catch (err) {
+                                setError(err instanceof Error ? err.message : 'Reject failed.');
+                              } finally {
+                                setLoading(false);
+                              }
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                      {task.details?.reason ? (
+                        <p className="muted" style={{ marginTop: '0.35rem' }}>{String(task.details.reason)}</p>
+                      ) : null}
+                    </li>
+                  ))
+              )}
+            </ul>
           </article>
 
           <article className="card">
