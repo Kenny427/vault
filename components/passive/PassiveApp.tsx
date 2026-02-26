@@ -188,11 +188,24 @@ export default function PassiveApp() {
 
   useEffect(() => {
     if (activeTab !== 'More') return;
-    if (!isAuthed) return;
+
+    if (!isAuthed) {
+      setReconciliationTasks([]);
+      setInboxBootstrapped(false);
+      return;
+    }
+
     if (inboxBootstrapped) return;
+
     void loadReconciliationTasks();
     setInboxBootstrapped(true);
   }, [activeTab, inboxBootstrapped, isAuthed]);
+
+  useEffect(() => {
+    if (!isAuthed) return;
+    // Keep the More tab badge up-to-date without forcing users to open the Inbox.
+    void loadReconciliationTasks();
+  }, [isAuthed]);
 
   async function loadDashboard() {
     setLoading(true);
@@ -269,12 +282,15 @@ export default function PassiveApp() {
       const details = await res.json().catch(() => null) as { error?: string } | null;
       if (res.status === 401) {
         setIsAuthed(false);
-        throw new Error('Not signed in. Go to More → Sign in.');
+        setReconciliationTasks([]);
+        setInboxBootstrapped(false);
+        return;
       }
       throw new Error(`Failed to load inbox (${res.status})${details?.error ? `: ${details.error}` : ''}`);
     }
     const payload = (await res.json()) as { tasks: ReconciliationTask[] };
-    setReconciliationTasks(payload.tasks);
+    setReconciliationTasks(payload.tasks ?? []);
+  }
   }
 
   async function addThesis() {
