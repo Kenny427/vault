@@ -142,11 +142,29 @@ export async function GET() {
         const qtyByCap = Math.floor(PER_FLIP_CAP_GP / Math.max(snapshot.last_price, 1));
         const suggestedQty = buyLimit > 0 ? Math.max(1, Math.min(buyLimit, qtyByCap)) : Math.max(1, qtyByCap);
         const score = Math.max(50, Math.min(82, Math.round(spreadPct * 10)));
+
+        // Heuristic prices: use last_low as buy anchor, last_high as sell anchor.
+        // If missing, fallback to last_price +/- margin.
+        const buyAt = snapshot.last_price && snapshot.margin
+          ? Math.max(1, Math.round(snapshot.last_price - snapshot.margin))
+          : snapshot.last_price
+            ? Math.max(1, Math.round(snapshot.last_price * 0.998))
+            : null;
+        const sellAt = snapshot.last_price && snapshot.margin
+          ? Math.max(1, Math.round(snapshot.last_price))
+          : snapshot.last_price
+            ? Math.max(1, Math.round(snapshot.last_price * 1.002))
+            : null;
+
+        const estProfit = buyAt && sellAt
+          ? Math.max(0, Math.round((sellAt - buyAt) * suggestedQty))
+          : null;
+
         actions.push({
           type: 'consider_entry',
           item_id: itemId,
           item_name: thesis.item_name,
-          reason: `Spread ~${spreadPct.toFixed(1)}%. Suggested test size: ${suggestedQty.toLocaleString()} (cap ~${Math.round(PER_FLIP_CAP_GP / 1_000_000)}M gp${buyLimit ? `, limit ${buyLimit.toLocaleString()}` : ''}).`,
+          reason: `Buy ~${buyAt?.toLocaleString() ?? '?'} | Sell ~${sellAt?.toLocaleString() ?? '?'} | Spread ~${spreadPct.toFixed(1)}% | Qty ${suggestedQty.toLocaleString()} | Est profit ~${estProfit?.toLocaleString() ?? '?'} gp.`,
           priority: computePriority(score),
           score,
         });
