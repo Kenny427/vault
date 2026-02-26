@@ -50,44 +50,85 @@ export async function POST(request: NextRequest) {
 
   const admin = createServiceRoleSupabaseClient();
 
-  const geEventsInsert = await admin.from('ge_events').insert(
-    events.map((event) => ({
-      user_id: event.user_id,
-      profile_id: event.profile_id,
-      rsn: event.rsn,
-      item_id: event.item_id,
-      item_name: event.item_name,
-      quantity: event.quantity,
-      price: event.price,
-      side: event.side,
-      status: event.status,
-      occurred_at: event.timestamp,
-      raw_payload: event,
-    }))
-  );
+  const requireReconciliation = process.env.DINK_REQUIRE_RECONCILIATION === 'true';
+
+  const geEventsInsert = await admin
+    .from('ge_events')
+    .insert(
+      events.map((event) => ({
+        user_id: event.user_id,
+        profile_id: event.profile_id,
+        rsn: event.rsn,
+        item_id: event.item_id,
+        item_name: event.item_name,
+        quantity: event.quantity,
+        price: event.price,
+        side: event.side,
+        status: event.status,
+        occurred_at: event.timestamp,
+        raw_payload: event,
+      }))
+    )
+    .select('id,user_id,item_id');
 
   if (geEventsInsert.error) {
     return NextResponse.json({ error: geEventsInsert.error.message }, { status: 500 });
   }
 
-  const orderAttemptsInsert = await admin.from('order_attempts').insert(
-    events.map((event) => ({
-      user_id: event.user_id,
-      item_id: event.item_id,
-      item_name: event.item_name,
-      side: event.side,
-      quantity: event.quantity,
-      price: event.price,
-      status: event.status,
-      source: 'dink',
-      placed_at: event.timestamp,
-      raw_payload: event,
-    }))
-  );
+  const orderAttemptsInsert = await admin
+    .from('order_attempts')
+    .insert(
+      events.map((event) => ({
+        user_id: event.user_id,
+        item_id: event.item_id,
+        item_name: event.item_name,
+        side: event.side,
+        quantity: event.quantity,
+        price: event.price,
+        status: event.status,
+        source: 'dink',
+        placed_at: event.timestamp,
+        raw_payload: event,
+      }))
+    )
+    .select('id,user_id,item_id');
 
   if (orderAttemptsInsert.error) {
     return NextResponse.json({ error: orderAttemptsInsert.error.message }, { status: 500 });
   }
+
+  if (requireReconciliation) {
+    const geRows = geEventsInsert.data ?? [];
+    const orderRows = orderAttemptsInsert.data ?? [];
+
+    const tasks = events
+      .map((event, idx) => ({ event, idx }))
+      .filter(({ event }) => Boolean(event.user_id))
+      .map(({ event, idx }) => ({
+        user_id: event.user_id as string,
+        source: 'dink',
+        order_attempt_id: orderRows[idx]?.id,
+        ge_event_id: geRows[idx]?.id,
+        status: 'pending' as const,
+        payload: event,
+      }));
+
+    if (tasks.length > 0) {
+      const reconciliationInsert = await admin.from('reconciliation_tasks').insert(tasks);
+      if (reconciliationInsert.error) {
+        return NextResponse.json({ error: reconciliationInsert.error.message }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({
+      ingested: events.length,
+      reconciliations_created: tasks.length,
+      positions_updated: 0,
+      requires_approval: true,
+    });
+  }
+
+  let positionsUpdated = 0;
 
   for (const event of events) {
     if (!event.user_id || !event.item_id || !event.quantity || !event.price) {
@@ -123,7 +164,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await admin.from('positions').upsert(
+    const upsertResult = await admin.from('positions').upsert(
       {
         id: existingPosition?.id,
         user_id: event.user_id,
@@ -138,7 +179,11 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: 'user_id,item_id' }
     );
+
+    if (!upsertResult.error) {
+      positionsUpdated += 1;
+    }
   }
 
-  return NextResponse.json({ ingested: events.length });
+  return NextResponse.json({ ingested: events.length, positions_updated: positionsUpdated, requires_approval: false });
 }
