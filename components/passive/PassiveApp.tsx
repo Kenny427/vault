@@ -295,20 +295,41 @@ export default function PassiveApp() {
               {positions.length === 0 ? (
                 <li className="muted">No active positions yet.</li>
               ) : (
-                positions.map((position) => (
-                  <li key={position.id} className="card" style={{ padding: '0.7rem' }}>
-                    <div className="row-between">
-                      <strong>{position.item_name}</strong>
-                      <span>{position.quantity.toLocaleString()} qty</span>
-                    </div>
-                    <p className="muted" style={{ marginTop: '0.2rem' }}>
-                      Avg buy: {position.avg_buy_price.toLocaleString()} gp | Last: {Math.round(position.last_price ?? 0).toLocaleString()} gp
-                    </p>
-                    <p style={{ marginTop: '0.2rem', color: (position.unrealized_profit ?? 0) >= 0 ? 'var(--accent-2)' : 'var(--danger)' }}>
-                      Unrealized: {Math.round(position.unrealized_profit ?? 0).toLocaleString()} gp
-                    </p>
-                  </li>
-                ))
+                positions.map((position) => {
+                  const avg = position.avg_buy_price;
+                  const last = position.last_price ?? 0;
+                  const pct = avg > 0 && last > 0 ? (last - avg) / avg : null;
+                  const pctLabel = pct === null ? '-' : `${pct >= 0 ? '+' : ''}${(pct * 100).toFixed(1)}%`;
+                  const isNegative = (position.unrealized_profit ?? 0) < 0;
+                  const fillWidth = pct === null ? '0%' : `${Math.min(100, Math.max(0, Math.abs(pct) * 100)).toFixed(0)}%`;
+
+                  return (
+                    <li key={position.id} className="card" style={{ padding: '0.7rem' }}>
+                      <div className="row-between">
+                        <strong>{position.item_name}</strong>
+                        <span>{position.quantity.toLocaleString()} qty</span>
+                      </div>
+
+                      <p className="muted" style={{ marginTop: '0.25rem' }}>
+                        Avg buy: {avg.toLocaleString()} gp · Last: {Math.round(last).toLocaleString()} gp
+                      </p>
+
+                      <div className="row-between" style={{ marginTop: '0.25rem' }}>
+                        <p style={{ margin: 0, color: isNegative ? 'var(--danger)' : 'var(--accent-2)', fontWeight: 700 }}>
+                          Unrealized: {Math.round(position.unrealized_profit ?? 0).toLocaleString()} gp
+                        </p>
+                        <span className="muted" style={{ fontWeight: 800 }}>{pctLabel}</span>
+                      </div>
+
+                      <div className="profitbar" style={{ marginTop: '0.35rem' }} aria-hidden>
+                        <div
+                          className={`profitbar-fill ${isNegative ? 'negative' : ''}`}
+                          style={{ width: fillWidth }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })
               )}
             </ul>
           </article>
