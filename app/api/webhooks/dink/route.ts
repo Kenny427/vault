@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createServiceRoleSupabaseClient } from '@/lib/supabase/service';
 
 type DinkEvent = {
@@ -65,6 +66,47 @@ function normalizeEvent(input: Record<string, unknown>): DinkEvent {
     ...baseEvent,
     event_hash: computeEventHash(baseEvent),
   };
+}
+
+export async function GET() {
+  // Authenticated polling endpoint for the frontend (e.g. legacy DINK poller)
+  // Returns the most recent order_attempts for the current user.
+  const supabase = createServerSupabaseClient();
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { data, error } = await supabase
+    .from('order_attempts')
+    .select('id,item_id,item_name,side,quantity,price,status,placed_at,raw_payload')
+    .eq('user_id', userData.user.id)
+    .order('placed_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const parsedTransactions = (data ?? []).map((row: any) => {
+    const raw = row.raw_payload ?? {};
+    const username = raw.rsn ?? raw.username ?? raw.user ?? undefined;
+
+    return {
+      id: row.id,
+      username,
+      type: String(row.side ?? '').toUpperCase(),
+      itemName: row.item_name,
+      status: row.status,
+      timestamp: row.placed_at ? Date.parse(row.placed_at) : Date.now(),
+      quantity: row.quantity,
+      price: row.price,
+      itemId: row.item_id,
+    };
+  });
+
+  return NextResponse.json({ parsedTransactions });
 }
 
 export async function POST(request: NextRequest) {

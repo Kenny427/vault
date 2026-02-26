@@ -107,3 +107,19 @@ export async function getOneHour() {
   const payload = await cachedFetch('/1h', 300);
   return (payload?.data ?? {}) as Record<string, TimeframeEntry>;
 }
+
+type TimeSeriesPoint = {
+  timestamp: number;
+  avgHighPrice?: number | null;
+  avgLowPrice?: number | null;
+  highPriceVolume?: number | null;
+  lowPriceVolume?: number | null;
+};
+
+export type TimeSeriesStep = '5m' | '1h' | '6h' | '24h';
+
+export async function getTimeSeries(params: { id: number; timestep: TimeSeriesStep }) {
+  const { id, timestep } = params;
+  const payload = await cachedFetch(`/timeseries?timestep=${encodeURIComponent(timestep)}&id=${encodeURIComponent(String(id))}`, 60);
+  return (payload?.data ?? []) as TimeSeriesPoint[];
+}
