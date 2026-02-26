@@ -11,10 +11,12 @@ export default function PriceSparkline(props: {
   width?: number;
   height?: number;
   stroke?: string;
+  showArea?: boolean;
 }) {
   const width = props.width ?? 240;
   const height = props.height ?? 64;
   const stroke = props.stroke ?? 'var(--accent)';
+  const showArea = props.showArea ?? true;
 
   const series = props.values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
 
@@ -52,6 +54,22 @@ export default function PriceSparkline(props: {
     })
     .join(' ');
 
+  // Area fill points (from first point to last point, then down to bottom)
+  const areaPoints = showArea
+    ? `${series
+        .map((v, i) => {
+          const x = i * stepX;
+          const y = height - ((v - minV) / range) * height;
+          return `${clamp(x, 0, width)},${clamp(y, 0, height)}`;
+        })
+        .join(' ')} ${width},${height} 0,${height}`
+    : '';
+
+  // Determine gradient direction based on price movement
+  const firstVal = series[0];
+  const lastVal = series[series.length - 1];
+  const isUp = lastVal >= firstVal;
+
   return (
     <svg
       width={width}
@@ -65,6 +83,18 @@ export default function PriceSparkline(props: {
       aria-label="Price sparkline"
       role="img"
     >
+      <defs>
+        <linearGradient id="sparklineGradient" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={isUp ? 'var(--accent)' : 'var(--danger)'} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={isUp ? 'var(--accent)' : 'var(--danger)'} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      {showArea && (
+        <polygon
+          fill="url(#sparklineGradient)"
+          points={areaPoints}
+        />
+      )}
       <polyline
         fill="none"
         stroke={stroke}
