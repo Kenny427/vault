@@ -89,56 +89,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: orderAttemptsInsert.error.message }, { status: 500 });
   }
 
-  for (const event of events) {
-    if (!event.user_id || !event.item_id || !event.quantity || !event.price) {
-      continue;
-    }
+  const actionableForApproval = events.filter((event) => event.user_id);
 
-    const { data: existingPosition } = await admin
-      .from('positions')
-      .select('id,quantity,avg_buy_price,realized_profit,item_name')
-      .eq('user_id', event.user_id)
-      .eq('item_id', event.item_id)
-      .maybeSingle();
-
-    const previousQty = Number(existingPosition?.quantity ?? 0);
-    const existingAvg = Number(existingPosition?.avg_buy_price ?? 0);
-    const realizedProfit = Number(existingPosition?.realized_profit ?? 0);
-
-    let nextQty = previousQty;
-    let nextAvg = existingAvg;
-    let nextRealized = realizedProfit;
-
-    if (event.side === 'buy') {
-      const totalCost = previousQty * existingAvg + event.quantity * event.price;
-      nextQty = previousQty + event.quantity;
-      nextAvg = nextQty > 0 ? totalCost / nextQty : 0;
-    } else {
-      const sellQty = Math.min(event.quantity, previousQty);
-      nextQty = previousQty - sellQty;
-      nextRealized = realizedProfit + sellQty * (event.price - existingAvg);
-      if (nextQty <= 0) {
-        nextQty = 0;
-        nextAvg = 0;
-      }
-    }
-
-    await admin.from('positions').upsert(
-      {
-        id: existingPosition?.id,
-        user_id: event.user_id,
-        item_id: event.item_id,
-        item_name: event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`,
-        quantity: nextQty,
-        avg_buy_price: nextAvg,
-        last_price: event.price,
-        realized_profit: nextRealized,
-        unrealized_profit: nextQty > 0 ? (event.price - nextAvg) * nextQty : 0,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id,item_id' }
-    );
+  if (actionableForApproval.length === 0) {
+    return NextResponse.json({ ingested: events.length, queued_for_approval: 0, warning: 'No user_id found; nothing queued for approval.' });
   }
 
-  return NextResponse.json({ ingested: events.length });
+  const tasksInsert = await admin.from('reconciliation_tasks').insert(
+    actionableForApproval.map((event) => ({
+      user_id: event.user_id,
+      source: 'dink',
+      kind: 'ge_event',
+      status: 'pending',
+      payload: event,
+      updated_at: new Date().toISOString(),
+    }))
+  );
+
+  if (tasksInsert.error) {
+    return NextResponse.json({ error: tasksInsert.error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ingested: events.length, queued_for_approval: actionableForApproval.length });
 }
