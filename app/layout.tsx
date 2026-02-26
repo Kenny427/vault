@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Passive Copilot',
+  title: 'Vault',
   description: 'OSRS passive flipping decision support powered by DINK + OSRS Wiki prices.',
 };
 
