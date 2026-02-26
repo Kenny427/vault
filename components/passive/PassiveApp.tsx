@@ -548,6 +548,30 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                       <PriorityBadge priority={action.priority} />
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
+                    {action.suggested_buy || action.suggested_sell || action.spread_pct || action.suggested_qty || action.est_profit ? (
+                      <div className="muted" style={{ marginTop: '0.35rem', display: 'grid', gap: '0.15rem' }}>
+                        <div className="row-between">
+                          <span>Buy</span>
+                          <strong>{action.suggested_buy ? action.suggested_buy.toLocaleString() : '?'}</strong>
+                        </div>
+                        <div className="row-between">
+                          <span>Sell</span>
+                          <strong>{action.suggested_sell ? action.suggested_sell.toLocaleString() : '?'}</strong>
+                        </div>
+                        <div className="row-between">
+                          <span>Spread</span>
+                          <strong>{typeof action.spread_pct === 'number' ? `${action.spread_pct.toFixed(1)}%` : '?'}</strong>
+                        </div>
+                        <div className="row-between">
+                          <span>Qty</span>
+                          <strong>{typeof action.suggested_qty === 'number' ? action.suggested_qty.toLocaleString() : '?'}</strong>
+                        </div>
+                        <div className="row-between">
+                          <span>Est profit</span>
+                          <strong>{typeof action.est_profit === 'number' ? `${action.est_profit.toLocaleString()} gp` : '?'}</strong>
+                        </div>
+                      </div>
+                    ) : null}
                   </li>
                 ))
               )}
