@@ -81,6 +81,7 @@ export default function PassiveApp() {
   const [inboxBootstrapped, setInboxBootstrapped] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
   const [authChecked, setAuthChecked] = useState(false);
   const [userEmail, setUserEmail] = useState('');
@@ -215,6 +216,26 @@ export default function PassiveApp() {
     }
   }
 
+  async function copyFlipPlan(action: NextBestAction) {
+    try {
+      const parts: string[] = [action.item_name];
+      if (typeof action.suggested_buy === 'number') parts.push(`buy ~${Math.round(action.suggested_buy).toLocaleString()} gp`);
+      if (typeof action.suggested_sell === 'number') parts.push(`sell ~${Math.round(action.suggested_sell).toLocaleString()} gp`);
+      if (typeof action.suggested_qty === 'number') parts.push(`qty ${Math.round(action.suggested_qty).toLocaleString()}`);
+      if (typeof action.est_profit === 'number') parts.push(`est ~${Math.round(action.est_profit).toLocaleString()} gp`);
+      if (typeof action.spread_pct === 'number') parts.push(`spread ~${action.spread_pct.toFixed(1)}%`);
+
+      const text = parts.join(' | ');
+      await navigator.clipboard.writeText(text);
+
+      const key = `${action.type}:${action.item_id ?? action.item_name}`;
+      setCopiedKey(key);
+      window.setTimeout(() => setCopiedKey((prev) => (prev === key ? null : prev)), 1500);
+    } catch {
+      setError('Copy failed (browser blocked clipboard).');
+    }
+  }
+
   async function refreshScan() {
     setLoading(true);
     setError(null);
@@ -344,7 +365,11 @@ export default function PassiveApp() {
               {actions.length === 0 ? (
                 <li className="muted">No actions yet. Tap Scan and refresh watchlists.</li>
               ) : (
-                actions.map((action, index) => (
+                actions.map((action, index) => {
+                  const actionKey = `${action.type}:${action.item_id ?? action.item_name}`;
+                  const hasFlipPlan = action.type === 'consider_entry' && (action.suggested_buy || action.suggested_sell || action.spread_pct || action.suggested_qty || action.est_profit);
+
+                  return (
                   <li key={`${action.type}-${action.item_id ?? index}`} className="card" style={{ padding: '0.7rem' }}>
                     <div className="row-between">
                       {typeof action.item_id === 'number' ? (
@@ -372,7 +397,36 @@ export default function PassiveApp() {
                       )}
                       <PriorityBadge priority={action.priority} />
                     </div>
-                    {action.type === 'consider_entry' && (action.suggested_buy || action.suggested_sell || action.spread_pct || action.suggested_qty || action.est_profit) ? (
+
+                    {typeof action.item_id === 'number' ? (
+                      <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.45rem' }}>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => window.open(`https://prices.runescape.wiki/osrs/item/${action.item_id}`, '_blank', 'noopener,noreferrer')}
+                        >
+                          Wiki Prices
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => window.open(`https://oldschool.runescape.wiki/w/Special:Lookup?type=item&id=${action.item_id}`, '_blank', 'noopener,noreferrer')}
+                        >
+                          OSRS Wiki
+                        </button>
+                        {hasFlipPlan ? (
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => void copyFlipPlan(action)}
+                          >
+                            {copiedKey === actionKey ? 'Copied!' : 'Copy flip'}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {hasFlipPlan ? (
                       <div style={{ marginTop: '0.35rem' }}>
                         <div className="row" style={{ gap: '0.6rem', flexWrap: 'wrap' }}>
                           {typeof action.suggested_buy === 'number' ? <span className="muted">Buy ~{Math.round(action.suggested_buy).toLocaleString()} gp</span> : null}
@@ -387,7 +441,8 @@ export default function PassiveApp() {
                       <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
                     )}
                   </li>
-                ))
+                  );
+                })
               )}
             </ul>
           </article>
