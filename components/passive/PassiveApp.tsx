@@ -72,6 +72,7 @@ export default function PassiveApp() {
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [theses, setTheses] = useState<Thesis[]>([]);
   const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
+  const [pendingInboxCount, setPendingInboxCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
@@ -124,11 +125,18 @@ export default function PassiveApp() {
     if (activeTab !== 'More') return;
     if (!isAuthed) {
       setReconciliationTasks([]);
+      setPendingInboxCount(0);
       return;
     }
 
     void loadReconciliationTasks();
   }, [activeTab, isAuthed]);
+
+  useEffect(() => {
+    if (!isAuthed) return;
+    // Keep the More tab badge up-to-date without forcing users to open the Inbox.
+    void loadReconciliationTasks();
+  }, [isAuthed]);
 
   async function loadDashboard() {
     setLoading(true);
@@ -186,13 +194,16 @@ export default function PassiveApp() {
       if (res.status === 401) {
         setIsAuthed(false);
         setReconciliationTasks([]);
+        setPendingInboxCount(0);
         return;
       }
       throw new Error(`Failed to load inbox (${res.status})${details?.error ? `: ${details.error}` : ''}`);
     }
 
     const payload = (await res.json()) as { tasks: ReconciliationTask[] };
-    setReconciliationTasks(payload.tasks ?? []);
+    const tasks = payload.tasks ?? [];
+    setReconciliationTasks(tasks);
+    setPendingInboxCount(tasks.length);
   }
 
   async function resolveReconciliationTask(id: string, status: 'approved' | 'rejected') {
@@ -567,16 +578,19 @@ export default function PassiveApp() {
       ) : null}
 
       <nav className="tabbar" aria-label="Primary">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            className={`tab ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-            aria-current={activeTab === tab ? 'page' : undefined}
-          >
-            {tab}
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const label = tab === 'More' && pendingInboxCount > 0 ? `${tab} (${pendingInboxCount})` : tab;
+          return (
+            <button
+              key={tab}
+              className={`tab ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+              aria-current={activeTab === tab ? 'page' : undefined}
+            >
+              {label}
+            </button>
+          );
+        })}
       </nav>
     </main>
   );
