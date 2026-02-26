@@ -60,6 +60,20 @@ type ReconciliationTask = {
   created_at: string;
 };
 
+type Opportunity = {
+  item_id: number;
+  item_name: string;
+  last_price: number;
+  margin: number;
+  spread_pct: number;
+  buy_at: number;
+  sell_at: number;
+  buy_limit: number | null;
+  suggested_qty: number;
+  est_profit: number;
+  score: number;
+};
+
 const tabs = ['Home', 'Scan', 'Queue', 'Positions', 'More'] as const;
 type Tab = (typeof tabs)[number];
 
@@ -74,6 +88,7 @@ export default function PassiveApp() {
   const [theses, setTheses] = useState<Thesis[]>([]);
   const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
   const [inboxFilter, setInboxFilter] = useState<'pending' | 'all'>('pending');
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
@@ -299,6 +314,20 @@ export default function PassiveApp() {
     }
   }
 
+  async function loadOpportunities() {
+    const res = await fetch('/api/opportunities', { method: 'GET' });
+    if (!res.ok) {
+      const details = await res.json().catch(() => null) as { error?: string } | null;
+      if (res.status === 401) {
+        setIsAuthed(false);
+        throw new Error('Not signed in. Go to More → Sign in.');
+      }
+      throw new Error(`Failed to load opportunities (${res.status})${details?.error ? `: ${details.error}` : ''}`);
+    }
+    const payload = (await res.json()) as { opportunities: Opportunity[] };
+    setOpportunities(payload.opportunities ?? []);
+  }
+
   async function addThesis() {
     setLoading(true);
     setError(null);
@@ -342,7 +371,16 @@ export default function PassiveApp() {
           <h1 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Passive Copilot</h1>
           <p className="muted">OSRS decision support for 1-2 hour sessions.</p>
         </div>
-        <button className="btn btn-secondary" disabled={loading} onClick={() => { void loadDashboard(); void loadTheses(); void loadReconciliationTasks(inboxFilter); }}>
+        <button
+          className="btn btn-secondary"
+          disabled={loading}
+          onClick={() => {
+            void loadDashboard();
+            void loadTheses();
+            void loadOpportunities();
+            void loadReconciliationTasks(inboxFilter);
+          }}
+        >
           {loading ? 'Loading...' : 'Sync'}
         </button>
       </div>
@@ -386,6 +424,30 @@ export default function PassiveApp() {
                       <PriorityBadge priority={action.priority} />
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
+                  </li>
+                ))
+              )}
+            </ul>
+          </article>
+
+          <article className="card">
+            <div className="row-between" style={{ marginBottom: '0.65rem' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Opportunities</h2>
+              <button className="btn" onClick={() => void loadOpportunities()} disabled={loading}>Refresh</button>
+            </div>
+            <ul className="list">
+              {opportunities.length === 0 ? (
+                <li className="muted">No opportunities yet. Run Scan → Refresh Watchlists, then Sync.</li>
+              ) : (
+                opportunities.slice(0, 8).map((opp) => (
+                  <li key={opp.item_id} className="card" style={{ padding: '0.7rem' }}>
+                    <div className="row-between">
+                      <strong>{opp.item_name}</strong>
+                      <span className="muted">Score {opp.score}</span>
+                    </div>
+                    <p className="muted" style={{ marginTop: '0.25rem' }}>
+                      Buy ~{opp.buy_at.toLocaleString()} | Sell ~{opp.sell_at.toLocaleString()} | Spread ~{opp.spread_pct.toFixed(1)}% | Qty {opp.suggested_qty.toLocaleString()} | Est profit ~{opp.est_profit.toLocaleString()} gp
+                    </p>
                   </li>
                 ))
               )}
