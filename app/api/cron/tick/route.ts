@@ -59,14 +59,15 @@ export async function GET(request: NextRequest) {
 
   const latest = (latestPayload?.data ?? {}) as Record<string, { high?: number | null; low?: number | null }>;
 
-  // Best-effort: store the raw /latest response for later scoring/reconciliation.
-  // If this insert fails, we still proceed with the tick (market snapshots are the critical path).
-  const ingestRes = await supabase.from('osrs_wiki_latest_ingests').insert({
+  // Best-effort raw store for debugging/scoring iterations.
+  // This should never break the cron tick itself.
+  const rawStoreInsert = await supabase.from('osrs_wiki_latest_ingests').insert({
+    source: 'prices.runescape.wiki/api/v1/osrs/latest',
     payload: latestPayload ?? { data: latest },
   });
-  const rawStoreError = ingestRes.error?.message ?? null;
-  if (ingestRes.error) {
-    console.error('Failed to insert osrs_wiki_latest_ingests:', ingestRes.error);
+  const rawStoreError = rawStoreInsert.error?.message ?? null;
+  if (rawStoreInsert.error) {
+    console.error('Failed to insert osrs_wiki_latest_ingests:', rawStoreInsert.error);
   }
 
   const mappingById = new Map<number, MappingItem>();
