@@ -183,16 +183,23 @@ export async function GET() {
           ? Math.max(0, Math.round((sellAt - buyAt) * suggestedQty))
           : null;
 
+        const spreadPctRounded = Number(spreadPct.toFixed(2));
+        const reasonParts: string[] = [`Spread ~${spreadPctRounded.toFixed(1)}%`];
+        if (typeof buyAt === 'number') reasonParts.push(`buy ~${buyAt.toLocaleString()} gp`);
+        if (typeof sellAt === 'number') reasonParts.push(`sell ~${sellAt.toLocaleString()} gp`);
+        reasonParts.push(`qty ${suggestedQty.toLocaleString()}`);
+        if (typeof estProfit === 'number') reasonParts.push(`est ~${estProfit.toLocaleString()} gp`);
+
         actions.push({
           type: 'consider_entry',
           item_id: itemId,
           item_name: thesis.item_name,
-          reason: 'Opportunity detected based on current spread.',
+          reason: reasonParts.join(' · '),
           priority: computePriority(score),
           score,
           suggested_buy: buyAt ?? undefined,
           suggested_sell: sellAt ?? undefined,
-          spread_pct: Number(spreadPct.toFixed(2)),
+          spread_pct: spreadPctRounded,
           suggested_qty: suggestedQty,
           est_profit: estProfit ?? undefined,
         });
