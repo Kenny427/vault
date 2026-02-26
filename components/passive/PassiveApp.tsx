@@ -443,7 +443,29 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                 actions.map((action, index) => (
                   <li key={`${action.type}-${action.item_id ?? index}`} className="card" style={{ padding: '0.7rem' }}>
                     <div className="row-between">
-                      <strong>{action.item_name}</strong>
+                      {typeof action.item_id === 'number' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSparklineStep('5m');
+                            setSelectedItem({ id: action.item_id as number, name: action.item_name });
+                          }}
+                          style={{
+                            border: 0,
+                            padding: 0,
+                            background: 'transparent',
+                            color: 'inherit',
+                            fontWeight: 800,
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                          }}
+                          aria-label={`Open ${action.item_name} chart`}
+                        >
+                          {action.item_name}
+                        </button>
+                      ) : (
+                        <strong>{action.item_name}</strong>
+                      )}
                       <PriorityBadge priority={action.priority} />
                     </div>
                     {action.type === 'consider_entry' && (action.suggested_buy || action.suggested_sell || action.spread_pct || action.suggested_qty || action.est_profit) ? (
@@ -549,7 +571,29 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                 queue.map((action, index) => (
                   <li key={`${action.type}-${action.item_id ?? index}`} className="card" style={{ padding: '0.7rem' }}>
                     <div className="row-between">
-                      <strong>{action.item_name}</strong>
+                      {typeof action.item_id === 'number' ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSparklineStep('5m');
+                            setSelectedItem({ id: action.item_id as number, name: action.item_name });
+                          }}
+                          style={{
+                            border: 0,
+                            padding: 0,
+                            background: 'transparent',
+                            color: 'inherit',
+                            fontWeight: 800,
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                          }}
+                          aria-label={`Open ${action.item_name} chart`}
+                        >
+                          {action.item_name}
+                        </button>
+                      ) : (
+                        <strong>{action.item_name}</strong>
+                      )}
                       <PriorityBadge priority={action.priority} />
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
