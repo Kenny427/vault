@@ -85,6 +85,7 @@ async function cachedFetch(path: string, revalidate: number) {
 
   throw lastErr instanceof Error ? lastErr : new Error(`OSRS Wiki request failed for ${path}`);
 }
+}
 
 export async function getMapping() {
   const payload = await cachedFetch('/mapping', 86400);
