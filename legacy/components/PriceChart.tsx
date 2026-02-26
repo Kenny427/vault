@@ -42,11 +42,16 @@ export default function PriceChart({
   showLineToggles = false,
   defaultLinesOn = true,
 }: PriceChartProps) {
-  const chartData = data.map(point => ({
-    ...point,
-    date: format(new Date(point.timestamp * 1000), 'MMM dd'),
-    fullDate: format(new Date(point.timestamp * 1000), 'MMM dd, HH:mm'),
-  }));
+  const chartData = data.map(point => {
+    const tsMs = point.timestamp * 1000;
+    return {
+      ...point,
+      tsMs,
+      // Keep preformatted labels for convenience
+      date: format(new Date(tsMs), 'MMM dd'),
+      fullDate: format(new Date(tsMs), 'MMM dd, HH:mm'),
+    };
+  });
 
   const prices = data.map(d => d.price);
   const min = Math.min(...prices);
@@ -235,9 +240,13 @@ export default function PriceChart({
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis
-                dataKey="date"
+                dataKey="tsMs"
+                type="number"
+                scale="time"
+                domain={['dataMin', 'dataMax']}
                 stroke="#94a3b8"
                 style={{ fontSize: '12px' }}
+                tickFormatter={(ms: number) => format(new Date(ms), 'MMM dd')}
               />
               <YAxis
                 stroke="#94a3b8"
@@ -254,7 +263,10 @@ export default function PriceChart({
                 }}
                 labelStyle={{ color: '#e2e8f0', fontWeight: 'bold', marginBottom: '4px' }}
                 formatter={(value: number) => [`${value.toLocaleString()}gp`, 'Price']}
-                labelFormatter={(label) => chartData.find(d => d.date === label)?.fullDate || label}
+                labelFormatter={(ms) => {
+                  const num = typeof ms === 'number' ? ms : Number(ms);
+                  return Number.isFinite(num) ? format(new Date(num), 'MMM dd, HH:mm') : String(ms);
+                }}
               />
               {visibleLines.avg30d && (
                 <ReferenceLine
