@@ -68,9 +68,7 @@ async function cachedFetch(path: string, revalidate: number) {
 
       if (!retryable || attempt === maxAttempts) {
         const text = await res.text().catch(() => '');
-        throw new Error(
-          `OSRS Wiki request failed (${res.status}) for ${path}${text ? `: ${text.slice(0, 200)}` : ''}`,
-        );
+        throw new Error(`OSRS Wiki request failed (${res.status}) for ${path}${text ? `: ${text.slice(0, 200)}` : ''}`);
       }
 
       const retryAfterMs = parseRetryAfterMs(res);
@@ -86,6 +84,7 @@ async function cachedFetch(path: string, revalidate: number) {
   }
 
   throw lastErr instanceof Error ? lastErr : new Error(`OSRS Wiki request failed for ${path}`);
+}
 }
 
 export async function getMapping() {
