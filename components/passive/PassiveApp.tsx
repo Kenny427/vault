@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
+import PriceSparkline from '@/components/market/PriceSparkline';
 
 type ActionPriority = 'high' | 'medium' | 'low';
 
@@ -66,10 +67,51 @@ export default function PassiveApp() {
   const [isAuthed, setIsAuthed] = useState(false);
   const [supabase, setSupabase] = useState<ReturnType<typeof createBrowserSupabaseClient> | null>(null);
 
+  const [selectedItem, setSelectedItem] = useState<{ id: number; name: string } | null>(null);
+  const [sparklineValues, setSparklineValues] = useState<number[]>([]);
+  const [sparklineLoading, setSparklineLoading] = useState(false);
+  const [sparklineError, setSparklineError] = useState<string | null>(null);
+
   const actions = useMemo(() => dashboard?.actions ?? [], [dashboard]);
   const queue = useMemo(() => dashboard?.queue ?? [], [dashboard]);
   const positions = useMemo(() => dashboard?.positions ?? [], [dashboard]);
   const summary = dashboard?.summary;
+
+  useEffect(() => {
+    if (!selectedItem) return;
+
+    const itemId = selectedItem.id;
+    let mounted = true;
+
+    async function loadSparkline() {
+      setSparklineLoading(true);
+      setSparklineError(null);
+      try {
+        const res = await fetch(`/api/market/timeseries?timestep=5m&id=${encodeURIComponent(String(itemId))}`);
+        const payload = (await res.json().catch(() => null)) as { data?: Array<{ avgHighPrice?: number | null; avgLowPrice?: number | null }> ; error?: string } | null;
+        if (!res.ok) throw new Error(payload?.error ? payload.error : `Failed to load chart (${res.status})`);
+
+        const values = (payload?.data ?? [])
+          .map((point) => (typeof point.avgHighPrice === 'number' ? point.avgHighPrice : point.avgLowPrice ?? null))
+          .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+
+        if (!mounted) return;
+        setSparklineValues(values);
+      } catch (err) {
+        if (!mounted) return;
+        setSparklineError(err instanceof Error ? err.message : 'Failed to load chart.');
+        setSparklineValues([]);
+      } finally {
+        if (mounted) setSparklineLoading(false);
+      }
+    }
+
+    void loadSparkline();
+
+    return () => {
+      mounted = false;
+    };
+  }, [selectedItem]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -298,7 +340,22 @@ export default function PassiveApp() {
                 positions.map((position) => (
                   <li key={position.id} className="card" style={{ padding: '0.7rem' }}>
                     <div className="row-between">
-                      <strong>{position.item_name}</strong>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedItem({ id: position.item_id, name: position.item_name })}
+                        style={{
+                          border: 0,
+                          padding: 0,
+                          background: 'transparent',
+                          color: 'inherit',
+                          fontWeight: 800,
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                        }}
+                        aria-label={`Open ${position.item_name} details`}
+                      >
+                        {position.item_name}
+                      </button>
                       <span>{position.quantity.toLocaleString()} qty</span>
                     </div>
                     <p className="muted" style={{ marginTop: '0.2rem' }}>
@@ -450,6 +507,36 @@ export default function PassiveApp() {
             </ul>
           </article>
         </section>
+      ) : null}
+
+      {selectedItem ? (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${selectedItem.name} details`}
+          onClick={() => setSelectedItem(null)}
+        >
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <div className="row-between" style={{ marginBottom: '0.75rem' }}>
+              <div style={{ display: 'grid', gap: '0.15rem' }}>
+                <h2 style={{ fontSize: '1rem', fontWeight: 900 }}>{selectedItem.name}</h2>
+                <p className="muted" style={{ fontSize: '0.85rem' }}>Recent 5m highs/lows (OSRS Wiki)</p>
+              </div>
+              <button className="btn btn-secondary" type="button" onClick={() => setSelectedItem(null)}>
+                Close
+              </button>
+            </div>
+
+            {sparklineLoading ? (
+              <p className="muted">Loading chart…</p>
+            ) : sparklineError ? (
+              <p className="muted">{sparklineError}</p>
+            ) : (
+              <PriceSparkline values={sparklineValues} />
+            )}
+          </div>
+        </div>
       ) : null}
 
       <nav className="tabbar" aria-label="Primary">
