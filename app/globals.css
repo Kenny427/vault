@@ -263,7 +263,8 @@ select {
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
-::placeholder {
+input::placeholder,
+textarea::placeholder {
   color: var(--muted);
 }
 

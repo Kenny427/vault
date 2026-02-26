@@ -1,7 +1,8 @@
+import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
+import { sendDiscordAlert } from '@/lib/server/discord';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createServiceRoleSupabaseClient } from '@/lib/supabase/service';
-import { sendDiscordAlert } from '@/lib/server/discord';
 
 type DinkEvent = {
   user_id?: string;
@@ -14,13 +15,42 @@ type DinkEvent = {
   side?: 'buy' | 'sell';
   status?: string;
   timestamp?: string;
+  event_hash?: string;
 };
+
+function toIsoSecond(input: string) {
+  const date = new Date(input);
+  if (Number.isNaN(date.getTime())) {
+    return new Date().toISOString().slice(0, 19) + 'Z';
+  }
+
+  // Stable timestamp for hashing (rounded to seconds)
+  return new Date(Math.floor(date.getTime() / 1000) * 1000).toISOString().slice(0, 19) + 'Z';
+}
+
+function computeEventHash(event: Omit<DinkEvent, 'event_hash'>) {
+  const userKey =
+    event.user_id ??
+    (event.profile_id || event.rsn ? `profile:${event.profile_id ?? ''}|rsn:${event.rsn ?? ''}` : 'anon');
+
+  const key = [
+    userKey,
+    event.item_id ?? '',
+    event.quantity ?? '',
+    event.price ?? '',
+    event.side ?? '',
+    event.status ?? '',
+    event.timestamp ?? '',
+  ].join('|');
+
+  return crypto.createHash('sha256').update(key).digest('hex');
+}
 
 function normalizeEvent(input: Record<string, unknown>): DinkEvent {
   const rawSide = String(input.side ?? input.type ?? '').toLowerCase();
   const side = rawSide.includes('sell') ? 'sell' : 'buy';
 
-  return {
+  const baseEvent: Omit<DinkEvent, 'event_hash'> = {
     user_id: (input.user_id as string | undefined) ?? (input.userId as string | undefined),
     profile_id: (input.profile_id as string | undefined) ?? (input.profileId as string | undefined),
     rsn: (input.rsn as string | undefined) ?? (input.username as string | undefined),
@@ -30,7 +60,12 @@ function normalizeEvent(input: Record<string, unknown>): DinkEvent {
     price: Number(input.price ?? input.unit_price ?? 0) || undefined,
     side,
     status: (input.status as string | undefined) ?? 'filled',
-    timestamp: (input.timestamp as string | undefined) ?? new Date().toISOString(),
+    timestamp: toIsoSecond((input.timestamp as string | undefined) ?? new Date().toISOString()),
+  };
+
+  return {
+    ...baseEvent,
+    event_hash: computeEventHash(baseEvent),
   };
 }
 
@@ -85,7 +120,9 @@ export async function POST(request: NextRequest) {
 
   const body = (await request.json()) as Record<string, unknown> | Record<string, unknown>[];
   const rawEvents = Array.isArray(body) ? body : [body];
-  const events = rawEvents.map(normalizeEvent).filter((event) => event.item_id && event.quantity && event.price);
+  const events = rawEvents
+    .map(normalizeEvent)
+    .filter((event) => event.item_id && event.quantity && event.price && event.event_hash);
 
   if (events.length === 0) {
     return NextResponse.json({ ingested: 0, warning: 'No actionable events found.' });
@@ -93,6 +130,7 @@ export async function POST(request: NextRequest) {
 
   const admin = createServiceRoleSupabaseClient();
 
+  // Always store raw payload for later reconciliation/debugging.
   const headersObject = Object.fromEntries(request.headers.entries());
   const rawUserId = events.find((event) => event.user_id)?.user_id ?? null;
 
@@ -110,7 +148,7 @@ export async function POST(request: NextRequest) {
   const rawId = rawInsert.data?.id ?? null;
 
   try {
-    const geEventsInsert = await admin.from('ge_events').insert(
+    const geEventsInsert = await admin.from('ge_events').upsert(
       events.map((event) => ({
         user_id: event.user_id,
         profile_id: event.profile_id,
@@ -122,15 +160,17 @@ export async function POST(request: NextRequest) {
         side: event.side,
         status: event.status,
         occurred_at: event.timestamp,
+        event_hash: event.event_hash,
         raw_payload: event,
-      }))
+      })),
+      { onConflict: 'event_hash', ignoreDuplicates: true }
     );
 
     if (geEventsInsert.error) {
       throw new Error(geEventsInsert.error.message);
     }
 
-    const orderAttemptsInsert = await admin.from('order_attempts').insert(
+    const orderAttemptsInsert = await admin.from('order_attempts').upsert(
       events.map((event) => ({
         user_id: event.user_id,
         item_id: event.item_id,
@@ -141,8 +181,10 @@ export async function POST(request: NextRequest) {
         status: event.status,
         source: 'dink',
         placed_at: event.timestamp,
+        event_hash: event.event_hash,
         raw_payload: event,
-      }))
+      })),
+      { onConflict: 'event_hash', ignoreDuplicates: true }
     );
 
     if (orderAttemptsInsert.error) {
@@ -221,9 +263,10 @@ export async function POST(request: NextRequest) {
 
       if (reconciliationNeeded) {
         const shortfall = Math.max(event.quantity - previousQty, 0);
-        const reason = previousQty <= 0
-          ? 'Sell event received but no open position exists in Vault ledger.'
-          : `Sell event exceeds position quantity by ${shortfall}.`;
+        const reason =
+          previousQty <= 0
+            ? 'Sell event received but no open position exists in Vault ledger.'
+            : `Sell event exceeds position quantity by ${shortfall}.`;
 
         await admin.from('reconciliation_tasks').insert({
           user_id: event.user_id,
