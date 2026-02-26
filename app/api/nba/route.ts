@@ -11,6 +11,12 @@ type NextBestAction = {
   reason: string;
   priority: ActionPriority;
   score: number;
+  // Optional structured fields for rendering opportunity cards.
+  suggested_buy?: number;
+  suggested_sell?: number;
+  spread_pct?: number;
+  suggested_qty?: number;
+  est_profit?: number;
 };
 
 const PER_FLIP_CAP_GP = 50_000_000; // Ray choice: option 4 (30M+). Keep conservative but useful.
@@ -43,10 +49,22 @@ export async function GET() {
     return NextResponse.json({ error: firstError.message }, { status: 500 });
   }
 
-  const snapshotByItem = new Map<number, { last_price: number | null; margin: number | null; snapshot_at: string | null }>();
+  const snapshotByItem = new Map<
+    number,
+    {
+      last_price: number | null;
+      last_high: number | null;
+      last_low: number | null;
+      margin: number | null;
+      snapshot_at: string | null;
+    }
+  >();
+
   for (const snapshot of snapshotsRes.data ?? []) {
     snapshotByItem.set(Number(snapshot.item_id), {
       last_price: snapshot.last_price,
+      last_high: snapshot.last_high,
+      last_low: snapshot.last_low,
       margin: snapshot.margin,
       snapshot_at: snapshot.snapshot_at,
     });
@@ -143,18 +161,23 @@ export async function GET() {
         const suggestedQty = buyLimit > 0 ? Math.max(1, Math.min(buyLimit, qtyByCap)) : Math.max(1, qtyByCap);
         const score = Math.max(50, Math.min(82, Math.round(spreadPct * 10)));
 
-        // Heuristic prices: use last_low as buy anchor, last_high as sell anchor.
-        // If missing, fallback to last_price +/- margin.
-        const buyAt = snapshot.last_price && snapshot.margin
-          ? Math.max(1, Math.round(snapshot.last_price - snapshot.margin))
-          : snapshot.last_price
-            ? Math.max(1, Math.round(snapshot.last_price * 0.998))
-            : null;
-        const sellAt = snapshot.last_price && snapshot.margin
-          ? Math.max(1, Math.round(snapshot.last_price))
-          : snapshot.last_price
-            ? Math.max(1, Math.round(snapshot.last_price * 1.002))
-            : null;
+        // Heuristic prices: prefer last_low/last_high from OSRS Wiki latest snapshot.
+        // Fallback to last_price +/- margin if needed.
+        const buyAt = typeof snapshot.last_low === 'number' && snapshot.last_low > 0
+          ? Math.max(1, Math.round(snapshot.last_low))
+          : snapshot.last_price && snapshot.margin
+            ? Math.max(1, Math.round(snapshot.last_price - snapshot.margin))
+            : snapshot.last_price
+              ? Math.max(1, Math.round(snapshot.last_price * 0.998))
+              : null;
+
+        const sellAt = typeof snapshot.last_high === 'number' && snapshot.last_high > 0
+          ? Math.max(1, Math.round(snapshot.last_high))
+          : snapshot.last_price && snapshot.margin
+            ? Math.max(1, Math.round(snapshot.last_price))
+            : snapshot.last_price
+              ? Math.max(1, Math.round(snapshot.last_price * 1.002))
+              : null;
 
         const estProfit = buyAt && sellAt
           ? Math.max(0, Math.round((sellAt - buyAt) * suggestedQty))
@@ -164,9 +187,14 @@ export async function GET() {
           type: 'consider_entry',
           item_id: itemId,
           item_name: thesis.item_name,
-          reason: `Buy ~${buyAt?.toLocaleString() ?? '?'} | Sell ~${sellAt?.toLocaleString() ?? '?'} | Spread ~${spreadPct.toFixed(1)}% | Qty ${suggestedQty.toLocaleString()} | Est profit ~${estProfit?.toLocaleString() ?? '?'} gp.`,
+          reason: 'Opportunity detected based on current spread.',
           priority: computePriority(score),
           score,
+          suggested_buy: buyAt ?? undefined,
+          suggested_sell: sellAt ?? undefined,
+          spread_pct: Number(spreadPct.toFixed(2)),
+          suggested_qty: suggestedQty,
+          est_profit: estProfit ?? undefined,
         });
       }
     }
