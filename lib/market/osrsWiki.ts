@@ -15,20 +15,56 @@ type TimeframeEntry = {
   lowPriceVolume?: number | null;
 };
 
-async function cachedFetch(path: string, revalidate: number) {
-  const res = await fetch(`${WIKI_API_ROOT}${path}`, {
-    method: 'GET',
-    headers: {
-      'User-Agent': USER_AGENT,
-    },
-    next: { revalidate },
-  });
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  if (!res.ok) {
-    throw new Error(`OSRS Wiki request failed (${res.status}) for ${path}`);
+function parseRetryAfterMs(res: Response): number | null {
+  const v = res.headers.get('retry-after');
+  if (!v) return null;
+
+  // Retry-After can be seconds or an HTTP-date.
+  const seconds = Number(v);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+
+  const at = Date.parse(v);
+  if (!Number.isFinite(at)) return null;
+
+  return Math.max(0, at - Date.now());
+}
+
+async function cachedFetch(path: string, revalidate: number) {
+  const url = `${WIKI_API_ROOT}${path}`;
+  const maxAttempts = 4;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': USER_AGENT,
+      },
+      next: { revalidate },
+    });
+
+    if (res.ok) return res.json();
+
+    const retryable =
+      res.status === 429 ||
+      res.status === 502 ||
+      res.status === 503 ||
+      res.status === 504;
+
+    if (!retryable || attempt === maxAttempts) {
+      throw new Error(`OSRS Wiki request failed (${res.status}) for ${path}`);
+    }
+
+    const retryAfterMs = parseRetryAfterMs(res);
+    const backoffMs = 250 * 2 ** (attempt - 1);
+    await sleep(retryAfterMs ?? backoffMs);
   }
 
-  return res.json();
+  // Should be unreachable
+  throw new Error(`OSRS Wiki request failed (exhausted retries) for ${path}`);
 }
 
 export async function getMapping() {
