@@ -11,6 +11,13 @@ type NextBestAction = {
   reason: string;
   priority: ActionPriority;
   score: number;
+
+  // Optional structured fields for richer UI cards (keep reason as the source of truth).
+  buy_at?: number | null;
+  sell_at?: number | null;
+  suggested_qty?: number | null;
+  est_profit?: number | null;
+  spread_pct?: number | null;
 };
 
 const PER_FLIP_CAP_GP = 50_000_000; // Ray choice: option 4 (30M+). Keep conservative but useful.
@@ -94,6 +101,7 @@ export async function GET() {
         reason: `Target sell hit (${Math.round(lastPrice).toLocaleString()} >= ${matchingThesis.target_sell.toLocaleString()}).`,
         priority: computePriority(score),
         score,
+        sell_at: matchingThesis.target_sell,
       });
       criticalMessages.push(`Exit target hit: ${position.item_name}`);
       continue;
@@ -127,6 +135,7 @@ export async function GET() {
         reason: `Entry window detected (${Math.round(snapshot.last_price).toLocaleString()} <= ${thesis.target_buy.toLocaleString()}).`,
         priority: computePriority(score),
         score,
+        buy_at: Math.round(snapshot.last_price),
       });
       continue;
     }
@@ -164,9 +173,14 @@ export async function GET() {
           type: 'consider_entry',
           item_id: itemId,
           item_name: thesis.item_name,
-          reason: `Buy ~${buyAt?.toLocaleString() ?? '?'} | Sell ~${sellAt?.toLocaleString() ?? '?'} | Spread ~${spreadPct.toFixed(1)}% | Qty ${suggestedQty.toLocaleString()} | Est profit ~${estProfit?.toLocaleString() ?? '?'} gp.`,
+          reason: 'Spread looks tradable. Consider placing a capped entry order.',
           priority: computePriority(score),
           score,
+          buy_at: buyAt,
+          sell_at: sellAt,
+          suggested_qty: suggestedQty,
+          est_profit: estProfit,
+          spread_pct: Number(spreadPct.toFixed(2)),
         });
       }
     }

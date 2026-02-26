@@ -12,6 +12,12 @@ type NextBestAction = {
   reason: string;
   priority: ActionPriority;
   score: number;
+
+  buy_at?: number | null;
+  sell_at?: number | null;
+  suggested_qty?: number | null;
+  est_profit?: number | null;
+  spread_pct?: number | null;
 };
 
 type Position = {
@@ -242,6 +248,15 @@ export default function PassiveApp() {
                       <PriorityBadge priority={action.priority} />
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
+                    {action.buy_at || action.sell_at || action.suggested_qty || action.est_profit || action.spread_pct ? (
+                      <div className="row" style={{ gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+                        {action.buy_at ? <span className="chip">Buy {Math.round(action.buy_at).toLocaleString()}</span> : null}
+                        {action.sell_at ? <span className="chip">Sell {Math.round(action.sell_at).toLocaleString()}</span> : null}
+                        {typeof action.spread_pct === 'number' ? <span className="chip">Spread {action.spread_pct.toFixed(2)}%</span> : null}
+                        {action.suggested_qty ? <span className="chip">Qty {Math.round(action.suggested_qty).toLocaleString()}</span> : null}
+                        {action.est_profit ? <span className="chip">Est {Math.round(action.est_profit).toLocaleString()} gp</span> : null}
+                      </div>
+                    ) : null}
                   </li>
                 ))
               )}
@@ -279,6 +294,15 @@ export default function PassiveApp() {
                       <PriorityBadge priority={action.priority} />
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>{action.reason}</p>
+                    {action.buy_at || action.sell_at || action.suggested_qty || action.est_profit || action.spread_pct ? (
+                      <div className="row" style={{ gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+                        {action.buy_at ? <span className="chip">Buy {Math.round(action.buy_at).toLocaleString()}</span> : null}
+                        {action.sell_at ? <span className="chip">Sell {Math.round(action.sell_at).toLocaleString()}</span> : null}
+                        {typeof action.spread_pct === 'number' ? <span className="chip">Spread {action.spread_pct.toFixed(2)}%</span> : null}
+                        {action.suggested_qty ? <span className="chip">Qty {Math.round(action.suggested_qty).toLocaleString()}</span> : null}
+                        {action.est_profit ? <span className="chip">Est {Math.round(action.est_profit).toLocaleString()} gp</span> : null}
+                      </div>
+                    ) : null}
                   </li>
                 ))
               )}
