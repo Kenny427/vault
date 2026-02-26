@@ -134,11 +134,14 @@ export async function GET() {
     // If no targets yet, still surface a "watch / consider" action based on current spread.
     if (!thesis.target_buy && !thesis.target_sell && snapshot.margin && snapshot.margin > 0) {
       const spreadPct = Math.min(100, (snapshot.margin / Math.max(snapshot.last_price, 1)) * 100);
-      if (spreadPct >= 1.0) {
+
+      // MVP noise control for Ray (30M+): ignore tiny spreads.
+      const MIN_SPREAD_PCT = 2.0;
+      if (spreadPct >= MIN_SPREAD_PCT) {
         const buyLimit = buyLimitByItem.get(itemId) ?? 0;
         const qtyByCap = Math.floor(PER_FLIP_CAP_GP / Math.max(snapshot.last_price, 1));
         const suggestedQty = buyLimit > 0 ? Math.max(1, Math.min(buyLimit, qtyByCap)) : Math.max(1, qtyByCap);
-        const score = Math.max(50, Math.min(78, Math.round(spreadPct * 10)));
+        const score = Math.max(50, Math.min(82, Math.round(spreadPct * 10)));
         actions.push({
           type: 'consider_entry',
           item_id: itemId,
@@ -174,6 +177,7 @@ export async function GET() {
 
   const sortedActions = Array.from(deduped.values()).sort((a, b) => b.score - a.score);
   const queue = sortedActions.slice(0, 5);
+  const visibleActions = sortedActions.slice(0, 15);
 
   const positionRows = positionsRes.data ?? [];
   const estimatedUnrealizedProfit = positionRows.reduce((sum, row) => sum + Number(row.unrealized_profit ?? 0), 0);
@@ -185,7 +189,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    actions: sortedActions,
+    actions: visibleActions,
     queue,
     positions: positionRows,
     summary: {
