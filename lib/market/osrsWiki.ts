@@ -36,8 +36,12 @@ export async function getMapping() {
   return Array.isArray(payload) ? payload : [];
 }
 
+export async function getLatestPayload() {
+  return cachedFetch('/latest', 60);
+}
+
 export async function getLatest() {
-  const payload = await cachedFetch('/latest', 60);
+  const payload = await getLatestPayload();
   return (payload?.data ?? {}) as Record<string, LatestEntry>;
 }
 
