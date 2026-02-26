@@ -391,9 +391,10 @@ export default function Portfolio() {
         </div>
       ) : (
         <div className="bg-slate-900 rounded-lg border border-slate-700">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-800/50 border-b border-slate-700">
+          {/* Scroll container so the table header can stick (premium dashboard feel) */}
+          <div className="max-h-[70vh] overflow-auto">
+            <table className="w-full min-w-[960px]">
+              <thead className="sticky top-0 z-10 bg-slate-900/90 backdrop-blur border-b border-slate-700">
                 <tr>
                   <th className="text-left px-6 py-4 text-slate-300 font-semibold">Item</th>
                   <th className="text-right px-6 py-4 text-slate-300 font-semibold">Qty</th>
@@ -414,7 +415,7 @@ export default function Portfolio() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700">
-                {items.map((item) => {
+                {items.map((item, idx) => {
                   const soldQty = (item.sales ?? []).reduce((sum, sale) => sum + sale.quantity, 0);
                   const remainingQty = Math.max(0, item.quantity - soldQty);
                   const priceData = prices[item.itemId];
@@ -426,7 +427,10 @@ export default function Portfolio() {
                   const value = current ? Math.round(current * remainingQty) : null;
 
                   return (
-                    <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
+                    <tr
+                      key={item.id}
+                      className={`${idx % 2 === 0 ? 'bg-slate-900' : 'bg-slate-900/40'} hover:bg-slate-800/40 transition-colors`}
+                    >
                       <td className="px-6 py-4">
                         <div className="font-medium text-slate-100">
                           <Link href={`/portfolio/${item.itemId}`} className="hover:text-osrs-accent transition-colors">
