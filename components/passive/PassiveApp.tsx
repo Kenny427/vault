@@ -138,6 +138,22 @@ export default function PassiveApp() {
     return { min, max, first, last, delta, pct };
   }, [sparklineValues]);
 
+  // Portfolio calculations
+  const portfolioStats = useMemo(() => {
+    if (positions.length === 0) return null;
+    let totalInvested = 0;
+    let currentValue = 0;
+    for (const p of positions) {
+      const invested = p.avg_buy_price * p.quantity;
+      const value = (p.last_price ?? p.avg_buy_price) * p.quantity;
+      totalInvested += invested;
+      currentValue += value;
+    }
+    const profit = currentValue - totalInvested;
+    const roi = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
+    return { totalInvested, currentValue, profit, roi };
+  }, [positions]);
+
   useEffect(() => {
     if (!selectedItem) return;
 
@@ -447,6 +463,25 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
             </article>
           </div>
 
+          {portfolioStats && portfolioStats.totalInvested > 0 ? (
+            <div className="grid grid-2">
+              <article className="card">
+                <p className="muted">Total Invested</p>
+                <p className="kpi">{Math.round(portfolioStats.totalInvested).toLocaleString()} gp</p>
+              </article>
+              <article className="card">
+                <p className="muted">Current Value</p>
+                <p className="kpi">{Math.round(portfolioStats.currentValue).toLocaleString()} gp</p>
+              </article>
+              <article className="card" style={{ gridColumn: 'span 2' }}>
+                <p className="muted">Portfolio ROI</p>
+                <p className="kpi" style={{ color: portfolioStats.roi >= 0 ? 'var(--accent-2)' : 'var(--danger)' }}>
+                  {portfolioStats.roi >= 0 ? '+' : ''}{portfolioStats.roi.toFixed(2)}%
+                </p>
+              </article>
+            </div>
+          ) : null}
+
           <article className="card">
             <div className="row-between" style={{ marginBottom: '0.65rem' }}>
               <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Next Best Actions</h2>
@@ -687,52 +722,57 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
               {positions.length === 0 ? (
                 <li className="muted">No active positions yet.</li>
               ) : (
-                positions.map((position) => (
-                  <li key={position.id} className="card" style={{ padding: '0.7rem' }}>
-                    <div className="row-between">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSparklineStep('5m');
-                          setSelectedItem({ id: position.item_id, name: position.item_name });
-                        }}
-                        style={{
-                          border: 0,
-                          padding: 0,
-                          background: 'transparent',
-                          color: 'inherit',
-                          fontWeight: 800,
-                          textAlign: 'left',
-                          cursor: 'pointer',
-                        }}
-                        aria-label={`Open ${position.item_name} details`}
-                      >
-                        {position.item_name}
-                      </button>
-                      <span>{position.quantity.toLocaleString()} qty</span>
-                    </div>
-                    <p className="muted" style={{ marginTop: '0.2rem' }}>
-                      Avg buy: {position.avg_buy_price.toLocaleString()} gp | Last: {Math.round(position.last_price ?? 0).toLocaleString()} gp
-                    </p>
-                    <div className="row-between" style={{ marginTop: '0.2rem' }}>
-                      <p style={{ color: (position.unrealized_profit ?? 0) >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
-                        {Math.round(position.unrealized_profit ?? 0).toLocaleString()} gp
+                positions.map((position) => {
+                  const invested = position.avg_buy_price * position.quantity;
+                  const current = (position.last_price ?? position.avg_buy_price) * position.quantity;
+                  const roi = invested > 0 ? ((current - invested) / invested) * 100 : 0;
+
+                  return (
+                    <li key={position.id} className="card" style={{ padding: '0.7rem' }}>
+                      <div className="row-between">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSparklineStep('5m');
+                            setSelectedItem({ id: position.item_id, name: position.item_name });
+                          }}
+                          style={{
+                            border: 0,
+                            padding: 0,
+                            background: 'transparent',
+                            color: 'inherit',
+                            fontWeight: 800,
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                          }}
+                          aria-label={`Open ${position.item_name} details`}
+                        >
+                          {position.item_name}
+                        </button>
+                        <span className="muted">{position.quantity.toLocaleString()} qty</span>
+                      </div>
+                      <p className="muted" style={{ marginTop: '0.2rem' }}>
+                        Avg: {position.avg_buy_price.toLocaleString()} gp | Last: {Math.round(position.last_price ?? 0).toLocaleString()} gp
                       </p>
-                      {position.last_price && position.avg_buy_price > 0 ? (
+                      <div className="row-between" style={{ marginTop: '0.2rem' }}>
+                        <span style={{ color: (position.unrealized_profit ?? 0) >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
+                          {(position.unrealized_profit ?? 0) >= 0 ? '+' : ''}
+                          {Math.round(position.unrealized_profit ?? 0).toLocaleString()} gp
+                        </span>
                         <span
                           style={{
-                            color: position.last_price >= position.avg_buy_price ? 'var(--accent)' : 'var(--danger)',
+                            color: roi >= 0 ? 'var(--accent)' : 'var(--danger)',
                             fontWeight: 700,
                             fontSize: '0.85rem',
                           }}
                         >
-                          {position.last_price >= position.avg_buy_price ? '+' : ''}
-                          {(((position.last_price - position.avg_buy_price) / position.avg_buy_price) * 100).toFixed(1)}%
+                          {roi >= 0 ? '+' : ''}
+                          {roi.toFixed(1)}%
                         </span>
-                      ) : null}
-                    </div>
-                  </li>
-                ))
+                      </div>
+                    </li>
+                  );
+                })
               )}
             </ul>
           </article>
