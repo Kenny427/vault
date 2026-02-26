@@ -50,43 +50,74 @@ export async function POST(request: NextRequest) {
 
   const admin = createServiceRoleSupabaseClient();
 
-  const geEventsInsert = await admin.from('ge_events').insert(
-    events.map((event) => ({
-      user_id: event.user_id,
-      profile_id: event.profile_id,
-      rsn: event.rsn,
-      item_id: event.item_id,
-      item_name: event.item_name,
-      quantity: event.quantity,
-      price: event.price,
-      side: event.side,
-      status: event.status,
-      occurred_at: event.timestamp,
-      raw_payload: event,
-    }))
-  );
+  const headersObject = Object.fromEntries(request.headers.entries());
+  const rawUserId = events.find((event) => event.user_id)?.user_id ?? null;
 
-  if (geEventsInsert.error) {
-    return NextResponse.json({ error: geEventsInsert.error.message }, { status: 500 });
-  }
-
-  const orderAttemptsInsert = await admin.from('order_attempts').insert(
-    events.map((event) => ({
-      user_id: event.user_id,
-      item_id: event.item_id,
-      item_name: event.item_name,
-      side: event.side,
-      quantity: event.quantity,
-      price: event.price,
-      status: event.status,
+  const rawInsert = await admin
+    .from('webhook_raw_events')
+    .insert({
       source: 'dink',
-      placed_at: event.timestamp,
-      raw_payload: event,
-    }))
-  );
+      user_id: rawUserId,
+      headers: headersObject,
+      payload: rawEvents,
+    })
+    .select('id')
+    .maybeSingle();
 
-  if (orderAttemptsInsert.error) {
-    return NextResponse.json({ error: orderAttemptsInsert.error.message }, { status: 500 });
+  const rawId = rawInsert.data?.id ?? null;
+
+  try {
+    const geEventsInsert = await admin.from('ge_events').insert(
+      events.map((event) => ({
+        user_id: event.user_id,
+        profile_id: event.profile_id,
+        rsn: event.rsn,
+        item_id: event.item_id,
+        item_name: event.item_name,
+        quantity: event.quantity,
+        price: event.price,
+        side: event.side,
+        status: event.status,
+        occurred_at: event.timestamp,
+        raw_payload: event,
+      }))
+    );
+
+    if (geEventsInsert.error) {
+      throw new Error(geEventsInsert.error.message);
+    }
+
+    const orderAttemptsInsert = await admin.from('order_attempts').insert(
+      events.map((event) => ({
+        user_id: event.user_id,
+        item_id: event.item_id,
+        item_name: event.item_name,
+        side: event.side,
+        quantity: event.quantity,
+        price: event.price,
+        status: event.status,
+        source: 'dink',
+        placed_at: event.timestamp,
+        raw_payload: event,
+      }))
+    );
+
+    if (orderAttemptsInsert.error) {
+      throw new Error(orderAttemptsInsert.error.message);
+    }
+
+    if (rawId) {
+      await admin.from('webhook_raw_events').update({ processed_at: new Date().toISOString() }).eq('id', rawId);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    if (rawId) {
+      await admin
+        .from('webhook_raw_events')
+        .update({ processed_at: new Date().toISOString(), process_error: message })
+        .eq('id', rawId);
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 
   for (const event of events) {
