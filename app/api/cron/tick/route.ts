@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
-import { getFiveMinute, getLatest, getMapping, getOneHour } from '@/lib/market/osrsWiki';
+import { getFiveMinute, getLatestPayload, getMapping, getOneHour } from '@/lib/market/osrsWiki';
 
 type MappingItem = {
   id: number;
@@ -50,7 +50,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ refreshed: 0, skipped: true, reason: 'No active theses or positions' });
   }
 
-  const [mapping, latest, fiveMinute, oneHour] = await Promise.all([getMapping(), getLatest(), getFiveMinute(), getOneHour()]);
+  const [mapping, latestPayload, fiveMinute, oneHour] = await Promise.all([
+    getMapping(),
+    getLatestPayload(),
+    getFiveMinute(),
+    getOneHour(),
+  ]);
+
+  const latest = (latestPayload?.data ?? {}) as Record<string, { high?: number | null; low?: number | null }>;
+
+  // Best-effort: store the raw /latest response for later scoring/reconciliation.
+  // If this insert fails, we still proceed with the tick (market snapshots are the critical path).
+  const ingestRes = await supabase.from('osrs_wiki_latest_ingests').insert({ payload: latestPayload ?? { data: latest } });
+  if (ingestRes.error) {
+    console.error('Failed to insert osrs_wiki_latest_ingests:', ingestRes.error);
+  }
+
   const mappingById = new Map<number, MappingItem>();
   for (const entry of mapping as MappingItem[]) {
     mappingById.set(entry.id, entry);
