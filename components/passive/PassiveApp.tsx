@@ -442,7 +442,25 @@ export default function PassiveApp() {
                 opportunities.slice(0, 8).map((opp) => (
                   <li key={opp.item_id} className="card" style={{ padding: '0.7rem' }}>
                     <div className="row-between">
-                      <strong>{opp.item_name}</strong>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSparklineStep('5m');
+                          setSelectedItem({ id: opp.item_id, name: opp.item_name });
+                        }}
+                        style={{
+                          border: 0,
+                          padding: 0,
+                          background: 'transparent',
+                          color: 'inherit',
+                          fontWeight: 800,
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                        }}
+                        aria-label={`View ${opp.item_name} chart`}
+                      >
+                        {opp.item_name}
+                      </button>
                       <span className="muted">Score {opp.score}</span>
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>
