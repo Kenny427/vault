@@ -28,6 +28,7 @@ type Position = {
   avg_buy_price: number;
   last_price: number | null;
   unrealized_profit: number | null;
+  realized_profit?: number | null;
 };
 
 type DashboardPayload = {
@@ -39,6 +40,7 @@ type DashboardPayload = {
     queued_actions: number;
     high_priority_actions: number;
     estimated_unrealized_profit: number;
+    total_realized_profit?: number;
   };
 };
 
@@ -370,6 +372,10 @@ export default function PassiveApp() {
               <p className="muted">Unrealized (est.)</p>
               <p className="kpi">{Math.round(summary?.estimated_unrealized_profit ?? 0).toLocaleString()} gp</p>
             </article>
+            <article className="card">
+              <p className="muted">Realized (total)</p>
+              <p className="kpi">{Math.round(summary?.total_realized_profit ?? 0).toLocaleString()} gp</p>
+            </article>
           </div>
 
           <article className="card">
@@ -586,6 +592,11 @@ export default function PassiveApp() {
                     <p style={{ marginTop: '0.2rem', color: (position.unrealized_profit ?? 0) >= 0 ? 'var(--accent-2)' : 'var(--danger)' }}>
                       Unrealized: {Math.round(position.unrealized_profit ?? 0).toLocaleString()} gp
                     </p>
+                    {typeof position.realized_profit === 'number' ? (
+                      <p style={{ marginTop: '0.2rem', color: position.realized_profit >= 0 ? 'var(--accent-2)' : 'var(--danger)' }}>
+                        Realized: {Math.round(position.realized_profit).toLocaleString()} gp
+                      </p>
+                    ) : null}
                   </li>
                 ))
               )}
