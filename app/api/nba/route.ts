@@ -37,7 +37,10 @@ export async function GET() {
   }
 
   const [snapshotsRes, positionsRes, thesesRes, alertsRes, staleOrdersRes] = await Promise.all([
-    supabase.from('market_snapshots').select('item_id,last_price,last_high,last_low,margin,snapshot_at').eq('user_id', userId),
+    supabase
+      .from('market_snapshots')
+      .select('item_id,last_price,last_high,last_low,margin,volume_1h,volume_5m,snapshot_at')
+      .eq('user_id', userId),
     supabase.from('positions').select('id,item_id,item_name,quantity,avg_buy_price,last_price,unrealized_profit').eq('user_id', userId).neq('quantity', 0),
     supabase.from('theses').select('id,item_id,item_name,target_buy,target_sell,priority,active').eq('user_id', userId).eq('active', true),
     supabase.from('alerts').select('id,item_id,severity,title,resolved_at').eq('user_id', userId).is('resolved_at', null),
@@ -56,6 +59,8 @@ export async function GET() {
       last_high: number | null;
       last_low: number | null;
       margin: number | null;
+      volume_1h: number | null;
+      volume_5m: number | null;
       snapshot_at: string | null;
     }
   >();
@@ -66,6 +71,8 @@ export async function GET() {
       last_high: snapshot.last_high,
       last_low: snapshot.last_low,
       margin: snapshot.margin,
+      volume_1h: (snapshot as any).volume_1h ?? null,
+      volume_5m: (snapshot as any).volume_5m ?? null,
       snapshot_at: snapshot.snapshot_at,
     });
   }
@@ -158,7 +165,17 @@ export async function GET() {
       if (spreadPct >= MIN_SPREAD_PCT) {
         const buyLimit = buyLimitByItem.get(itemId) ?? 0;
         const qtyByCap = Math.floor(PER_FLIP_CAP_GP / Math.max(snapshot.last_price, 1));
-        const suggestedQty = buyLimit > 0 ? Math.max(1, Math.min(buyLimit, qtyByCap)) : Math.max(1, qtyByCap);
+
+        // Liquidity-aware quantity: avoid recommending size that exceeds a chunk of hourly volume.
+        // (volume_1h is unit volume; we take 5% as a conservative "fillable" slice.)
+        const volume1h = typeof snapshot.volume_1h === 'number' ? snapshot.volume_1h : null;
+        const qtyByVolume = volume1h && volume1h > 0 ? Math.max(1, Math.floor(volume1h * 0.05)) : null;
+
+        const unclampedSuggestedQty = buyLimit > 0 ? Math.max(1, Math.min(buyLimit, qtyByCap)) : Math.max(1, qtyByCap);
+        const suggestedQty = typeof qtyByVolume === 'number'
+          ? Math.max(1, Math.min(unclampedSuggestedQty, qtyByVolume))
+          : unclampedSuggestedQty;
+
         const score = Math.max(50, Math.min(82, Math.round(spreadPct * 10)));
 
         // Heuristic prices: prefer last_low/last_high from OSRS Wiki latest snapshot.
@@ -189,6 +206,12 @@ export async function GET() {
         if (typeof sellAt === 'number') reasonParts.push(`sell ~${sellAt.toLocaleString()} gp`);
         reasonParts.push(`qty ${suggestedQty.toLocaleString()}`);
         if (typeof estProfit === 'number') reasonParts.push(`est ~${estProfit.toLocaleString()} gp`);
+        if (typeof volume1h === 'number' && volume1h > 0) {
+          reasonParts.push(`vol 1h ~${Math.round(volume1h).toLocaleString()}`);
+          if (typeof qtyByVolume === 'number' && unclampedSuggestedQty > qtyByVolume) {
+            reasonParts.push('qty capped by liquidity');
+          }
+        }
 
         actions.push({
           type: 'consider_entry',
