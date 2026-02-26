@@ -147,6 +147,24 @@ export async function POST(request: NextRequest) {
     const existingAvg = Number(existingPosition?.avg_buy_price ?? 0);
     const realizedProfit = Number(existingPosition?.realized_profit ?? 0);
 
+    // Approval gate: if DINK reports a sell larger than our known position, create a reconciliation task
+    // and do NOT mutate positions until someone approves.
+    if (event.side === 'sell' && event.quantity > previousQty) {
+      await admin.from('reconciliation_tasks').insert({
+        user_id: event.user_id,
+        task_type: 'sell_exceeds_position',
+        item_id: event.item_id,
+        item_name: event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`,
+        status: 'pending',
+        details: {
+          reason: 'Sell event quantity exceeds tracked position. Needs manual review.',
+          previous_qty: previousQty,
+          event,
+        },
+      });
+      continue;
+    }
+
     let nextQty = previousQty;
     let nextAvg = existingAvg;
     let nextRealized = realizedProfit;
