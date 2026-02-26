@@ -15,20 +15,43 @@ type TimeframeEntry = {
   lowPriceVolume?: number | null;
 };
 
-async function cachedFetch(path: string, revalidate: number) {
-  const res = await fetch(`${WIKI_API_ROOT}${path}`, {
-    method: 'GET',
-    headers: {
-      'User-Agent': USER_AGENT,
-    },
-    next: { revalidate },
-  });
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
-  if (!res.ok) {
-    throw new Error(`OSRS Wiki request failed (${res.status}) for ${path}`);
+async function cachedFetch(path: string, revalidate: number) {
+  const url = `${WIKI_API_ROOT}${path}`;
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': USER_AGENT,
+        },
+        next: { revalidate },
+      });
+
+      if (res.ok) {
+        return res.json();
+      }
+
+      const retryable = res.status === 429 || res.status >= 500;
+      if (!retryable || attempt === maxAttempts) {
+        throw new Error(`OSRS Wiki request failed (${res.status}) for ${path}`);
+      }
+
+      const retryAfter = res.headers.get('retry-after');
+      const backoffMs = retryAfter ? Math.max(0, Number(retryAfter) * 1000) : 300 * 2 ** (attempt - 1);
+      await sleep(backoffMs);
+    } catch (err) {
+      if (attempt === maxAttempts) throw err;
+      await sleep(300 * 2 ** (attempt - 1));
+    }
   }
 
-  return res.json();
+  throw new Error(`OSRS Wiki request failed (unknown) for ${path}`);
 }
 
 export async function getMapping() {
