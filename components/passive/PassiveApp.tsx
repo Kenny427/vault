@@ -65,6 +65,7 @@ export default function PassiveApp() {
   const [userEmail, setUserEmail] = useState('');
   const [isAuthed, setIsAuthed] = useState(false);
   const [supabase, setSupabase] = useState<ReturnType<typeof createBrowserSupabaseClient> | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   const actions = useMemo(() => dashboard?.actions ?? [], [dashboard]);
   const queue = useMemo(() => dashboard?.queue ?? [], [dashboard]);
@@ -75,6 +76,22 @@ export default function PassiveApp() {
     if (typeof window === 'undefined') return;
     setSupabase(createBrowserSupabaseClient());
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = window.localStorage.getItem('vault-theme');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initial = stored === 'light' || stored === 'dark' ? stored : prefersDark ? 'dark' : 'light';
+    document.documentElement.dataset.theme = initial;
+    setTheme(initial);
+  }, []);
+
+  function applyTheme(next: 'light' | 'dark') {
+    if (typeof window === 'undefined') return;
+    document.documentElement.dataset.theme = next;
+    window.localStorage.setItem('vault-theme', next);
+    setTheme(next);
+  }
 
   useEffect(() => {
     if (!supabase) return;
@@ -365,6 +382,23 @@ export default function PassiveApp() {
                 </button>
               </div>
             )}
+          </article>
+
+          <article className="card">
+            <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.65rem' }}>Appearance</h2>
+            <div className="row-between">
+              <p className="muted">Theme</p>
+              <button
+                className="btn btn-secondary"
+                type="button"
+                onClick={() => applyTheme(theme === 'dark' ? 'light' : 'dark')}
+              >
+                {theme === 'dark' ? 'Dark' : 'Light'}
+              </button>
+            </div>
+            <p className="muted" style={{ marginTop: '0.5rem' }}>
+              Persists on this device.
+            </p>
           </article>
 
           <article className="card">
