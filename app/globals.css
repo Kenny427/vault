@@ -82,10 +82,25 @@ main {
   border-radius: 14px;
   padding: 0.9rem;
   box-shadow: var(--shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .card:focus-within {
   box-shadow: var(--shadow), var(--ring);
+}
+
+/* Interactive cards (buttons that look like cards) */
+button.card {
+  cursor: pointer;
+}
+
+button.card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-strong);
+}
+
+button.card:active {
+  transform: translateY(0);
 }
 
 .row {
@@ -183,6 +198,26 @@ p {
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border);
+}
+
+.btn-close {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+}
+
+.btn-close:hover {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
 }
 
 .tabbar {
