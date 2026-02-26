@@ -46,6 +46,19 @@ type Thesis = {
   active: boolean;
 };
 
+type ReconciliationTask = {
+  id: string;
+  item_id: number | null;
+  item_name: string | null;
+  side: 'buy' | 'sell';
+  quantity: number;
+  price: number;
+  occurred_at: string | null;
+  reason: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'resolved' | string;
+  created_at: string;
+};
+
 const tabs = ['Home', 'Scan', 'Queue', 'Positions', 'More'] as const;
 type Tab = (typeof tabs)[number];
 
@@ -58,6 +71,7 @@ export default function PassiveApp() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
   const [dashboard, setDashboard] = useState<DashboardPayload | null>(null);
   const [theses, setTheses] = useState<Thesis[]>([]);
+  const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
@@ -105,6 +119,16 @@ export default function PassiveApp() {
   }, [supabase]);
 
   const highPriorityCount = useMemo(() => actions.filter((a) => a.priority === 'high').length, [actions]);
+
+  useEffect(() => {
+    if (activeTab !== 'More') return;
+    if (!isAuthed) {
+      setReconciliationTasks([]);
+      return;
+    }
+
+    void loadReconciliationTasks();
+  }, [activeTab, isAuthed]);
 
   async function loadDashboard() {
     setLoading(true);
@@ -155,6 +179,49 @@ export default function PassiveApp() {
     setTheses(payload.theses);
   }
 
+  async function loadReconciliationTasks() {
+    const res = await fetch('/api/reconciliation/tasks', { method: 'GET' });
+    if (!res.ok) {
+      const details = await res.json().catch(() => null) as { error?: string } | null;
+      if (res.status === 401) {
+        setIsAuthed(false);
+        setReconciliationTasks([]);
+        return;
+      }
+      throw new Error(`Failed to load inbox (${res.status})${details?.error ? `: ${details.error}` : ''}`);
+    }
+
+    const payload = (await res.json()) as { tasks: ReconciliationTask[] };
+    setReconciliationTasks(payload.tasks ?? []);
+  }
+
+  async function resolveReconciliationTask(id: string, status: 'approved' | 'rejected') {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/reconciliation/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+
+      if (!res.ok) {
+        const details = await res.json().catch(() => null) as { error?: string } | null;
+        if (res.status === 401) {
+          setIsAuthed(false);
+          throw new Error('Not signed in.');
+        }
+        throw new Error(`Failed to update task (${res.status})${details?.error ? `: ${details.error}` : ''}`);
+      }
+
+      await loadReconciliationTasks();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update task.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function addThesis() {
     setLoading(true);
     setError(null);
@@ -198,7 +265,7 @@ export default function PassiveApp() {
           <h1 style={{ fontSize: '1.2rem', fontWeight: 900 }}>Passive Copilot</h1>
           <p className="muted">OSRS decision support for 1-2 hour sessions.</p>
         </div>
-        <button className="btn btn-secondary" disabled={loading} onClick={() => { void loadDashboard(); void loadTheses(); }}>
+        <button className="btn btn-secondary" disabled={loading} onClick={() => { void loadDashboard(); void loadTheses(); void loadReconciliationTasks(); }}>
           {loading ? 'Loading...' : 'Sync'}
         </button>
       </div>
@@ -317,6 +384,53 @@ export default function PassiveApp() {
 
       {activeTab === 'More' ? (
         <section className="grid" style={{ gap: '0.75rem' }}>
+          <article className="card">
+            <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.65rem' }}>Inbox</h2>
+            {!isAuthed ? (
+              <p className="muted">Sign in to view reconciliation tasks.</p>
+            ) : reconciliationTasks.length === 0 ? (
+              <p className="muted">No pending tasks.</p>
+            ) : (
+              <ul className="list">
+                {reconciliationTasks.map((task) => (
+                  <li key={task.id} className="card" style={{ padding: '0.7rem' }}>
+                    <div className="row-between">
+                      <strong>{task.item_name ?? `Item ${task.item_id ?? ''}`}</strong>
+                      <span className="muted">{task.side.toUpperCase()}</span>
+                    </div>
+                    <p className="muted" style={{ marginTop: '0.25rem' }}>
+                      Qty: {Number(task.quantity ?? 0).toLocaleString()} | Price: {Math.round(Number(task.price ?? 0)).toLocaleString()} gp
+                    </p>
+                    <p className="muted" style={{ marginTop: '0.25rem' }}>
+                      When: {task.occurred_at ? new Date(task.occurred_at).toLocaleString() : '-'}
+                    </p>
+                    {task.reason ? (
+                      <p className="muted" style={{ marginTop: '0.25rem' }}>
+                        Reason: {task.reason}
+                      </p>
+                    ) : null}
+                    <div className="row" style={{ marginTop: '0.5rem' }}>
+                      <button
+                        className="btn btn-secondary"
+                        disabled={loading}
+                        onClick={() => void resolveReconciliationTask(task.id, 'approved')}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="btn btn-secondary"
+                        disabled={loading}
+                        onClick={() => void resolveReconciliationTask(task.id, 'rejected')}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+
           <article className="card">
             <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.65rem' }}>Account</h2>
             {!authChecked ? (

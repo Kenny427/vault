@@ -115,6 +115,29 @@ export async function POST(request: NextRequest) {
       nextAvg = nextQty > 0 ? totalCost / nextQty : 0;
     } else {
       const sellQty = Math.min(event.quantity, previousQty);
+      const reconciliationNeeded = previousQty <= 0 || event.quantity > previousQty;
+
+      if (reconciliationNeeded) {
+        const shortfall = Math.max(event.quantity - previousQty, 0);
+        const reason = previousQty <= 0
+          ? 'Sell event received but no open position exists in Vault ledger.'
+          : `Sell event exceeds position quantity by ${shortfall}.`;
+
+        await admin.from('reconciliation_tasks').insert({
+          user_id: event.user_id,
+          item_id: event.item_id,
+          item_name: event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`,
+          side: 'sell',
+          quantity: event.quantity,
+          price: event.price,
+          occurred_at: event.timestamp,
+          reason,
+          status: 'pending',
+          raw_payload: event,
+          updated_at: new Date().toISOString(),
+        });
+      }
+
       nextQty = previousQty - sellQty;
       nextRealized = realizedProfit + sellQty * (event.price - existingAvg);
       if (nextQty <= 0) {
