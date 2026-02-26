@@ -49,10 +49,22 @@ export async function GET() {
     return NextResponse.json({ error: firstError.message }, { status: 500 });
   }
 
-  const snapshotByItem = new Map<number, { last_price: number | null; margin: number | null; snapshot_at: string | null }>();
+  const snapshotByItem = new Map<
+    number,
+    {
+      last_price: number | null;
+      last_high: number | null;
+      last_low: number | null;
+      margin: number | null;
+      snapshot_at: string | null;
+    }
+  >();
+
   for (const snapshot of snapshotsRes.data ?? []) {
     snapshotByItem.set(Number(snapshot.item_id), {
       last_price: snapshot.last_price,
+      last_high: snapshot.last_high,
+      last_low: snapshot.last_low,
       margin: snapshot.margin,
       snapshot_at: snapshot.snapshot_at,
     });
@@ -149,18 +161,23 @@ export async function GET() {
         const suggestedQty = buyLimit > 0 ? Math.max(1, Math.min(buyLimit, qtyByCap)) : Math.max(1, qtyByCap);
         const score = Math.max(50, Math.min(82, Math.round(spreadPct * 10)));
 
-        // Heuristic prices: use last_low as buy anchor, last_high as sell anchor.
-        // If missing, fallback to last_price +/- margin.
-        const buyAt = snapshot.last_price && snapshot.margin
-          ? Math.max(1, Math.round(snapshot.last_price - snapshot.margin))
-          : snapshot.last_price
-            ? Math.max(1, Math.round(snapshot.last_price * 0.998))
-            : null;
-        const sellAt = snapshot.last_price && snapshot.margin
-          ? Math.max(1, Math.round(snapshot.last_price))
-          : snapshot.last_price
-            ? Math.max(1, Math.round(snapshot.last_price * 1.002))
-            : null;
+        // Heuristic prices: prefer last_low/last_high from OSRS Wiki latest snapshot.
+        // Fallback to last_price +/- margin if needed.
+        const buyAt = typeof snapshot.last_low === 'number' && snapshot.last_low > 0
+          ? Math.max(1, Math.round(snapshot.last_low))
+          : snapshot.last_price && snapshot.margin
+            ? Math.max(1, Math.round(snapshot.last_price - snapshot.margin))
+            : snapshot.last_price
+              ? Math.max(1, Math.round(snapshot.last_price * 0.998))
+              : null;
+
+        const sellAt = typeof snapshot.last_high === 'number' && snapshot.last_high > 0
+          ? Math.max(1, Math.round(snapshot.last_high))
+          : snapshot.last_price && snapshot.margin
+            ? Math.max(1, Math.round(snapshot.last_price))
+            : snapshot.last_price
+              ? Math.max(1, Math.round(snapshot.last_price * 1.002))
+              : null;
 
         const estProfit = buyAt && sellAt
           ? Math.max(0, Math.round((sellAt - buyAt) * suggestedQty))
