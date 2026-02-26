@@ -52,11 +52,15 @@ export default function PriceChart({
 
   const formatGp = (value: number) => `${formatCompact(Math.round(value))}gp`;
 
-  const chartData = data.map(point => ({
-    ...point,
-    date: format(new Date(point.timestamp * 1000), 'MMM dd'),
-    fullDate: format(new Date(point.timestamp * 1000), 'MMM dd, HH:mm'),
-  }));
+  const chartData = data.map((point) => {
+    const tsMs = point.timestamp * 1000;
+    return {
+      ...point,
+      tsMs,
+      date: format(new Date(tsMs), 'MMM dd'),
+      fullDate: format(new Date(tsMs), 'MMM dd, HH:mm'),
+    };
+  });
 
   const prices = data.map(d => d.price);
   const min = Math.min(...prices);
@@ -249,9 +253,13 @@ export default function PriceChart({
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
               <XAxis
-                dataKey="date"
+                dataKey="tsMs"
+                type="number"
+                scale="time"
+                domain={['dataMin', 'dataMax']}
                 stroke="var(--muted)"
                 style={{ fontSize: '12px' }}
+                tickFormatter={(ms: number) => format(new Date(ms), 'MMM dd')}
               />
               <YAxis
                 stroke="var(--muted)"
@@ -268,7 +276,10 @@ export default function PriceChart({
                 }}
                 labelStyle={{ color: 'var(--text)', fontWeight: 'bold', marginBottom: '4px' }}
                 formatter={(value: number) => [formatGp(value), 'Price']}
-                labelFormatter={(label) => chartData.find(d => d.date === label)?.fullDate || label}
+                labelFormatter={(ms) => {
+                  const num = typeof ms === 'number' ? ms : Number(ms);
+                  return Number.isFinite(num) ? format(new Date(num), 'MMM dd, HH:mm') : String(ms);
+                }}
               />
               {visibleLines.avg30d && (
                 <ReferenceLine
