@@ -956,6 +956,45 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                   ))
               )}
             </ul>
+
+            <details style={{ marginTop: '0.65rem' }}>
+              <summary className="muted" style={{ cursor: 'pointer' }}>Recent decisions</summary>
+              <ul className="list" style={{ marginTop: '0.65rem' }}>
+                {reconciliationTasks.filter((task) => task.status !== 'pending').length === 0 ? (
+                  <li className="muted">No decisions yet.</li>
+                ) : (
+                  reconciliationTasks
+                    .filter((task) => task.status !== 'pending')
+                    .slice(0, 10)
+                    .map((task) => (
+                      <li key={task.id} className="card" style={{ padding: '0.7rem' }}>
+                        <div className="row-between" style={{ gap: '0.75rem' }}>
+                          <div>
+                            <strong>{task.item_name ?? `Item ${task.item_id ?? ''}`}</strong>
+                            <p className="muted" style={{ marginTop: '0.2rem' }}>
+                              {task.task_type.split('_').join(' ')} · {new Date(task.created_at).toLocaleString()}
+                            </p>
+                          </div>
+                          <span
+                            className="badge"
+                            style={{
+                              background: task.status === 'approved' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
+                              color: task.status === 'approved' ? 'rgb(34,197,94)' : 'rgb(239,68,68)',
+                              border: '1px solid rgba(255,255,255,0.08)',
+                            }}
+                          >
+                            {task.status.toUpperCase()}
+                          </span>
+                        </div>
+                        {task.decision_note ? (
+                          <p className="muted" style={{ marginTop: '0.35rem' }}>{task.decision_note}</p>
+                        ) : null}
+                      </li>
+                    ))
+                )}
+              </ul>
+            </details>
+
           </article>
 
           <article className="card">
