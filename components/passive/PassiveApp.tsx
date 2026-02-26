@@ -68,6 +68,7 @@ export default function PassiveApp() {
   const [supabase, setSupabase] = useState<ReturnType<typeof createBrowserSupabaseClient> | null>(null);
 
   const [selectedItem, setSelectedItem] = useState<{ id: number; name: string } | null>(null);
+  const [sparklineStep, setSparklineStep] = useState<'5m' | '1h' | '6h' | '24h'>('5m');
   const [sparklineValues, setSparklineValues] = useState<number[]>([]);
   const [sparklineLoading, setSparklineLoading] = useState(false);
   const [sparklineError, setSparklineError] = useState<string | null>(null);
@@ -76,6 +77,18 @@ export default function PassiveApp() {
   const queue = useMemo(() => dashboard?.queue ?? [], [dashboard]);
   const positions = useMemo(() => dashboard?.positions ?? [], [dashboard]);
   const summary = dashboard?.summary;
+
+  const sparkStats = useMemo(() => {
+    if (sparklineValues.length < 2) return null;
+    const min = Math.min(...sparklineValues);
+    const max = Math.max(...sparklineValues);
+    const first = sparklineValues[0] ?? null;
+    const last = sparklineValues[sparklineValues.length - 1] ?? null;
+    if (typeof first !== 'number' || typeof last !== 'number') return null;
+    const delta = last - first;
+    const pct = first !== 0 ? (delta / first) * 100 : null;
+    return { min, max, first, last, delta, pct };
+  }, [sparklineValues]);
 
   useEffect(() => {
     if (!selectedItem) return;
@@ -87,7 +100,7 @@ export default function PassiveApp() {
       setSparklineLoading(true);
       setSparklineError(null);
       try {
-        const res = await fetch(`/api/market/timeseries?timestep=5m&id=${encodeURIComponent(String(itemId))}`);
+        const res = await fetch(`/api/market/timeseries?timestep=${encodeURIComponent(sparklineStep)}&id=${encodeURIComponent(String(itemId))}`);
         const payload = (await res.json().catch(() => null)) as { data?: Array<{ avgHighPrice?: number | null; avgLowPrice?: number | null }> ; error?: string } | null;
         if (!res.ok) throw new Error(payload?.error ? payload.error : `Failed to load chart (${res.status})`);
 
@@ -111,7 +124,7 @@ export default function PassiveApp() {
     return () => {
       mounted = false;
     };
-  }, [selectedItem]);
+  }, [selectedItem, sparklineStep]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -342,7 +355,10 @@ export default function PassiveApp() {
                     <div className="row-between">
                       <button
                         type="button"
-                        onClick={() => setSelectedItem({ id: position.item_id, name: position.item_name })}
+                        onClick={() => {
+                          setSparklineStep('5m');
+                          setSelectedItem({ id: position.item_id, name: position.item_name });
+                        }}
                         style={{
                           border: 0,
                           padding: 0,
@@ -518,14 +534,38 @@ export default function PassiveApp() {
           onClick={() => setSelectedItem(null)}
         >
           <div className="modal" onClick={(event) => event.stopPropagation()}>
-            <div className="row-between" style={{ marginBottom: '0.75rem' }}>
-              <div style={{ display: 'grid', gap: '0.15rem' }}>
+            <div className="row-between" style={{ marginBottom: '0.75rem', alignItems: 'flex-start' }}>
+              <div style={{ display: 'grid', gap: '0.2rem' }}>
                 <h2 style={{ fontSize: '1rem', fontWeight: 900 }}>{selectedItem.name}</h2>
-                <p className="muted" style={{ fontSize: '0.85rem' }}>Recent 5m highs/lows (OSRS Wiki)</p>
+                <p className="muted" style={{ fontSize: '0.85rem' }}>Recent {sparklineStep} highs/lows (OSRS Wiki)</p>
+                {sparkStats ? (
+                  <p className="muted" style={{ fontSize: '0.8rem' }}>
+                    Range: {Math.round(sparkStats.min).toLocaleString()} → {Math.round(sparkStats.max).toLocaleString()} gp · Last: {Math.round(sparkStats.last).toLocaleString()} gp
+                    {typeof sparkStats.pct === 'number' ? (
+                      <>
+                        {' '}· Δ {sparkStats.pct >= 0 ? '+' : ''}
+                        {sparkStats.pct.toFixed(1)}%
+                      </>
+                    ) : null}
+                  </p>
+                ) : null}
               </div>
-              <button className="btn btn-secondary" type="button" onClick={() => setSelectedItem(null)}>
-                Close
-              </button>
+              <div className="row" style={{ gap: '0.5rem' }}>
+                <select
+                  value={sparklineStep}
+                  onChange={(event) => setSparklineStep(event.target.value as '5m' | '1h' | '6h' | '24h')}
+                  aria-label="Chart timeframe"
+                  style={{ width: 'auto' }}
+                >
+                  <option value="5m">5m</option>
+                  <option value="1h">1h</option>
+                  <option value="6h">6h</option>
+                  <option value="24h">24h</option>
+                </select>
+                <button className="btn btn-secondary" type="button" onClick={() => setSelectedItem(null)}>
+                  Close
+                </button>
+              </div>
             </div>
 
             {sparklineLoading ? (
@@ -533,7 +573,9 @@ export default function PassiveApp() {
             ) : sparklineError ? (
               <p className="muted">{sparklineError}</p>
             ) : (
-              <PriceSparkline values={sparklineValues} />
+              <div style={{ overflowX: 'auto', paddingBottom: '0.25rem' }}>
+                <PriceSparkline values={sparklineValues} width={560} height={140} />
+              </div>
             )}
           </div>
         </div>
