@@ -123,7 +123,7 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
       default:
         return sorted;
     }
-  }, [opportunities, sortBy, scoreFilter]);
+  }, [opportunities, sortBy, scoreFilter, searchQuery]);
 
   const handleAddToWatchlist = async (itemId: number, itemName: string) => {
     if (adding.has(itemId) || added.has(itemId)) return;
