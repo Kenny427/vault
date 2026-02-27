@@ -93,6 +93,7 @@ export default function VaultDashboard() {
 
   // Data states
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [opportunitiesLastUpdated, setOpportunitiesLastUpdated] = useState<string | null>(null);
   const [portfolioPositions, setPortfolioPositions] = useState<PortfolioPosition[]>([]);
   const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -144,6 +145,7 @@ export default function VaultDashboard() {
       if (oppRes.ok) {
         const oppData = await oppRes.json();
         setOpportunities(oppData.opportunities || []);
+        setOpportunitiesLastUpdated(oppData.lastUpdated || null);
       }
 
       // Load portfolio if authed
@@ -301,6 +303,7 @@ export default function VaultDashboard() {
               opportunities={opportunities}
               loading={loading}
               onRefresh={() => void loadData()}
+              lastUpdated={opportunitiesLastUpdated}
               onRefreshPrices={handleRefreshPrices}
               onCreateProposal={(opp) => {
                 setPrefillProposal({

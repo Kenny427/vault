@@ -28,6 +28,7 @@ interface OpportunitiesCardProps {
   opportunities: Opportunity[];
   loading: boolean;
   onRefresh: () => void;
+  lastUpdated?: string | null;
   onRefreshPrices?: () => Promise<{ refreshed?: number; error?: string }>;
   onCreateProposal?: (opp: Opportunity) => void;
 }
@@ -76,7 +77,7 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-export default function OpportunitiesCard({ opportunities, loading, onRefresh, onRefreshPrices, onCreateProposal }: OpportunitiesCardProps) {
+export default function OpportunitiesCard({ opportunities, loading, onRefresh, lastUpdated, onRefreshPrices, onCreateProposal }: OpportunitiesCardProps) {
   const totalEstProfit = opportunities.reduce((sum, o) => sum + o.est_profit, 0);
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const [added, setAdded] = useState<Set<number>>(new Set());
@@ -162,6 +163,20 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, o
     }
   };
 
+  // Format "last updated" as relative time
+  const formatLastUpdated = (iso: string | null | undefined) => {
+    if (!iso) return null;
+    const date = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return date.toLocaleDateString();
+  };
+
   return (
     <section className="grid" style={{ gap: '0.75rem' }}>
       {/* Summary Card */}
@@ -178,6 +193,11 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, o
             </p>
           </div>
         </div>
+        {lastUpdated && (
+          <p className="muted" style={{ fontSize: '0.7rem', marginTop: '0.5rem', textAlign: 'right' }}>
+            Prices: {formatLastUpdated(lastUpdated)}
+          </p>
+        )}
       </article>
 
       {/* Opportunities List */}
