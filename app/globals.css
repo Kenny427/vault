@@ -335,3 +335,30 @@ select {
   background: var(--surface);
   color: var(--text);
 }
+
+/* Section headers */
+.section-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 0.6rem;
+  margin-top: 0.3rem;
+}
+
+/* Card hover effects */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.9rem;
+  box-shadow: 0 8px 18px var(--shadow);
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px var(--shadow);
+  border-color: var(--accent);
+}

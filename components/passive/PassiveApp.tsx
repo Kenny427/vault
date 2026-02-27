@@ -520,7 +520,9 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
           </div>
 
           {portfolioStats && portfolioStats.totalInvested > 0 ? (
-            <div className="grid grid-2">
+            <div>
+              <h3 className="section-header">Portfolio Overview</h3>
+              <div className="grid grid-2">
               <article className="card">
                 <p className="muted">Total Invested</p>
                 <p className="kpi">{Math.round(portfolioStats.totalInvested).toLocaleString()} gp</p>
@@ -589,6 +591,7 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                   </div>
                 </article>
               ) : null}
+            </div>
             </div>
           ) : null}
 
@@ -723,15 +726,40 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                       >
                         {opp.item_name}
                       </button>
-                      <span className="muted">Score {opp.score}</span>
+                      <div className="row-between" style={{ gap: '0.5rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const text = `Buy ${opp.item_name} @ ${opp.buy_at.toLocaleString()} | Sell @ ${opp.sell_at.toLocaleString()} | Qty ${opp.suggested_qty.toLocaleString()} | Est ${opp.est_profit.toLocaleString()}gp`;
+                            void navigator.clipboard.writeText(text);
+                            setCopiedKey(`opp-${opp.item_id}`);
+                            setTimeout(() => setCopiedKey(null), 1500);
+                          }}
+                          className="btn-small"
+                          style={{ padding: '0.15rem 0.4rem', fontSize: '0.65rem' }}
+                        >
+                          {copiedKey === `opp-${opp.item_id}` ? 'Copied!' : 'Copy'}
+                        </button>
+                        <span className="muted">Score {opp.score}</span>
+                      </div>
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>
                       Buy ~{opp.buy_at.toLocaleString()} | Sell ~{opp.sell_at.toLocaleString()} | Margin ~{opp.margin.toLocaleString()} gp ({opp.spread_pct.toFixed(1)}%) | Qty {opp.suggested_qty.toLocaleString()} | Est profit ~{opp.est_profit.toLocaleString()} gp
                     </p>
                     {(opp.volume_5m || opp.volume_1h) ? (
-                      <p className="muted" style={{ marginTop: '0.15rem', fontSize: '0.8rem' }}>
-                        Vol: {opp.volume_5m ? `${(opp.volume_5m/1000).toFixed(1)}k (5m)` : ''}{opp.volume_5m && opp.volume_1h ? ' · ' : ''}{opp.volume_1h ? `${(opp.volume_1h/1000).toFixed(1)}k (1h)` : ''}
-                      </p>
+                      <div className="row-between" style={{ marginTop: '0.15rem', fontSize: '0.8rem' }}>
+                        <span className="muted">
+                          Vol: {opp.volume_5m ? `${(opp.volume_5m/1000).toFixed(1)}k (5m)` : ''}{opp.volume_5m && opp.volume_1h ? ' · ' : ''}{opp.volume_1h ? `${(opp.volume_1h/1000).toFixed(1)}k (1h)` : ''}
+                        </span>
+                        <span style={{ 
+                          fontWeight: 600, 
+                          fontSize: '0.7rem',
+                          color: (opp.volume_5m ?? 0) > 100_000 ? 'var(--accent)' : (opp.volume_5m ?? 0) > 50_000 ? 'var(--accent-2)' : 'var(--muted)',
+                          textTransform: 'uppercase'
+                        }}>
+                          {(opp.volume_5m ?? 0) > 100_000 ? '🔥 HOT' : (opp.volume_5m ?? 0) > 50_000 ? '⚡ Warm' : '💧 Cold'}
+                        </span>
+                      </div>
                     ) : null}
                   </li>
                 ))
