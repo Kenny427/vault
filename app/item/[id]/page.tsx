@@ -235,6 +235,21 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           <div>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--accent)' }}>{item.name}</h1>
             <div className="row" style={{ gap: '0.75rem', marginTop: '0.25rem' }}>
+              <a
+                href={`https://oldschool.runescape.wiki/w/GE${item.name.replace(/ /g, '_')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: 'var(--muted)',
+                  textDecoration: 'none',
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                📖 Wiki ↗
+              </a>
               {item.members && (
                 <span style={{ background: 'var(--accent)', color: 'var(--bg)', padding: '0.1rem 0.4rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 700 }}>
                   MEMBERS
