@@ -183,7 +183,20 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             <img src={item.icon_url} alt={item.name} style={{ width: 64, height: 64, imageRendering: 'pixelated' }} />
           )}
           <div style={{ flex: 1, minWidth: 200 }}>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f5c518' }}>{item.name}</h1>
+            <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f5c518' }}>{item.name}</h1>
+              <button
+                onClick={() => {
+                  const info = price ? `${item.name}: ${price.last_price.toLocaleString()}gp (${price.spread_pct.toFixed(1)}% spread)` : item.name;
+                  navigator.clipboard.writeText(info);
+                }}
+                className="btn btn-secondary"
+                style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                title="Copy item info"
+              >
+                📋
+              </button>
+            </div>
             <div className="row" style={{ gap: '0.75rem', marginTop: '0.25rem' }}>
               {item.members && (
                 <span style={{ background: '#22c55e', color: '#000', padding: '0.1rem 0.4rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 700 }}>
