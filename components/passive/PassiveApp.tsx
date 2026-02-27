@@ -1200,20 +1200,28 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
             <div className="row-between" style={{ marginBottom: '0.75rem', alignItems: 'flex-start' }}>
               <div style={{ display: 'grid', gap: '0.2rem' }}>
                 <h2 style={{ fontSize: '1rem', fontWeight: 900 }}>{selectedItem.name}</h2>
-                <p className="muted" style={{ fontSize: '0.85rem' }}>Recent {sparklineStep} highs/lows (OSRS Wiki)</p>
+                <p className="muted" style={{ fontSize: '0.8rem' }}>{sparklineStep} price history (OSRS Wiki)</p>
                 {sparkStats ? (
-                  <p className="muted" style={{ fontSize: '0.8rem' }}>
-                    Range: {Math.round(sparkStats.min).toLocaleString()} → {Math.round(sparkStats.max).toLocaleString()} gp · Last: {Math.round(sparkStats.last).toLocaleString()} gp
-                    {typeof sparkStats.pct === 'number' ? (
-                      <span style={{ 
-                        color: sparkStats.pct >= 0 ? 'var(--accent)' : 'var(--danger)',
-                        fontWeight: 700,
-                        marginLeft: '0.5rem'
-                      }}>
-                        {sparkStats.pct >= 0 ? '↑' : '↓'} {sparkStats.pct >= 0 ? '+' : ''}{sparkStats.pct.toFixed(1)}%
-                      </span>
-                    ) : null}
-                  </p>
+                  <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span className="muted" style={{ fontSize: '0.8rem' }}>
+                      <span style={{ color: 'var(--accent)' }}>↑</span> High: {Math.round(sparkStats.max).toLocaleString()}
+                    </span>
+                    <span className="muted" style={{ fontSize: '0.8rem' }}>
+                      <span style={{ color: 'var(--danger)' }}>↓</span> Low: {Math.round(sparkStats.min).toLocaleString()}
+                    </span>
+                    <span className="muted" style={{ fontSize: '0.8rem' }}>
+                      Last: <strong style={{ color: sparkStats.last >= sparkStats.first ? 'var(--accent)' : 'var(--danger)' }}>{Math.round(sparkStats.last).toLocaleString()}</strong>
+                      {typeof sparkStats.pct === 'number' ? (
+                        <span style={{ 
+                          color: sparkStats.pct >= 0 ? 'var(--accent)' : 'var(--danger)',
+                          fontWeight: 700,
+                          marginLeft: '0.35rem'
+                        }}>
+                          ({sparkStats.pct >= 0 ? '+' : ''}{sparkStats.pct.toFixed(1)}%)
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
                 ) : null}
               </div>
               <div className="row" style={{ gap: '0.5rem' }}>
