@@ -247,17 +247,17 @@ export default function VaultDashboard() {
       {/* Header */}
       <div className="row-between" style={{ marginBottom: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#f5c518' }}>Vault</h1>
-          <p className="muted" style={{ fontSize: '0.85rem' }}>OSRS Investment Dashboard</p>
+          <h1 className="text-2xl font-extrabold text-accent tracking-tight">Vault</h1>
+          <p className="text-sm text-text-muted mt-1">OSRS Investment Dashboard</p>
         </div>
         <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
           {/* Price freshness indicator */}
           <div 
             className="row" 
             style={{ 
-              gap: '0.35rem', 
-              padding: '0.25rem 0.5rem', 
-              borderRadius: 6, 
+              gap: 'var(--space-2)', 
+              padding: 'var(--space-1) var(--space-2)', 
+              borderRadius: 'var(--radius-md)', 
               background: 'rgba(255,255,255,0.05)',
               border: `1px solid ${priceFreshness.color}40`,
               cursor: 'pointer',
@@ -266,7 +266,7 @@ export default function VaultDashboard() {
             title="Click to refresh prices"
           >
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: priceFreshness.color }} />
-            <span style={{ fontSize: '0.7rem', color: priceFreshness.color, fontWeight: 600 }}>
+            <span className="text-xs font-semibold" style={{ color: priceFreshness.color }}>
               {priceFreshness.text}
             </span>
           </div>
