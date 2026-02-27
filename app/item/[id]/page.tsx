@@ -127,14 +127,14 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           <Link href="/" style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 700 }}>← Back</Link>
         </div>
         <div style={{ 
-          background: 'var(--card-bg, #1f2937)', 
+          background: 'var(--surface)', 
           borderRadius: 8, 
           padding: '1.5rem',
           animation: 'pulse 2s infinite'
         }}>
-          <div style={{ width: '60%', height: 24, background: 'var(--muted-bg, #374151)', borderRadius: 4, marginBottom: '1rem' }} />
-          <div style={{ width: '40%', height: 16, background: 'var(--muted-bg, #374151)', borderRadius: 4, marginBottom: '0.5rem' }} />
-          <div style={{ width: '70%', height: 16, background: 'var(--muted-bg, #374151)', borderRadius: 4 }} />
+          <div style={{ width: '60%', height: 24, background: 'var(--surface-2)', borderRadius: 4, marginBottom: '1rem' }} />
+          <div style={{ width: '40%', height: 16, background: 'var(--surface-2)', borderRadius: 4, marginBottom: '0.5rem' }} />
+          <div style={{ width: '70%', height: 16, background: 'var(--surface-2)', borderRadius: 4 }} />
         </div>
         <style jsx>{`
           @keyframes pulse {
@@ -149,8 +149,8 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   if (error || !item) {
     return (
       <main style={{ padding: '1rem' }}>
-        <Link href="/" style={{ color: '#f5c518', textDecoration: 'none', fontSize: '0.9rem' }}>← Back to Vault</Link>
-        <p style={{ color: '#ef4444', marginTop: '1rem' }}>Error: {error || 'Item not found'}</p>
+        <Link href="/" style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: '0.9rem' }}>← Back to Vault</Link>
+        <p style={{ color: 'var(--danger)', marginTop: '1rem' }}>Error: {error || 'Item not found'}</p>
       </main>
     );
   }
@@ -159,23 +159,23 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     <main style={{ padding: '1rem', maxWidth: '800px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ marginBottom: '1.5rem' }}>
-        <Link href="/" style={{ color: '#f5c518', textDecoration: 'none', fontSize: '0.9rem' }}>
+        <Link href="/" style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: '0.9rem' }}>
           ← Back to Vault
         </Link>
         <span className="muted" style={{ fontSize: '0.75rem', marginLeft: '0.5rem' }}>ESC</span>
       </div>
 
       {/* Item Header */}
-      <div className="card" style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
+      <div className="card" style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, var(--surface-2) 0%, var(--surface) 100%)' }}>
         <div className="row" style={{ gap: '1rem', alignItems: 'center' }}>
           {item.icon_url && (
             <img src={item.icon_url} alt={item.name} style={{ width: 64, height: 64, imageRendering: 'pixelated' }} />
           )}
           <div>
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f5c518' }}>{item.name}</h1>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--accent)' }}>{item.name}</h1>
             <div className="row" style={{ gap: '0.75rem', marginTop: '0.25rem' }}>
               {item.members && (
-                <span style={{ background: '#22c55e', color: '#000', padding: '0.1rem 0.4rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 700 }}>
+                <span style={{ background: 'var(--accent)', color: 'var(--bg)', padding: '0.1rem 0.4rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 700 }}>
                   MEMBERS
                 </span>
               )}
@@ -200,7 +200,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               <p style={{ 
                 fontSize: '0.85rem', 
                 fontWeight: 700, 
-                color: priceChange >= 0 ? '#22c55e' : '#ef4444'
+                color: priceChange >= 0 ? 'var(--accent)' : 'var(--danger)'
               }}>
                 {priceChange >= 0 ? '↑' : '↓'} {Math.abs(priceChange).toFixed(1)}% ({timestep})
               </p>
@@ -208,7 +208,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           </article>
           <article className="card">
             <p className="muted" style={{ fontSize: '0.75rem' }}>Margin</p>
-            <p style={{ fontSize: '1.3rem', fontWeight: 900, color: '#22c55e' }}>{price.margin.toLocaleString()} gp</p>
+            <p style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--accent)' }}>{price.margin.toLocaleString()} gp</p>
           </article>
           <article className="card">
             <p className="muted" style={{ fontSize: '0.75rem' }}>Buy At</p>
@@ -248,8 +248,8 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                 style={{
                   padding: '0.25rem 0.5rem',
                   fontSize: '0.75rem',
-                  background: timestep === t ? '#f5c518' : 'transparent',
-                  color: timestep === t ? '#000' : 'var(--muted)',
+                  background: timestep === t ? 'var(--accent)' : 'transparent',
+                  color: timestep === t ? 'var(--bg)' : 'var(--muted)',
                   border: '1px solid var(--border)',
                   borderRadius: 4,
                   cursor: 'pointer',
