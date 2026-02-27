@@ -372,53 +372,30 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           )}
           <article className="card">
             <p className="muted" style={{ fontSize: '0.75rem' }}>5m Volume</p>
-            <p style={{ fontSize: '1.1rem', fontWeight: 700, color: price.volume_5m && price.volume_5m > 0 ? '#3b82f6' : 'var(--muted)' }}>
+            <p
+              style={{
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                color: price.volume_5m && price.volume_5m > 0 ? '#3b82f6' : 'var(--muted)',
+              }}
+            >
               {price.volume_5m ? price.volume_5m.toLocaleString() : '—'} trades
             </p>
             <p className="muted" style={{ fontSize: '0.65rem' }}>Last 5 minutes</p>
           </article>
           <article className="card">
             <p className="muted" style={{ fontSize: '0.75rem' }}>1h Volume</p>
-            <p style={{ fontSize: '1.1rem', fontWeight: 700, color: price.volume_1h && price.volume_1h > 0 ? '#8b5cf6' : 'var(--muted)' }}>
+            <p
+              style={{
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                color: price.volume_1h && price.volume_1h > 0 ? '#8b5cf6' : 'var(--muted)',
+              }}
+            >
               {price.volume_1h ? price.volume_1h.toLocaleString() : '—'} trades
             </p>
             <p className="muted" style={{ fontSize: '0.65rem' }}>Last hour</p>
           </article>
-          {high24h !== null && low24h !== null && price && (
-            <article className="card">
-              <p className="muted" style={{ fontSize: '0.75rem' }}>24h Range</p>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>
-                <span style={{ color: '#22c55e' }}>{high24h.toLocaleString()}</span>
-                <span className="muted" style={{ margin: '0 0.4rem' }}>→</span>
-                <span style={{ color: '#ef4444' }}>{low24h.toLocaleString()}</span>
-              </div>
-              {/* Price position bar */}
-              <div style={{ marginTop: '0.5rem' }}>
-                <div style={{ 
-                  height: '6px', 
-                  background: 'linear-gradient(90deg, #22c55e 0%, #f5c518 50%, #ef4444 100%)', 
-                  borderRadius: '3px',
-                  position: 'relative',
-                }}>
-                  <div style={{
-                    position: 'absolute',
-                    left: `${Math.min(100, Math.max(0, ((price.last_price - low24h) / (high24h - low24h)) * 100))}%`,
-                    top: '-3px',
-                    width: '12px',
-                    height: '12px',
-                    background: '#fff',
-                    border: '2px solid #0d1513',
-                    borderRadius: '50%',
-                    transform: 'translateX(-50%)',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                  }} />
-                </div>
-                <p className="muted" style={{ fontSize: '0.7rem', marginTop: '0.25rem', textAlign: 'center' }}>
-                  Current: {price.last_price.toLocaleString()} gp
-                </p>
-              </div>
-            </article>
-          )}
           <article className="card">
             <p className="muted" style={{ fontSize: '0.75rem' }}>Margin</p>
             <p style={{ fontSize: '1.3rem', fontWeight: 900, color: '#22c55e' }}>{price.margin.toLocaleString()} gp</p>
