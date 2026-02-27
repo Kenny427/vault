@@ -98,8 +98,17 @@ export async function GET() {
 
     const estProfit = Math.max(0, Math.round((sellAt - buyAt) * suggestedQty));
 
-    // Keep score intuitive (0-100) and aligned-ish with /api/nba heuristics.
-    const score = clamp(Math.round(spreadPct * 10), 1, 100);
+    // Score combines spread profitability with volume liquidity.
+    // Base score from spread (0-60), volume bonus (0-40) for actionable opportunities.
+    const spreadScore = Math.min(spreadPct * 6, 60); // 10% spread = 60pts
+    const volumeScore = (() => {
+      const v = volume5m ?? volume1h ?? 0;
+      if (v >= 100_000) return 40; // Hot
+      if (v >= 50_000) return 25;  // Warm
+      if (v >= 10_000) return 10;  // Some liquidity
+      return 0;
+    })();
+    const score = clamp(Math.round(spreadScore + volumeScore), 1, 100);
 
     opportunities.push({
       item_id: itemId,
