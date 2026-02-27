@@ -446,6 +446,15 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
               <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Opportunities</h2>
               <button className="btn" onClick={() => void loadOpportunities()} disabled={loading}>Refresh</button>
             </div>
+            {opportunities.length > 0 ? (
+              <p className="muted" style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+                Top {opportunities.slice(0, 8).length} opps: ≈{' '}
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>
+                  {opportunities.slice(0, 8).reduce((sum, o) => sum + o.est_profit, 0).toLocaleString()} gp
+                </span>{' '}
+                potential profit
+              </p>
+            ) : null}
             <ul className="list">
               {opportunities.length === 0 ? (
                 <li className="muted">No opportunities yet. Run Scan → Refresh Watchlists, then Sync.</li>
