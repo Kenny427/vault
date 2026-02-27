@@ -319,7 +319,17 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                         unoptimized
                       />
                     )}
-                    <Link href={`/item/${opp.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 700 }}>
+                    <Link 
+                      href={`/item/${opp.item_id}`} 
+                      style={{ 
+                        color: '#f5c518', 
+                        textDecoration: 'none', 
+                        fontWeight: 700,
+                        transition: 'text-decoration 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.textDecoration = 'underline'}
+                      onMouseLeave={(e) => e.currentTarget.style.textDecoration = 'none'}
+                    >
                       {opp.item_name}
                     </Link>
                     <ScoreBadge score={opp.score} />
