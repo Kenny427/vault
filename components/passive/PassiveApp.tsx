@@ -557,9 +557,23 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                     <p className="muted" style={{ marginTop: '0.2rem' }}>
                       Avg buy: {position.avg_buy_price.toLocaleString()} gp | Last: {Math.round(position.last_price ?? 0).toLocaleString()} gp
                     </p>
-                    <p style={{ marginTop: '0.2rem', color: (position.unrealized_profit ?? 0) >= 0 ? 'var(--accent-2)' : 'var(--danger)' }}>
-                      Unrealized: {Math.round(position.unrealized_profit ?? 0).toLocaleString()} gp
-                    </p>
+                    <div className="row-between" style={{ marginTop: '0.2rem' }}>
+                      <p style={{ color: (position.unrealized_profit ?? 0) >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
+                        {Math.round(position.unrealized_profit ?? 0).toLocaleString()} gp
+                      </p>
+                      {position.last_price && position.avg_buy_price > 0 ? (
+                        <span
+                          style={{
+                            color: position.last_price >= position.avg_buy_price ? 'var(--accent)' : 'var(--danger)',
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          {position.last_price >= position.avg_buy_price ? '+' : ''}
+                          {(((position.last_price - position.avg_buy_price) / position.avg_buy_price) * 100).toFixed(1)}%
+                        </span>
+                      ) : null}
+                    </div>
                   </li>
                 ))
               )}
