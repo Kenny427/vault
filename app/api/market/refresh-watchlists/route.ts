@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createSupabaseAdmin } from '@/lib/supabase/admin';
 import { getFiveMinute, getLatest, getMapping, getOneHour } from '@/lib/market/osrsWiki';
 
 type MappingItem = {
@@ -20,9 +21,12 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Use admin client for DB ops to avoid RLS/privilege issues on server routes.
+  const admin = createSupabaseAdmin();
+
   const [thesesRes, positionsRes] = await Promise.all([
-    supabase.from('theses').select('item_id').eq('user_id', userId).eq('active', true),
-    supabase.from('positions').select('item_id').eq('user_id', userId).neq('quantity', 0),
+    admin.from('theses').select('item_id').eq('user_id', userId).eq('active', true),
+    admin.from('positions').select('item_id').eq('user_id', userId).neq('quantity', 0),
   ]);
 
   if (thesesRes.error || positionsRes.error) {
@@ -89,8 +93,8 @@ export async function POST() {
     };
   });
 
-  const itemsUpsert = await supabase.from('items').upsert(items, { onConflict: 'item_id' });
-  const snapshotsUpsert = await supabase.from('market_snapshots').upsert(snapshots, { onConflict: 'user_id,item_id' });
+  const itemsUpsert = await admin.from('items').upsert(items, { onConflict: 'item_id' });
+  const snapshotsUpsert = await admin.from('market_snapshots').upsert(snapshots, { onConflict: 'user_id,item_id' });
 
   if (itemsUpsert.error || snapshotsUpsert.error) {
     return NextResponse.json({

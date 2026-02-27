@@ -315,7 +315,35 @@ export default function OpportunitiesTable({ opportunities, loading, onRefresh, 
       {sortedOpportunities.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '2rem' }}>
           <p className="muted" style={{ marginBottom: '0.5rem' }}>No opportunities found</p>
-          <p className="muted" style={{ fontSize: '0.75rem' }}>Add theses and refresh watchlists</p>
+          <p className="muted" style={{ fontSize: '0.75rem', marginBottom: '0.75rem' }}>
+            First time here? Seed a starter watchlist, then refresh prices.
+          </p>
+          <div className="row" style={{ gap: '0.5rem', justifyContent: 'center' }}>
+            <button
+              className="btn btn-secondary"
+              onClick={async () => {
+                try {
+                  const seedRes = await fetch('/api/theses/seed', { method: 'POST' });
+                  const seedData = await seedRes.json().catch(() => ({}));
+                  if (!seedRes.ok) {
+                    setRefreshResult(seedData?.error ?? 'Failed to seed demo watchlist');
+                    return;
+                  }
+                  setRefreshResult(`✓ Seeded ${seedData?.inserted ?? 0} items`);
+                  await handleRefreshPrices();
+                } catch {
+                  setRefreshResult('Failed to seed demo watchlist');
+                }
+              }}
+            >
+              Seed starter list
+            </button>
+            {typeof onRefreshPrices === 'function' && (
+              <button className="btn" onClick={handleRefreshPrices} disabled={refreshingPrices}>
+                {refreshingPrices ? 'Refreshing...' : 'Refresh prices'}
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         <div style={{ background: 'var(--surface-2)', borderRadius: '6px', overflow: 'hidden' }}>
