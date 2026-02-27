@@ -79,6 +79,8 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const [added, setAdded] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>('score');
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<string | null>(null);
 
   const sortedOpportunities = useMemo(() => {
     const sorted = [...opportunities];
@@ -115,6 +117,25 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
       await navigator.clipboard.writeText(text);
     } catch {
       // Clipboard failed
+    }
+  };
+
+  const handleSeedDemo = async () => {
+    setSeeding(true);
+    setSeedResult(null);
+    try {
+      const res = await fetch('/api/theses/seed', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setSeedResult(`✓ Added ${data.inserted} items to watchlist!`);
+        onRefresh();
+      } else {
+        setSeedResult(data.error || 'Failed to seed');
+      }
+    } catch {
+      setSeedResult('Failed to seed demo data');
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -158,7 +179,19 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
         </div>
 
         {sortedOpportunities.length === 0 ? (
-          <p className="muted">No opportunities found. Add theses and refresh watchlists.</p>
+          <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+            <p className="muted" style={{ marginBottom: '1rem' }}>No opportunities found. Add theses and refresh watchlists.</p>
+            {seedResult ? (
+              <p style={{ color: seedResult.startsWith('✓') ? '#22c55e' : '#ef4444', fontSize: '0.9rem' }}>{seedResult}</p>
+            ) : (
+              <button className="btn" onClick={handleSeedDemo} disabled={seeding}>
+                {seeding ? 'Seeding...' : 'Seed Demo Watchlist'}
+              </button>
+            )}
+            <p className="muted" style={{ fontSize: '0.75rem', marginTop: '0.75rem' }}>
+              This will add popular pool items to your watchlist.
+            </p>
+          </div>
         ) : (
           <ul className="list">
             {sortedOpportunities.map((opp) => (
