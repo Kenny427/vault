@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { createServiceRoleSupabaseClient } from '@/lib/supabase/service';
+import { sendDiscordAlert } from '@/lib/server/discord';
 
 type DinkEvent = {
   user_id?: string;
@@ -219,6 +220,12 @@ export async function POST(request: NextRequest) {
           raw_payload: event,
           updated_at: new Date().toISOString(),
         });
+
+        // Notify in Discord
+        const itemName = event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`;
+        await sendDiscordAlert(
+          `⚠️ Reconciliation task created: Sold ${event.quantity}x ${itemName} @ ${event.price.toLocaleString()}gp but no/insufficient position in Vault. Needs review.`
+        );
       }
 
       nextQty = previousQty - sellQty;
@@ -244,6 +251,14 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: 'user_id,item_id' }
     );
+
+    // Notify on new position opened
+    if (event.side === 'buy' && previousQty === 0 && nextQty > 0) {
+      const itemName = event.item_name ?? `Item ${event.item_id}`;
+      await sendDiscordAlert(
+        `📈 New position opened: Bought ${event.quantity}x ${itemName} @ ${event.price.toLocaleString()}gp (avg: ${Math.round(nextAvg).toLocaleString()}gp)`
+      );
+    }
   }
 
   return NextResponse.json({ ingested: events.length });
