@@ -4,6 +4,7 @@ import { useEffect, useState, use, useMemo } from 'react';
 import PriceVolumeChart from '@/components/market/PriceVolumeChart';
 import SignalsPanel from '@/components/market/SignalsPanel';
 import Link from 'next/link';
+import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 
 type ItemDetails = {
   item_id: number;
@@ -32,6 +33,16 @@ type TimeSeriesPoint = {
   lowPriceVolume?: number | null;
 };
 
+type Holding = {
+  item_id: number;
+  item_name: string;
+  quantity: number;
+  avg_buy_price: number;
+  last_price: number | null;
+  unrealized_profit: number | null;
+  icon_url: string | null;
+};
+
 export default function ItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const itemId = Number(id);
@@ -42,6 +53,11 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timestep, setTimestep] = useState<'5m' | '1h' | '6h' | '24h'>('1h');
+  
+  // Auth + holdings
+  const [supabase, setSupabase] = useState<ReturnType<typeof createBrowserSupabaseClient> | null>(null);
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [holding, setHolding] = useState<Holding | null>(null);
 
   // Calculate volatility and price change from timeseries
   const { volatility, priceChange } = useMemo(() => {
@@ -119,6 +135,51 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  // Initialize supabase
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setSupabase(createBrowserSupabaseClient());
+  }, []);
+
+  // Auth check + load holdings
+  useEffect(() => {
+    if (!supabase || !itemId) return;
+    let mounted = true;
+
+    async function checkAuthAndLoadHolding() {
+      if (!supabase) return;
+      const { data: auth } = await supabase.auth.getUser();
+      if (!mounted) return;
+      
+      if (auth.user) {
+        setIsAuthed(true);
+        // Fetch positions to find holding for this item
+        const { data: posData } = await supabase
+          .from('positions')
+          .select('item_id,item_name,quantity,avg_buy_price,last_price,unrealized_profit,items(icon_url)')
+          .eq('user_id', auth.user.id)
+          .eq('item_id', itemId)
+          .single() as { data: any };
+        
+        if (posData && mounted) {
+          const itemsData = posData.items as { icon_url: string | null } | null;
+          setHolding({
+            item_id: posData.item_id,
+            item_name: posData.item_name,
+            quantity: posData.quantity,
+            avg_buy_price: posData.avg_buy_price,
+            last_price: posData.last_price,
+            unrealized_profit: posData.unrealized_profit,
+            icon_url: itemsData?.icon_url ?? null,
+          });
+        }
+      }
+    }
+
+    void checkAuthAndLoadHolding();
+    return () => { mounted = false; };
+  }, [supabase, itemId]);
 
   if (loading) {
     return (
@@ -233,6 +294,39 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             volatility={volatility}
             price={price.last_price}
           />
+        </article>
+      )}
+
+      {/* Your Holdings */}
+      {isAuthed && holding && (
+        <article className="card" style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%)', border: '1px solid var(--accent)' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--accent)' }}>Your Holdings</h2>
+          <div className="grid grid-2" style={{ gap: '0.75rem' }}>
+            <div>
+              <p className="muted" style={{ fontSize: '0.75rem' }}>Quantity</p>
+              <p style={{ fontSize: '1.2rem', fontWeight: 900 }}>{holding.quantity.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="muted" style={{ fontSize: '0.75rem' }}>Avg. Buy</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>{holding.avg_buy_price.toLocaleString()} gp</p>
+            </div>
+            <div>
+              <p className="muted" style={{ fontSize: '0.75rem' }}>Current Value</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>{((holding.last_price ?? holding.avg_buy_price) * holding.quantity).toLocaleString()} gp</p>
+            </div>
+            <div>
+              <p className="muted" style={{ fontSize: '0.75rem' }}>Unrealized P/L</p>
+              {holding.unrealized_profit !== null && (
+                <p style={{ 
+                  fontSize: '1.1rem', 
+                  fontWeight: 900, 
+                  color: holding.unrealized_profit >= 0 ? 'var(--accent)' : 'var(--danger)'
+                }}>
+                  {holding.unrealized_profit >= 0 ? '+' : ''}{holding.unrealized_profit.toLocaleString()} gp
+                </p>
+              )}
+            </div>
+          </div>
         </article>
       )}
 
