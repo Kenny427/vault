@@ -50,14 +50,11 @@ export async function POST() {
     { item_id: 7937, item_name: 'Pure essence', priority: 60, enabled: true },
   ];
 
+  // IMPORTANT: Do not block first-run UX on this optional table.
+  // If the query fails for any reason (missing table, perms, schema cache), use fallback.
   let poolItems = (poolRes.data ?? []) as PoolItem[];
   if (poolRes.error) {
-    const msg = poolRes.error.message ?? '';
-    if (msg.includes('custom_pool_items') || msg.includes('schema cache')) {
-      poolItems = fallbackPool;
-    } else {
-      return NextResponse.json({ error: msg }, { status: 500 });
-    }
+    poolItems = fallbackPool;
   }
 
   if (poolItems.length === 0) {
