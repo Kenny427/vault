@@ -244,24 +244,26 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
                       Vol:{' '}
                       {opp.volume_5m
                         ? `${(opp.volume_5m / 1000).toFixed(1)}k (5m)`
+                        : opp.volume_1h
+                        ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)`
                         : ''}
                       {opp.volume_5m && opp.volume_1h ? ' · ' : ''}
-                      {opp.volume_1h ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)` : ''}
+                      {opp.volume_5m && opp.volume_1h ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)` : ''}
                     </span>
                     <span
                       style={{
                         fontWeight: 600,
                         color:
-                          (opp.volume_5m ?? 0) > 100000
+                          (opp.volume_5m ?? opp.volume_1h ?? 0) > 100000
                             ? '#f5c518'
-                            : (opp.volume_5m ?? 0) > 50000
+                            : (opp.volume_5m ?? opp.volume_1h ?? 0) > 50000
                             ? '#22c55e'
                             : '#6b7280',
                       }}
                     >
-                      {(opp.volume_5m ?? 0) > 100000
+                      {(opp.volume_5m ?? opp.volume_1h ?? 0) > 100000
                         ? '🔥 HOT'
-                        : (opp.volume_5m ?? 0) > 50000
+                        : (opp.volume_5m ?? opp.volume_1h ?? 0) > 50000
                         ? '⚡ Warm'
                         : '💧 Cold'}
                     </span>
