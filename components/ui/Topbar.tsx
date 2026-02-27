@@ -68,12 +68,12 @@ export default function Topbar() {
         }
 
         .topbar-content {
-          max-width: 840px;
+          max-width: 1320px;
           margin: 0 auto;
           display: flex;
           align-items: center;
           gap: 1rem;
-          padding: 0.75rem 1rem;
+          padding: 0.85rem 1.25rem;
         }
 
         .topbar-logo {
@@ -105,13 +105,13 @@ export default function Topbar() {
         .topbar-nav-item {
           display: flex;
           align-items: center;
-          gap: 0.4rem;
-          padding: 0.5rem 0.75rem;
-          border-radius: 8px;
+          gap: 0.45rem;
+          padding: 0.55rem 0.9rem;
+          border-radius: 10px;
           text-decoration: none;
           color: var(--muted);
-          font-size: 0.85rem;
-          font-weight: 600;
+          font-size: 0.95rem;
+          font-weight: 700;
           transition: all 120ms ease;
         }
 
@@ -170,12 +170,11 @@ export default function Topbar() {
           font-weight: 700;
         }
 
-<<<<<<< HEAD
         .topbar-footer-hint {
           display: none;
           justify-content: center;
-          padding: 0.4rem;
-          font-size: 0.7rem;
+          padding: 0.45rem;
+          font-size: 0.75rem;
           color: var(--muted);
           background: var(--surface-2);
           border-top: 1px solid var(--border);
@@ -185,20 +184,17 @@ export default function Topbar() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-width: 1.1rem;
-          height: 1.1rem;
-          padding: 0 0.25rem;
+          min-width: 1.2rem;
+          height: 1.2rem;
+          padding: 0 0.3rem;
           background: var(--surface);
           border: 1px solid var(--border);
-          border-radius: 4px;
+          border-radius: 6px;
           font-family: inherit;
-          font-size: 0.6rem;
-          font-weight: 700;
-          margin: 0 0.2rem;
+          font-size: 0.65rem;
+          font-weight: 800;
+          margin: 0 0.25rem;
         }
-
-=======
->>>>>>> origin/main
         @media (max-width: 640px) {
           .topbar-nav-label {
             display: none;
@@ -208,15 +204,12 @@ export default function Topbar() {
             display: none;
           }
         }
-<<<<<<< HEAD
 
         @media (min-width: 641px) {
           .topbar-footer-hint {
             display: flex;
           }
         }
-=======
->>>>>>> origin/main
       `}</style>
     </header>
   );
