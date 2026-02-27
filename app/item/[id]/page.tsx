@@ -6,6 +6,12 @@ import PriceSparkline from '@/components/market/PriceSparkline';
 import SignalsPanel from '@/components/market/SignalsPanel';
 import Link from 'next/link';
 
+// Helper to get OSRS Wiki URL for an item
+function getWikiUrl(itemName: string): string {
+  const encoded = encodeURIComponent(itemName.replace(/ /g, '_'));
+  return `https://oldschool.runescape.wiki/w/${encoded}`;
+}
+
 type ItemDetails = {
   item_id: number;
   name: string;
@@ -43,6 +49,28 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timestep, setTimestep] = useState<'5m' | '1h' | '6h' | '24h'>('1h');
+  const [showFlipCalc, setShowFlipCalc] = useState(false);
+
+  // Flip calculator state
+  const [flipQty, setFlipQty] = useState<number>(1);
+  const [flipBuyPrice, setFlipBuyPrice] = useState<string>('');
+  const [flipSellPrice, setFlipSellPrice] = useState<string>('');
+
+  // Flip calculation
+  const flipCalc = useMemo(() => {
+    const qty = flipQty > 0 ? flipQty : 0;
+    const buyPrice = Number(flipBuyPrice) || 0;
+    const sellPrice = Number(flipSellPrice) || 0;
+    
+    if (qty === 0 || buyPrice === 0 || sellPrice === 0) return null;
+    
+    const totalCost = qty * buyPrice;
+    const totalRevenue = qty * sellPrice;
+    const profit = totalRevenue - totalCost;
+    const roi = totalCost > 0 ? (profit / totalCost) * 100 : 0;
+    
+    return { qty, buyPrice, sellPrice, totalCost, totalRevenue, profit, roi };
+  }, [flipQty, flipBuyPrice, flipSellPrice]);
 
   // Extract sparkline values from timeseries
   const sparklineValues = useMemo(() => {
@@ -170,20 +198,61 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               )}
             </div>
           </div>
-          {sparklineValues.length > 3 && (
-            <div style={{ opacity: 0.9 }}>
-              <PriceSparkline 
-                values={sparklineValues} 
-                width={140} 
-                height={50} 
-                stroke={sparklineColor}
-                showArea={true}
-                showLastDot={true}
-                showGrid={false}
-                timestep={timestep}
-              />
-            </div>
-          )}
+          {/* Wiki link + sparkline row */}
+          <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+            {sparklineValues.length > 3 && (
+              <div style={{ opacity: 0.9 }}>
+                <PriceSparkline 
+                  values={sparklineValues} 
+                  width={140} 
+                  height={50} 
+                  stroke={sparklineColor}
+                  showArea={true}
+                  showLastDot={true}
+                  showGrid={false}
+                  timestep={timestep}
+                />
+              </div>
+            )}
+            {item && (
+              <a
+                href={getWikiUrl(item.name)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary"
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '0.35rem 0.65rem',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                }}
+                title="Open OSRS Wiki"
+              >
+                📖 Wiki
+              </a>
+            )}
+            <button
+              onClick={() => {
+                setFlipBuyPrice(String(price?.buy_at || ''));
+                setFlipSellPrice(String(price?.sell_at || ''));
+                setFlipQty(1);
+                setShowFlipCalc(true);
+              }}
+              className="btn btn-secondary"
+              style={{
+                fontSize: '0.75rem',
+                padding: '0.35rem 0.65rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+              }}
+              title="Flip Calculator"
+            >
+              🧮 Flip
+            </button>
+          </div>
         </div>
       </div>
 
@@ -285,6 +354,106 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           </div>
         )}
       </article>
+
+      {/* Flip Calculator Modal */}
+      {showFlipCalc && (
+        <div className="modal-overlay" onClick={() => setShowFlipCalc(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className="row-between" style={{ marginBottom: '1rem' }}>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 800 }}>🧮 Flip Calculator</h2>
+              <button className="btn-close" onClick={() => setShowFlipCalc(false)}>✕</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div>
+                <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={flipQty}
+                  onChange={(e) => setFlipQty(Math.max(1, parseInt(e.target.value) || 1))}
+                  style={{ fontSize: '1rem', padding: '0.6rem' }}
+                />
+              </div>
+              <div className="grid grid-2" style={{ gap: '0.5rem' }}>
+                <div>
+                  <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Buy Price (gp)</label>
+                  <input
+                    type="number"
+                    placeholder={price ? String(price.buy_at) : '0'}
+                    value={flipBuyPrice}
+                    onChange={(e) => setFlipBuyPrice(e.target.value)}
+                    style={{ fontSize: '1rem', padding: '0.6rem' }}
+                  />
+                </div>
+                <div>
+                  <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Sell Price (gp)</label>
+                  <input
+                    type="number"
+                    placeholder={price ? String(price.sell_at) : '0'}
+                    value={flipSellPrice}
+                    onChange={(e) => setFlipSellPrice(e.target.value)}
+                    style={{ fontSize: '1rem', padding: '0.6rem' }}
+                  />
+                </div>
+              </div>
+
+              {flipCalc && (
+                <div style={{ 
+                  marginTop: '0.5rem', 
+                  padding: '1rem', 
+                  background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)', 
+                  borderRadius: 12,
+                  border: '1px solid var(--border)'
+                }}>
+                  <div className="grid grid-2" style={{ gap: '0.75rem' }}>
+                    <div>
+                      <p className="muted" style={{ fontSize: '0.7rem' }}>Total Cost</p>
+                      <p style={{ fontSize: '1rem', fontWeight: 700 }}>{flipCalc.totalCost.toLocaleString()} gp</p>
+                    </div>
+                    <div>
+                      <p className="muted" style={{ fontSize: '0.7rem' }}>Total Revenue</p>
+                      <p style={{ fontSize: '1rem', fontWeight: 700 }}>{flipCalc.totalRevenue.toLocaleString()} gp</p>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
+                    <div className="row-between">
+                      <div>
+                        <p className="muted" style={{ fontSize: '0.7rem' }}>Profit</p>
+                        <p style={{ 
+                          fontSize: '1.4rem', 
+                          fontWeight: 900, 
+                          color: flipCalc.profit >= 0 ? '#22c55e' : '#ef4444' 
+                        }}>
+                          {flipCalc.profit >= 0 ? '+' : ''}{flipCalc.profit.toLocaleString()} gp
+                        </p>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <p className="muted" style={{ fontSize: '0.7rem' }}>ROI</p>
+                        <p style={{ 
+                          fontSize: '1.4rem', 
+                          fontWeight: 900, 
+                          color: flipCalc.roi >= 0 ? '#22c55e' : '#ef4444' 
+                        }}>
+                          {flipCalc.roi >= 0 ? '+' : ''}{flipCalc.roi.toFixed(1)}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button 
+                className="btn" 
+                onClick={() => setShowFlipCalc(false)}
+                style={{ marginTop: '0.5rem', width: '100%' }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
