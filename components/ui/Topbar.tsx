@@ -52,6 +52,11 @@ export default function Topbar() {
         </button>
       </div>
 
+      {/* Desktop-only shortcuts hint */}
+      <div className="topbar-footer-hint">
+        Press <kbd>?</kbd> for shortcuts
+      </div>
+
       <style jsx>{`
         .topbar {
           position: sticky;
@@ -165,6 +170,35 @@ export default function Topbar() {
           font-weight: 700;
         }
 
+<<<<<<< HEAD
+        .topbar-footer-hint {
+          display: none;
+          justify-content: center;
+          padding: 0.4rem;
+          font-size: 0.7rem;
+          color: var(--muted);
+          background: var(--surface-2);
+          border-top: 1px solid var(--border);
+        }
+
+        .topbar-footer-hint kbd {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 1.1rem;
+          height: 1.1rem;
+          padding: 0 0.25rem;
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: 4px;
+          font-family: inherit;
+          font-size: 0.6rem;
+          font-weight: 700;
+          margin: 0 0.2rem;
+        }
+
+=======
+>>>>>>> origin/main
         @media (max-width: 640px) {
           .topbar-nav-label {
             display: none;
@@ -174,6 +208,15 @@ export default function Topbar() {
             display: none;
           }
         }
+<<<<<<< HEAD
+
+        @media (min-width: 641px) {
+          .topbar-footer-hint {
+            display: flex;
+          }
+        }
+=======
+>>>>>>> origin/main
       `}</style>
     </header>
   );

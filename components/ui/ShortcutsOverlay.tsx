@@ -25,7 +25,7 @@ export default function ShortcutsOverlay() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
+    const target = e.target as HTMLElement;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
       
       if (e.key === '?' && !isInput) {
@@ -43,6 +43,7 @@ export default function ShortcutsOverlay() {
 
   if (!isOpen) return null;
 
+  // Group shortcuts by category
   const grouped = shortcuts.reduce((acc, shortcut) => {
     if (!acc[shortcut.category]) {
       acc[shortcut.category] = [];
