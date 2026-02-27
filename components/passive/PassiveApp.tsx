@@ -101,6 +101,9 @@ export default function PassiveApp() {
   const [error, setError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [newThesis, setNewThesis] = useState({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' as ActionPriority });
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
+  const [itemSearchResults, setItemSearchResults] = useState<Array<{ item_id: number; name: string }>>([]);
+  const [itemSearchLoading, setItemSearchLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [isAuthed, setIsAuthed] = useState(false);
@@ -407,6 +410,29 @@ export default function PassiveApp() {
     setOpportunities(payload.opportunities ?? []);
   }
 
+  // Item search effect
+  useEffect(() => {
+    if (!isAuthed || itemSearchQuery.length < 2) {
+      setItemSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setItemSearchLoading(true);
+      try {
+        const res = await fetch(`/api/items/search?q=${encodeURIComponent(itemSearchQuery)}&limit=8`);
+        const payload = (await res.json()) as { items?: Array<{ item_id: number; name: string }> };
+        setItemSearchResults(payload.items ?? []);
+      } catch {
+        setItemSearchResults([]);
+      } finally {
+        setItemSearchLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [itemSearchQuery, isAuthed]);
+
   async function addThesis() {
     setLoading(true);
     setError(null);
@@ -434,6 +460,8 @@ export default function PassiveApp() {
       }
 
       setNewThesis({ item_id: '', item_name: '', target_buy: '', target_sell: '', priority: 'medium' });
+      setItemSearchQuery('');
+      setItemSearchResults([]);
       await loadTheses();
       await loadDashboard();
     } catch (err) {
@@ -441,6 +469,12 @@ export default function PassiveApp() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function selectSearchResult(item: { item_id: number; name: string }) {
+    setNewThesis((prev) => ({ ...prev, item_id: String(item.item_id), item_name: item.name }));
+    setItemSearchQuery('');
+    setItemSearchResults([]);
   }
 
   return (
@@ -1011,11 +1045,63 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
           <article className="card">
             <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.65rem' }}>Theses</h2>
             <div className="grid" style={{ gap: '0.5rem', marginBottom: '0.75rem' }}>
-              <input
-                placeholder="Item ID"
-                value={newThesis.item_id}
-                onChange={(event) => setNewThesis((prev) => ({ ...prev, item_id: event.target.value }))}
-              />
+              <div style={{ position: 'relative' }}>
+                <input
+                  placeholder="Search item..."
+                  value={itemSearchQuery}
+                  onChange={(event) => setItemSearchQuery(event.target.value)}
+                  autoComplete="off"
+                />
+                {itemSearchResults.length > 0 && (
+                  <ul
+                    className="list"
+                    style={{
+                      position: 'absolute',
+                      zIndex: 10,
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '0 0 var(--radius) var(--radius)',
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      margin: 0,
+                      padding: '0.25rem',
+                    }}
+                  >
+                    {itemSearchResults.map((item) => (
+                      <li key={item.item_id}>
+                        <button
+                          type="button"
+                          onClick={() => selectSearchResult(item)}
+                          style={{
+                            width: '100%',
+                            textAlign: 'left',
+                            padding: '0.5rem',
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            borderRadius: 'var(--radius)',
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-2)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <span style={{ fontWeight: 600 }}>{item.name}</span>
+                          <span className="muted" style={{ marginLeft: '0.5rem', fontSize: '0.8rem' }}>
+                            #{item.item_id}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {itemSearchLoading && itemSearchQuery.length >= 2 && (
+                  <p className="muted" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                    Searching...
+                  </p>
+                )}
+              </div>
               <input
                 placeholder="Item Name"
                 value={newThesis.item_name}
