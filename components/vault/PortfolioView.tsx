@@ -107,6 +107,33 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
     };
   }, [positions]);
 
+  // Worst performer (lowest ROI)
+  const worstPerformer = useMemo(() => {
+    if (positions.length === 0) return null;
+    let worst: PortfolioPosition | null = null;
+    let worstRoi = Infinity;
+    
+    for (const p of positions) {
+      const invested = p.avg_buy_price * p.quantity;
+      if (invested <= 0) continue;
+      const currentValue = (p.last_price ?? p.avg_buy_price) * p.quantity;
+      const roi = ((currentValue - invested) / invested) * 100;
+      if (roi < worstRoi) {
+        worstRoi = roi;
+        worst = p;
+      }
+    }
+    
+    if (!worst) return null;
+    const invested = worst.avg_buy_price * worst.quantity;
+    const currentValue = (worst.last_price ?? worst.avg_buy_price) * worst.quantity;
+    return {
+      ...worst,
+      roi: worstRoi,
+      profit: currentValue - invested,
+    };
+  }, [positions]);
+
   if (loading) {
     return (
       <div className="card">
@@ -175,7 +202,18 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
         <article className="card" style={{ 
           background: 'linear-gradient(135deg, #166534 0%, #14532d 50%, #0f172a 100%)',
           border: '1px solid #22c55e',
-        }}>
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.01)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(34,197,94,0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
+        >
           <div className="row-between">
             <div>
               <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏆 Best Performer</p>
@@ -189,6 +227,42 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
               </p>
               <p className="muted" style={{ fontSize: '0.75rem' }}>
                 +{Math.round(bestPerformer.profit).toLocaleString()} gp
+              </p>
+            </div>
+          </div>
+        </article>
+      )}
+
+      {/* Worst Performer */}
+      {worstPerformer && worstPerformer.roi < 0 && (
+        <article className="card" style={{ 
+          background: 'linear-gradient(135deg, #7f1d1d 0%, #450a0a 50%, #0f172a 100%)',
+          border: '1px solid #ef4444',
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.01)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(239,68,68,0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
+        >
+          <div className="row-between">
+            <div>
+              <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📉 Worst Performer</p>
+              <Link href={`/item/${worstPerformer.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 800, fontSize: '1.2rem' }}>
+                {worstPerformer.item_name}
+              </Link>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ef4444' }}>
+                {worstPerformer.roi.toFixed(1)}%
+              </p>
+              <p className="muted" style={{ fontSize: '0.75rem' }}>
+                {Math.round(worstPerformer.profit).toLocaleString()} gp
               </p>
             </div>
           </div>
@@ -277,6 +351,17 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
                 style={{
                   padding: '0.75rem',
                   borderLeft: `3px solid ${roi >= 0 ? '#22c55e' : '#ef4444'}`,
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                  e.currentTarget.style.borderColor = roi >= 0 ? '#22c55e' : '#ef4444';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateX(0)';
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <div className="row-between" style={{ marginBottom: '0.35rem' }}>

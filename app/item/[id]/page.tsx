@@ -189,6 +189,19 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                   borderRadius: 4,
                   cursor: 'pointer',
                   fontWeight: timestep === t ? 700 : 400,
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (timestep !== t) {
+                    e.currentTarget.style.background = 'var(--surface-2)';
+                    e.currentTarget.style.borderColor = '#f5c518';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (timestep !== t) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.borderColor = 'var(--border)';
+                  }
                 }}
               >
                 {t}
