@@ -78,6 +78,17 @@ const Skeleton = memo(function Skeleton({
    For loading multiple related elements
    ============================================ */
 
+interface SkeletonGroupProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export const SkeletonGroup = memo(function SkeletonGroup({
+  children,
+  className = '',
+}: SkeletonGroupProps) {
+  return <div className={`flex flex-col gap-3 ${className}`}>{children}</div>;
+});
 /* ============================================
    OPPORTUNITY CARD SKELETON
    ============================================ */
@@ -108,6 +119,7 @@ export const OpportunitySkeleton = memo(function OpportunitySkeleton({
           <div className="row" style={{ gap: '0.25rem' }}>
             <Skeleton width={40} height={22} />
             <Skeleton width={40} height={22} />
+            <Skeleton width={32} height={22} />
           </div>
         )}
       </div>
