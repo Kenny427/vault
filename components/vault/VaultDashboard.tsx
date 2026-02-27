@@ -21,6 +21,7 @@ type Opportunity = {
   score: number;
   volume_5m: number | null;
   volume_1h: number | null;
+  icon_url: string | null;
 };
 
 type Proposal = {
