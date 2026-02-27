@@ -378,6 +378,13 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             <p className="muted" style={{ fontSize: '0.75rem' }}>Sell At</p>
             <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>{price.sell_at.toLocaleString()} gp</p>
           </article>
+          <article className="card">
+            <p className="muted" style={{ fontSize: '0.75rem' }}>Spread</p>
+            <p style={{ fontSize: '1.3rem', fontWeight: 900, color: price.spread_pct <= 1 ? '#22c55e' : price.spread_pct <= 3 ? '#f5c518' : '#ef4444' }}>
+              {price.spread_pct.toFixed(1)}%
+            </p>
+            <p className="muted" style={{ fontSize: '0.65rem' }}>{price.spread_pct <= 1 ? 'Great' : price.spread_pct <= 3 ? 'OK' : 'High'} spread</p>
+          </article>
         </div>
       )}
 
