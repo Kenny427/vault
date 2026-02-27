@@ -40,6 +40,7 @@ type DashboardPayload = {
     queued_actions: number;
     high_priority_actions: number;
     estimated_unrealized_profit: number;
+    total_portfolio_value: number;
   };
 };
 
@@ -1369,7 +1370,7 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
               <p className="muted">{sparklineError}</p>
             ) : (
               <div style={{ overflowX: 'auto', paddingBottom: '0.25rem' }}>
-                <PriceSparkline values={sparklineValues} width={560} height={140} />
+                <PriceSparkline values={sparklineValues} width={560} height={140} timestep={sparklineStep} />
               </div>
             )}
           </div>

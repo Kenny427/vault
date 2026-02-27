@@ -14,12 +14,14 @@ export default function PriceSparkline(props: {
   showArea?: boolean;
   showLastDot?: boolean;
   showGrid?: boolean;
+  timestep?: '5m' | '1h' | '6h' | '24h';
 }) {
   const width = props.width ?? 240;
   const height = props.height ?? 140;
   const showArea = props.showArea ?? true;
   const showLastDot = props.showLastDot ?? true;
   const showGrid = props.showGrid ?? true;
+  const timestep = props.timestep ?? '5m';
 
   const gradientId = useId();
 
@@ -99,6 +101,30 @@ export default function PriceSparkline(props: {
           <line x1={0} y1={Math.round(height * 0.75)} x2={width} y2={Math.round(height * 0.75)} />
         </g>
       ) : null}
+
+      {/* Y-axis price labels */}
+      <g fill="var(--muted)" fontSize="8" fontWeight={500}>
+        <text x={4} y={10} opacity={0.7}>
+          {maxV >= 1000 ? `${(maxV / 1000).toFixed(1)}k` : Math.round(maxV)}
+        </text>
+        <text x={4} y={height / 2 + 3} opacity={0.5}>
+          {range >= 1000 ? `${((maxV + minV) / 2 / 1000).toFixed(1)}k` : Math.round((maxV + minV) / 2)}
+        </text>
+        <text x={4} y={height - 4} opacity={0.7}>
+          {minV >= 1000 ? `${(minV / 1000).toFixed(1)}k` : Math.round(minV)}
+        </text>
+      </g>
+
+      {/* Time axis labels */}
+      <g fill="var(--muted)" fontSize="9" fontWeight={500}>
+        <text x={4} y={height - 4} opacity={0.7}>now</text>
+        <text x={width / 2} y={height - 4} textAnchor="middle" opacity={0.5}>
+          {timestep === '5m' ? '2.5m' : timestep === '1h' ? '30m' : timestep === '6h' ? '3h' : '12h'}
+        </text>
+        <text x={width - 4} y={height - 4} textAnchor="end" opacity={0.7}>
+          {timestep === '5m' ? '5m ago' : timestep === '1h' ? '1h ago' : timestep === '6h' ? '6h ago' : '24h ago'}
+        </text>
+      </g>
 
       {showArea ? <polygon points={areaPoints} fill={`url(#spark-area-${gradientId})`} /> : null}
 

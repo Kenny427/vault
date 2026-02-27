@@ -257,6 +257,7 @@ export async function GET() {
 
   const positionRows = positionsRes.data ?? [];
   const estimatedUnrealizedProfit = positionRows.reduce((sum, row) => sum + Number(row.unrealized_profit ?? 0), 0);
+  const totalPortfolioValue = positionRows.reduce((sum, row) => sum + Number(row.quantity ?? 0) * Number(row.avg_buy_price ?? 0), 0);
   const highPriorityActions = sortedActions.filter((action) => action.priority === 'high').length;
 
   if (criticalMessages.length > 0) {
@@ -273,6 +274,7 @@ export async function GET() {
       queued_actions: queue.length,
       high_priority_actions: highPriorityActions,
       estimated_unrealized_profit: estimatedUnrealizedProfit,
+      total_portfolio_value: totalPortfolioValue,
     },
   });
 }
