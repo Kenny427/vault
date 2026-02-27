@@ -72,6 +72,8 @@ type Opportunity = {
   suggested_qty: number;
   est_profit: number;
   score: number;
+  volume_5m: number | null;
+  volume_1h: number | null;
 };
 
 const tabs = ['Home', 'Scan', 'Queue', 'Positions', 'More'] as const;
@@ -486,6 +488,11 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>
                       Buy ~{opp.buy_at.toLocaleString()} | Sell ~{opp.sell_at.toLocaleString()} | Margin ~{opp.margin.toLocaleString()} gp ({opp.spread_pct.toFixed(1)}%) | Qty {opp.suggested_qty.toLocaleString()} | Est profit ~{opp.est_profit.toLocaleString()} gp
                     </p>
+                    {(opp.volume_5m || opp.volume_1h) ? (
+                      <p className="muted" style={{ marginTop: '0.15rem', fontSize: '0.8rem' }}>
+                        Vol: {opp.volume_5m ? `${(opp.volume_5m/1000).toFixed(1)}k (5m)` : ''}{opp.volume_5m && opp.volume_1h ? ' · ' : ''}{opp.volume_1h ? `${(opp.volume_1h/1000).toFixed(1)}k (1h)` : ''}
+                      </p>
+                    ) : null}
                   </li>
                 ))
               )}
