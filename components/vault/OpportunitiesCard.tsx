@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 type Opportunity = {
   item_id: number;
@@ -187,10 +188,13 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
                 <div className="row-between" style={{ marginBottom: '0.35rem' }}>
                   <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
                     {opp.icon_url && (
-                      <img
+                      <Image
                         src={opp.icon_url}
                         alt=""
-                        style={{ width: 24, height: 24, imageRendering: 'pixelated', borderRadius: 4 }}
+                        width={24}
+                        height={24}
+                        style={{ imageRendering: 'pixelated', borderRadius: 4 }}
+                        unoptimized
                       />
                     )}
                     <Link href={`/item/${opp.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 700 }}>
