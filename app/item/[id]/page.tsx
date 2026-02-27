@@ -6,6 +6,12 @@ import PriceSparkline from '@/components/market/PriceSparkline';
 import SignalsPanel from '@/components/market/SignalsPanel';
 import Link from 'next/link';
 
+// Helper to get OSRS Wiki URL for an item
+function getWikiUrl(itemName: string): string {
+  const encoded = encodeURIComponent(itemName.replace(/ /g, '_'));
+  return `https://oldschool.runescape.wiki/w/${encoded}`;
+}
+
 type ItemDetails = {
   item_id: number;
   name: string;
@@ -170,20 +176,42 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               )}
             </div>
           </div>
-          {sparklineValues.length > 3 && (
-            <div style={{ opacity: 0.9 }}>
-              <PriceSparkline 
-                values={sparklineValues} 
-                width={140} 
-                height={50} 
-                stroke={sparklineColor}
-                showArea={true}
-                showLastDot={true}
-                showGrid={false}
-                timestep={timestep}
-              />
-            </div>
-          )}
+          {/* Wiki link + sparkline row */}
+          <div className="row" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
+            {sparklineValues.length > 3 && (
+              <div style={{ opacity: 0.9 }}>
+                <PriceSparkline 
+                  values={sparklineValues} 
+                  width={140} 
+                  height={50} 
+                  stroke={sparklineColor}
+                  showArea={true}
+                  showLastDot={true}
+                  showGrid={false}
+                  timestep={timestep}
+                />
+              </div>
+            )}
+            {item && (
+              <a
+                href={getWikiUrl(item.name)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary"
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '0.35rem 0.65rem',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                }}
+                title="Open OSRS Wiki"
+              >
+                📖 Wiki
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
