@@ -83,17 +83,12 @@ interface SkeletonGroupProps {
   className?: string;
 }
 
-const SkeletonGroup = memo(function SkeletonGroup({
+export const SkeletonGroup = memo(function SkeletonGroup({
   children,
   className = '',
 }: SkeletonGroupProps) {
-  return (
-    <div className={`flex flex-col gap-3 ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`flex flex-col gap-3 ${className}`}>{children}</div>;
 });
-
 /* ============================================
    OPPORTUNITY CARD SKELETON
    ============================================ */
@@ -124,9 +119,7 @@ export const OpportunitySkeleton = memo(function OpportunitySkeleton({
           <div className="row" style={{ gap: '0.25rem' }}>
             <Skeleton width={40} height={22} />
             <Skeleton width={40} height={22} />
-            {typeof window !== 'undefined' && (
-              <Skeleton width={32} height={22} />
-            )}
+            <Skeleton width={32} height={22} />
           </div>
         )}
       </div>
