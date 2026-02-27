@@ -84,6 +84,7 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
   const [added, setAdded] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>('score');
   const [scoreFilter, setScoreFilter] = useState<ScoreFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<string | null>(null);
   const [refreshingPrices, setRefreshingPrices] = useState(false);
@@ -91,6 +92,12 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
 
   const sortedOpportunities = useMemo(() => {
     let filtered = [...opportunities];
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(o => o.item_name.toLowerCase().includes(query));
+    }
     
     // Apply score filter
     if (scoreFilter !== 'all') {
@@ -217,9 +224,24 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
 
       {/* Opportunities List */}
       <article className="card">
-        <div className="row-between" style={{ marginBottom: '0.75rem' }}>
+        <div className="row-between" style={{ marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Flipping Opportunities</h2>
-          <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+          <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              placeholder="Search items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ 
+                padding: '0.3rem 0.6rem', 
+                fontSize: '0.8rem', 
+                borderRadius: '4px',
+                width: '140px',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--border)',
+                color: 'var(--text)',
+              }}
+            />
             <select
               value={scoreFilter}
               onChange={(e) => setScoreFilter(e.target.value as ScoreFilter)}
