@@ -43,6 +43,26 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timestep, setTimestep] = useState<'5m' | '1h' | '6h' | '24h'>('1h');
+  const [addingWatch, setAddingWatch] = useState(false);
+  const [addedToWatch, setAddedToWatch] = useState(false);
+
+  // Add to watchlist
+  const handleAddToWatchlist = async () => {
+    if (!item || addingWatch || addedToWatch) return;
+    setAddingWatch(true);
+    try {
+      const res = await fetch('/api/theses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.item_id, item_name: item.name }),
+      });
+      if (res.ok) {
+        setAddedToWatch(true);
+      }
+    } finally {
+      setAddingWatch(false);
+    }
+  };
 
   // Extract sparkline values from timeseries
   const sparklineValues = useMemo(() => {
@@ -183,6 +203,28 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                 timestep={timestep}
               />
             </div>
+          )}
+        </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          {addedToWatch ? (
+            <span style={{ fontSize: '0.85rem', color: '#22c55e', fontWeight: 600 }}>✓ Added to Watchlist</span>
+          ) : (
+            <button
+              onClick={handleAddToWatchlist}
+              disabled={addingWatch}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--muted)',
+                padding: '0.3rem 0.6rem',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                cursor: addingWatch ? 'not-allowed' : 'pointer',
+                opacity: addingWatch ? 0.6 : 1,
+              }}
+            >
+              {addingWatch ? 'Adding...' : '+ Add to Watchlist'}
+            </button>
           )}
         </div>
       </div>
