@@ -143,15 +143,22 @@ export default function PassiveApp() {
     if (positions.length === 0) return null;
     let totalInvested = 0;
     let currentValue = 0;
+    let topPerformer: { name: string; roi: number } | null = null;
     for (const p of positions) {
       const invested = p.avg_buy_price * p.quantity;
       const value = (p.last_price ?? p.avg_buy_price) * p.quantity;
       totalInvested += invested;
       currentValue += value;
+
+      // Calculate individual position ROI
+      const positionRoi = invested > 0 ? ((value - invested) / invested) * 100 : 0;
+      if (!topPerformer || positionRoi > topPerformer.roi) {
+        topPerformer = { name: p.item_name, roi: positionRoi };
+      }
     }
     const profit = currentValue - totalInvested;
     const roi = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
-    return { totalInvested, currentValue, profit, roi };
+    return { totalInvested, currentValue, profit, roi, topPerformer };
   }, [positions]);
 
   useEffect(() => {
@@ -483,6 +490,30 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                 <p className="muted">Positions</p>
                 <p className="kpi">{positions.length}</p>
               </article>
+              {portfolioStats.topPerformer ? (
+                <article
+                  className="card"
+                  style={{
+                    gridColumn: 'span 2',
+                    background: 'linear-gradient(135deg, var(--surface) 0%, rgba(39, 194, 103, 0.08) 100%)',
+                  }}
+                >
+                  <p className="muted">Top Performer</p>
+                  <p className="kpi" style={{ fontSize: '1.1rem' }}>
+                    {portfolioStats.topPerformer.name}
+                  </p>
+                  <p
+                    style={{
+                      color: portfolioStats.topPerformer.roi >= 0 ? 'var(--accent)' : 'var(--danger)',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                    }}
+                  >
+                    {portfolioStats.topPerformer.roi >= 0 ? '+' : ''}
+                    {portfolioStats.topPerformer.roi.toFixed(1)}% ROI
+                  </p>
+                </article>
+              ) : null}
             </div>
           ) : null}
 
@@ -730,7 +761,6 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                   const invested = position.avg_buy_price * position.quantity;
                   const current = (position.last_price ?? position.avg_buy_price) * position.quantity;
                   const roi = invested > 0 ? ((current - invested) / invested) * 100 : 0;
-
                   return (
                     <li key={position.id} className="card" style={{ padding: '0.7rem' }}>
                       <div className="row-between">
@@ -785,84 +815,6 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
 
       {activeTab === 'More' ? (
         <section className="grid" style={{ gap: '0.75rem' }}>
-          <article className="card">
-            <div className="row-between" style={{ marginBottom: '0.65rem' }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Inbox</h2>
-              {isAuthed ? (
-                <div className="row" style={{ gap: '0.35rem' }}>
-                  <button
-                    className={`btn btn-secondary ${inboxFilter === 'pending' ? 'active' : ''}`}
-                    disabled={loading}
-                    onClick={() => {
-                      setInboxFilter('pending');
-                      void loadReconciliationTasks('pending');
-                    }}
-                  >
-                    Pending
-                  </button>
-                  <button
-                    className={`btn btn-secondary ${inboxFilter === 'all' ? 'active' : ''}`}
-                    disabled={loading}
-                    onClick={() => {
-                      setInboxFilter('all');
-                      void loadReconciliationTasks('all');
-                    }}
-                  >
-                    All
-                  </button>
-                </div>
-              ) : null}
-            </div>
-            {!isAuthed ? (
-              <p className="muted">Sign in to view reconciliation tasks.</p>
-            ) : reconciliationTasks.length === 0 ? (
-              <p className="muted">No pending tasks.</p>
-            ) : (
-              <ul className="list">
-                {reconciliationTasks.map((task) => (
-                  <li key={task.id} className="card" style={{ padding: '0.7rem' }}>
-                    <div className="row-between">
-                      <strong>{task.item_name ?? `Item ${task.item_id ?? ''}`}</strong>
-                      <span className="muted">
-                        {task.side.toUpperCase()}
-                        {inboxFilter === 'all' ? ` · ${String(task.status).toUpperCase()}` : ''}
-                      </span>
-                    </div>
-                    <p className="muted" style={{ marginTop: '0.25rem' }}>
-                      Qty: {Number(task.quantity ?? 0).toLocaleString()} | Price: {Math.round(Number(task.price ?? 0)).toLocaleString()} gp
-                    </p>
-                    <p className="muted" style={{ marginTop: '0.25rem' }}>
-                      When: {task.occurred_at ? new Date(task.occurred_at).toLocaleString() : '-'}
-                    </p>
-                    {task.reason ? (
-                      <p className="muted" style={{ marginTop: '0.25rem' }}>
-                        Reason: {task.reason}
-                      </p>
-                    ) : null}
-                    {task.status === 'pending' ? (
-                      <div className="row" style={{ marginTop: '0.5rem' }}>
-                        <button
-                          className="btn btn-secondary"
-                          disabled={loading}
-                          onClick={() => void resolveReconciliationTask(task.id, 'approved')}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          className="btn btn-secondary"
-                          disabled={loading}
-                          onClick={() => void resolveReconciliationTask(task.id, 'rejected')}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-
           <article className="card">
             <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.65rem' }}>Account</h2>
             {!authChecked ? (

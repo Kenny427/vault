@@ -57,11 +57,11 @@ export default function PriceSparkline(props: {
     return { x: clamp(x, 0, width), y: clamp(y, 0, height), v };
   });
 
-  // Infer stroke color from trend unless explicitly provided
   const firstVal = series[0];
   const lastVal = series[series.length - 1];
-  const inferredStroke = lastVal >= firstVal ? 'var(--accent)' : 'var(--danger)';
-  const stroke = props.stroke ?? inferredStroke;
+  const isUp = lastVal >= firstVal;
+
+  const stroke = props.stroke ?? (isUp ? 'var(--accent)' : 'var(--danger)');
 
   const points = coords.map((p) => `${p.x},${p.y}`).join(' ');
   const areaPoints = showArea ? `${points} ${width},${height} 0,${height}` : '';
