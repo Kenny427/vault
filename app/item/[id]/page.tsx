@@ -5,6 +5,7 @@ import PriceVolumeChart from '@/components/market/PriceVolumeChart';
 import PriceSparkline from '@/components/market/PriceSparkline';
 import SignalsPanel from '@/components/market/SignalsPanel';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // Helper to get OSRS Wiki URL for an item
 function getWikiUrl(itemName: string): string {
@@ -56,21 +57,42 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const [flipBuyPrice, setFlipBuyPrice] = useState<string>('');
   const [flipSellPrice, setFlipSellPrice] = useState<string>('');
 
+  const [addingWatch, setAddingWatch] = useState(false);
+  const [addedToWatch, setAddedToWatch] = useState(false);
+
   // Flip calculation
   const flipCalc = useMemo(() => {
     const qty = flipQty > 0 ? flipQty : 0;
     const buyPrice = Number(flipBuyPrice) || 0;
     const sellPrice = Number(flipSellPrice) || 0;
-    
+
     if (qty === 0 || buyPrice === 0 || sellPrice === 0) return null;
-    
+
     const totalCost = qty * buyPrice;
     const totalRevenue = qty * sellPrice;
     const profit = totalRevenue - totalCost;
     const roi = totalCost > 0 ? (profit / totalCost) * 100 : 0;
-    
+
     return { qty, buyPrice, sellPrice, totalCost, totalRevenue, profit, roi };
   }, [flipQty, flipBuyPrice, flipSellPrice]);
+
+  // Add to watchlist
+  const handleAddToWatchlist = async () => {
+    if (!item || addingWatch || addedToWatch) return;
+    setAddingWatch(true);
+    try {
+      const res = await fetch('/api/theses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.item_id, item_name: item.name }),
+      });
+      if (res.ok) {
+        setAddedToWatch(true);
+      }
+    } finally {
+      setAddingWatch(false);
+    }
+  };
 
   // Extract sparkline values from timeseries
   const sparklineValues = useMemo(() => {
@@ -180,7 +202,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       <div className="card" style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
         <div className="row" style={{ gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {item.icon_url && (
-            <img src={item.icon_url} alt={item.name} style={{ width: 64, height: 64, imageRendering: 'pixelated' }} />
+            <Image src={item.icon_url} alt={item.name} width={64} height={64} style={{ imageRendering: 'pixelated' }} unoptimized />
           )}
           <div style={{ flex: 1, minWidth: 200 }}>
             <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
@@ -266,6 +288,28 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               🧮 Flip
             </button>
           </div>
+        </div>
+        <div style={{ marginTop: '0.75rem' }}>
+          {addedToWatch ? (
+            <span style={{ fontSize: '0.85rem', color: '#22c55e', fontWeight: 600 }}>✓ Added to Watchlist</span>
+          ) : (
+            <button
+              onClick={handleAddToWatchlist}
+              disabled={addingWatch}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border)',
+                color: 'var(--muted)',
+                padding: '0.3rem 0.6rem',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                cursor: addingWatch ? 'not-allowed' : 'pointer',
+                opacity: addingWatch ? 0.6 : 1,
+              }}
+            >
+              {addingWatch ? 'Adding...' : '+ Add to Watchlist'}
+            </button>
+          )}
         </div>
       </div>
 

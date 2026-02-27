@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { formatGp } from '@/lib/format';
 import Image from 'next/image';
 
 type Opportunity = {
@@ -129,7 +130,7 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
           <div style={{ textAlign: 'right' }}>
             <p className="muted" style={{ fontSize: '0.8rem' }}>Est. Profit Potential</p>
             <p style={{ fontSize: '1.2rem', fontWeight: 700, color: '#22c55e' }}>
-              ~{totalEstProfit.toLocaleString()} gp
+              ~{formatGp(totalEstProfit)}
             </p>
           </div>
         </div>
@@ -214,15 +215,15 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
                 <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', fontSize: '0.85rem' }}>
                   <div>
                     <p className="muted" style={{ fontSize: '0.7rem' }}>Buy</p>
-                    <p style={{ fontWeight: 600 }}>{opp.buy_at.toLocaleString()} gp</p>
+                    <p style={{ fontWeight: 600 }}>{formatGp(opp.buy_at)}</p>
                   </div>
                   <div>
                     <p className="muted" style={{ fontSize: '0.7rem' }}>Sell</p>
-                    <p style={{ fontWeight: 600 }}>{opp.sell_at.toLocaleString()} gp</p>
+                    <p style={{ fontWeight: 600 }}>{formatGp(opp.sell_at)}</p>
                   </div>
                   <div>
                     <p className="muted" style={{ fontSize: '0.7rem' }}>Margin</p>
-                    <p style={{ fontWeight: 600, color: '#22c55e' }}>{opp.margin.toLocaleString()} gp</p>
+                    <p style={{ fontWeight: 600, color: '#22c55e' }}>{formatGp(opp.margin)}</p>
                   </div>
                   <div>
                     <p className="muted" style={{ fontSize: '0.7rem' }}>Spread</p>
@@ -234,7 +235,7 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
                   </div>
                   <div>
                     <p className="muted" style={{ fontSize: '0.7rem' }}>Est Profit</p>
-                    <p style={{ fontWeight: 600, color: '#22c55e' }}>{opp.est_profit.toLocaleString()} gp</p>
+                    <p style={{ fontWeight: 600, color: '#22c55e' }}>{formatGp(opp.est_profit)}</p>
                   </div>
                 </div>
 
@@ -244,24 +245,26 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
                       Vol:{' '}
                       {opp.volume_5m
                         ? `${(opp.volume_5m / 1000).toFixed(1)}k (5m)`
+                        : opp.volume_1h
+                        ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)`
                         : ''}
                       {opp.volume_5m && opp.volume_1h ? ' · ' : ''}
-                      {opp.volume_1h ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)` : ''}
+                      {opp.volume_5m && opp.volume_1h ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)` : ''}
                     </span>
                     <span
                       style={{
                         fontWeight: 600,
                         color:
-                          (opp.volume_5m ?? 0) > 100000
+                          (opp.volume_5m ?? opp.volume_1h ?? 0) > 100000
                             ? '#f5c518'
-                            : (opp.volume_5m ?? 0) > 50000
+                            : (opp.volume_5m ?? opp.volume_1h ?? 0) > 50000
                             ? '#22c55e'
                             : '#6b7280',
                       }}
                     >
-                      {(opp.volume_5m ?? 0) > 100000
+                      {(opp.volume_5m ?? opp.volume_1h ?? 0) > 100000
                         ? '🔥 HOT'
-                        : (opp.volume_5m ?? 0) > 50000
+                        : (opp.volume_5m ?? opp.volume_1h ?? 0) > 50000
                         ? '⚡ Warm'
                         : '💧 Cold'}
                     </span>
