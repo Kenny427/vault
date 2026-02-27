@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
-import PriceSparkline from '@/components/market/PriceSparkline';
+import { useEffect, useState, use, useMemo } from 'react';
+import PriceVolumeChart from '@/components/market/PriceVolumeChart';
+import SignalsPanel from '@/components/market/SignalsPanel';
 import Link from 'next/link';
 
 type ItemDetails = {
@@ -24,8 +25,11 @@ type PriceData = {
 };
 
 type TimeSeriesPoint = {
-  timestamp: string;
-  price: number;
+  timestamp: number;
+  avgHighPrice?: number | null;
+  avgLowPrice?: number | null;
+  highPriceVolume?: number | null;
+  lowPriceVolume?: number | null;
 };
 
 export default function ItemPage({ params }: { params: Promise<{ id: string }> }) {
@@ -38,6 +42,34 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [timestep, setTimestep] = useState<'5m' | '1h' | '6h' | '24h'>('1h');
+
+  // Calculate volatility and price change from timeseries
+  const { volatility, priceChange } = useMemo(() => {
+    if (timeseries.length < 2) return { volatility: null, priceChange: null };
+    
+    const prices = timeseries
+      .map((t) => t.avgHighPrice)
+      .filter((p): p is number => typeof p === 'number' && Number.isFinite(p));
+    
+    if (prices.length < 2) return { volatility: null, priceChange: null };
+    
+    // Calculate volatility (coefficient of variation)
+    const mean = prices.reduce((a, b) => a + b, 0) / prices.length;
+    let volatility: number | null = null;
+    if (mean !== 0) {
+      const squaredDiffs = prices.map((p) => Math.pow(p - mean, 2));
+      const variance = squaredDiffs.reduce((a, b) => a + b, 0) / prices.length;
+      const stdDev = Math.sqrt(variance);
+      volatility = (stdDev / mean) * 100;
+    }
+    
+    // Calculate price change
+    const first = prices[0];
+    const last = prices[prices.length - 1];
+    const priceChange = ((last - first) / first) * 100;
+    
+    return { volatility, priceChange };
+  }, [timeseries]);
 
   useEffect(() => {
     async function loadData() {
@@ -94,8 +126,6 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     );
   }
 
-  const sparklineValues = timeseries.map((t) => t.price);
-
   return (
     <main style={{ padding: '1rem', maxWidth: '800px', margin: '0 auto' }}>
       {/* Header */}
@@ -130,29 +160,19 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         </div>
       </div>
 
-      {/* Price Info */}
+      {/* Price Info Grid */}
       {price && (
         <div className="grid grid-2" style={{ gap: '0.5rem', marginBottom: '1rem' }}>
           <article className="card">
             <p className="muted" style={{ fontSize: '0.75rem' }}>Current Price</p>
             <p style={{ fontSize: '1.3rem', fontWeight: 900 }}>{price.last_price.toLocaleString()} gp</p>
-            {timeseries.length >= 2 && (
+            {priceChange !== null && (
               <p style={{ 
                 fontSize: '0.85rem', 
                 fontWeight: 700, 
-                color: (() => {
-                  const first = timeseries[0]?.price || 0;
-                  const last = timeseries[timeseries.length - 1]?.price || 0;
-                  const change = ((last - first) / first) * 100;
-                  return change >= 0 ? '#22c55e' : '#ef4444';
-                })()
+                color: priceChange >= 0 ? '#22c55e' : '#ef4444'
               }}>
-                {(() => {
-                  const first = timeseries[0]?.price || 0;
-                  const last = timeseries[timeseries.length - 1]?.price || 0;
-                  const change = ((last - first) / first) * 100;
-                  return `${change >= 0 ? '↑' : '↓'} ${Math.abs(change).toFixed(1)}% (${timestep})`;
-                })()}
+                {priceChange >= 0 ? '↑' : '↓'} {Math.abs(priceChange).toFixed(1)}% ({timestep})
               </p>
             )}
           </article>
@@ -171,10 +191,25 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         </div>
       )}
 
-      {/* Sparkline Chart */}
+      {/* Signals Panel */}
+      {price && (
+        <article className="card" style={{ marginBottom: '1rem' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem' }}>Market Signals</h2>
+          <SignalsPanel
+            spreadPct={price.spread_pct}
+            spreadGp={price.margin}
+            volume5m={price.volume_5m}
+            volume1h={price.volume_1h}
+            volatility={volatility}
+            price={price.last_price}
+          />
+        </article>
+      )}
+
+      {/* Price + Volume Chart */}
       <article className="card" style={{ marginBottom: '1rem' }}>
         <div className="row-between" style={{ marginBottom: '0.75rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Price History</h2>
+          <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Price & Volume</h2>
           <div className="row" style={{ gap: '0.25rem' }}>
             {(['5m', '1h', '6h', '24h'] as const).map((t) => (
               <button
@@ -210,35 +245,19 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           </div>
         </div>
 
-        {sparklineValues.length > 0 ? (
-          <PriceSparkline values={sparklineValues} width={700} height={200} timestep={timestep} />
+        {timeseries.length > 0 ? (
+          <PriceVolumeChart 
+            data={timeseries} 
+            width={700} 
+            height={320} 
+            timestep={timestep} 
+          />
         ) : (
-          <div style={{ height: 200, display: 'grid', placeItems: 'center', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface-2)' }}>
+          <div style={{ height: 320, display: 'grid', placeItems: 'center', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface-2)' }}>
             <p className="muted">No chart data available</p>
           </div>
         )}
       </article>
-
-      {/* Volume Info */}
-      {price && (price.volume_5m || price.volume_1h) && (
-        <article className="card">
-          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem' }}>Volume</h2>
-          <div className="grid grid-2" style={{ gap: '0.5rem' }}>
-            {price.volume_5m && (
-              <div>
-                <p className="muted" style={{ fontSize: '0.75rem' }}>5 minutes</p>
-                <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>{(price.volume_5m / 1000).toFixed(1)}k</p>
-              </div>
-            )}
-            {price.volume_1h && (
-              <div>
-                <p className="muted" style={{ fontSize: '0.75rem' }}>1 hour</p>
-                <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>{(price.volume_1h / 1000).toFixed(1)}k</p>
-              </div>
-            )}
-          </div>
-        </article>
-      )}
     </main>
   );
 }
