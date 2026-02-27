@@ -97,7 +97,6 @@ export default function PassiveApp() {
   const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
   const [inboxFilter, setInboxFilter] = useState<'pending' | 'all'>('pending');
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [inboxBootstrapped, setInboxBootstrapped] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -277,7 +276,6 @@ export default function PassiveApp() {
     if (activeTab !== 'More') return;
     if (!isAuthed) {
       setReconciliationTasks([]);
-      setInboxBootstrapped(false);
       return;
     }
 
@@ -289,7 +287,6 @@ export default function PassiveApp() {
         if (res.status === 401) {
           setIsAuthed(false);
           setReconciliationTasks([]);
-          setInboxBootstrapped(false);
           return;
         }
         setError(`Failed to load inbox (${res.status})${details?.error ? `: ${details.error}` : ''}`);
@@ -298,7 +295,6 @@ export default function PassiveApp() {
 
       const payload = (await res.json()) as { tasks: ReconciliationTask[] };
       setReconciliationTasks(payload.tasks ?? []);
-      setInboxBootstrapped(true);
     })();
   }, [activeTab, isAuthed, inboxFilter]);
 
@@ -318,7 +314,6 @@ export default function PassiveApp() {
           if (!res.ok) return;
           const payload = (await res.json()) as { opportunities: Opportunity[] };
           setOpportunities(payload.opportunities ?? []);
-          setOpportunitiesLastUpdated(new Date());
         } catch {
           // Silently fail - user can manually refresh
         }
