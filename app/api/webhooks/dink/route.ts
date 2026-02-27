@@ -180,6 +180,12 @@ export async function POST(request: NextRequest) {
   }
 
   for (const event of actionableEvents) {
+    const qty = Number(event.quantity ?? 0);
+    const price = Number(event.price ?? 0);
+
+    // Should be filtered already, but keep runtime-safe.
+    if (!event.item_id || !qty || !price) continue;
+
     const { data: existingPosition } = await admin
       .from('positions')
       .select('id,quantity,avg_buy_price,realized_profit,item_name')
@@ -193,7 +199,7 @@ export async function POST(request: NextRequest) {
 
     // Approval gate: if DINK reports a sell larger than our known position, create a reconciliation task
     // and do NOT mutate positions until someone approves.
-    if (event.side === 'sell' && event.quantity > previousQty) {
+    if (event.side === 'sell' && qty > previousQty) {
       const taskItemName = event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`;
 
       const insertRes = await admin.from('reconciliation_tasks').insert({
@@ -201,8 +207,8 @@ export async function POST(request: NextRequest) {
         item_id: event.item_id,
         item_name: taskItemName,
         side: 'sell',
-        quantity: event.quantity,
-        price: event.price,
+        quantity: qty,
+        price,
         occurred_at: event.timestamp,
         reason: 'Sell event quantity exceeds tracked position. Needs manual review.',
         status: 'pending',
@@ -213,7 +219,7 @@ export async function POST(request: NextRequest) {
       // Proactive alert so Ray sees approvals waiting without having to open the app.
       if (!insertRes.error) {
         await sendDiscordAlert(
-          `Approval needed: sell exceeds position · ${taskItemName} · sell ${event.quantity?.toLocaleString()} @ ${event.price?.toLocaleString()} (tracked ${previousQty.toLocaleString()})`
+          `Approval needed: sell exceeds position · ${taskItemName} · sell ${qty.toLocaleString()} @ ${price.toLocaleString()} (tracked ${previousQty.toLocaleString()})`
         );
       }
 
@@ -225,15 +231,15 @@ export async function POST(request: NextRequest) {
     let nextRealized = realizedProfit;
 
     if (event.side === 'buy') {
-      const totalCost = previousQty * existingAvg + event.quantity * event.price;
-      nextQty = previousQty + event.quantity;
+      const totalCost = previousQty * existingAvg + qty * price;
+      nextQty = previousQty + qty;
       nextAvg = nextQty > 0 ? totalCost / nextQty : 0;
     } else {
-      const sellQty = Math.min(event.quantity, previousQty);
-      const reconciliationNeeded = previousQty <= 0 || event.quantity > previousQty;
+      const sellQty = Math.min(qty, previousQty);
+      const reconciliationNeeded = previousQty <= 0 || qty > previousQty;
 
       if (reconciliationNeeded) {
-        const shortfall = Math.max(event.quantity - previousQty, 0);
+        const shortfall = Math.max(qty - previousQty, 0);
         const reason =
           previousQty <= 0
             ? 'Sell event received but no open position exists in Vault ledger.'
@@ -244,8 +250,8 @@ export async function POST(request: NextRequest) {
           item_id: event.item_id,
           item_name: event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`,
           side: 'sell',
-          quantity: event.quantity,
-          price: event.price,
+          quantity: qty,
+          price,
           occurred_at: event.timestamp,
           reason,
           status: 'pending',
@@ -255,7 +261,7 @@ export async function POST(request: NextRequest) {
       }
 
       nextQty = previousQty - sellQty;
-      nextRealized = realizedProfit + sellQty * (event.price - existingAvg);
+      nextRealized = realizedProfit + sellQty * (price - existingAvg);
       if (nextQty <= 0) {
         nextQty = 0;
         nextAvg = 0;
@@ -270,9 +276,9 @@ export async function POST(request: NextRequest) {
         item_name: event.item_name ?? existingPosition?.item_name ?? `Item ${event.item_id}`,
         quantity: nextQty,
         avg_buy_price: nextAvg,
-        last_price: event.price,
+        last_price: price,
         realized_profit: nextRealized,
-        unrealized_profit: nextQty > 0 ? (event.price - nextAvg) * nextQty : 0,
+        unrealized_profit: nextQty > 0 ? (price - nextAvg) * nextQty : 0,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id,item_id' }
