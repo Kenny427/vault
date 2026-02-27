@@ -28,6 +28,7 @@ type Position = {
   avg_buy_price: number;
   last_price: number | null;
   unrealized_profit: number | null;
+  realized_profit: number | null;
 };
 
 type DashboardPayload = {
@@ -155,6 +156,7 @@ export default function PassiveApp() {
     if (positions.length === 0) return null;
     let totalInvested = 0;
     let currentValue = 0;
+    let totalRealized = 0;
     let topPerformer: { name: string; roi: number } | null = null;
     let worstPerformer: { name: string; roi: number } | null = null;
     let totalPositionRoi = 0;
@@ -165,6 +167,7 @@ export default function PassiveApp() {
       const value = (p.last_price ?? p.avg_buy_price) * p.quantity;
       totalInvested += invested;
       currentValue += value;
+      totalRealized += Number(p.realized_profit ?? 0);
 
       // Calculate individual position ROI
       const positionRoi = invested > 0 ? ((value - invested) / invested) * 100 : 0;
@@ -190,7 +193,7 @@ export default function PassiveApp() {
     const profit = currentValue - totalInvested;
     const roi = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
     const avgPositionRoi = positions.length > 0 ? totalPositionRoi / positions.length : 0;
-    return { totalInvested, currentValue, profit, roi, avgPositionRoi, topPerformer, worstPerformer, topAllocations };
+    return { totalInvested, currentValue, profit, roi, avgPositionRoi, topPerformer, worstPerformer, topAllocations, realizedProfit: totalRealized };
   }, [positions]);
 
   useEffect(() => {
@@ -592,6 +595,14 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                   {portfolioStats.avgPositionRoi >= 0 ? '+' : ''}{portfolioStats.avgPositionRoi.toFixed(1)}%
                 </p>
               </article>
+              {portfolioStats.realizedProfit !== undefined && portfolioStats.realizedProfit !== 0 ? (
+                <article className="card" style={{ gridColumn: 'span 2', background: 'linear-gradient(135deg, var(--surface) 0%, rgba(59, 130, 246, 0.08) 100%)' }}>
+                  <p className="muted">Realized Profit (Total)</p>
+                  <p className="kpi" style={{ color: portfolioStats.realizedProfit >= 0 ? 'var(--accent)' : 'var(--danger)', fontSize: '1.15rem' }}>
+                    {portfolioStats.realizedProfit >= 0 ? '+' : ''}{Math.round(portfolioStats.realizedProfit).toLocaleString()} gp
+                  </p>
+                </article>
+              ) : null}
               {portfolioStats.topPerformer ? (
                 <article
                   className="card"
