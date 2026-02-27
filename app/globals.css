@@ -125,6 +125,12 @@ p {
 .badge-high {
   background: #dcfce7;
   color: #14532d;
+  animation: pulse-high 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-high {
+  0%, 100% { box-shadow: 0 0 0 0 var(--pulse-color, rgba(39, 194, 103, 0)); }
+  50% { box-shadow: 0 0 8px 2px var(--pulse-color, rgba(39, 194, 103, 0.35)); }
 }
 
 .badge-medium {
@@ -139,8 +145,9 @@ p {
 
 @media (prefers-color-scheme: dark) {
   .badge-high {
-    background: rgba(39, 194, 103, 0.18);
-    color: #bdf6d8;
+    --pulse-color: rgba(51, 209, 122, 0.5);
+    background: rgba(39, 194, 103, 0.22);
+    color: #9ff0c4;
   }
 
   .badge-medium {
