@@ -138,7 +138,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   if (error || !item) {
     return (
       <main style={{ padding: '1rem' }}>
-        <Link href="/" style={{ color: '#f5c518', textDecoration: 'underline' }}>← Back to Vault</Link>
+        <Link href="/" style={{ color: '#f5c518', textDecoration: 'none', fontSize: '0.9rem' }}>← Back to Vault</Link>
         <p style={{ color: '#ef4444', marginTop: '1rem' }}>Error: {error || 'Item not found'}</p>
       </main>
     );
