@@ -102,6 +102,19 @@ export default function PriceSparkline(props: {
         </g>
       ) : null}
 
+      {/* Y-axis price labels */}
+      <g fill="var(--muted)" fontSize="8" fontWeight={500}>
+        <text x={4} y={10} opacity={0.7}>
+          {maxV >= 1000 ? `${(maxV / 1000).toFixed(1)}k` : Math.round(maxV)}
+        </text>
+        <text x={4} y={height / 2 + 3} opacity={0.5}>
+          {range >= 1000 ? `${((maxV + minV) / 2 / 1000).toFixed(1)}k` : Math.round((maxV + minV) / 2)}
+        </text>
+        <text x={4} y={height - 4} opacity={0.7}>
+          {minV >= 1000 ? `${(minV / 1000).toFixed(1)}k` : Math.round(minV)}
+        </text>
+      </g>
+
       {/* Time axis labels */}
       <g fill="var(--muted)" fontSize="9" fontWeight={500}>
         <text x={4} y={height - 4} opacity={0.7}>now</text>
