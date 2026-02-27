@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useId, useMemo } from 'react';
+import React, { useId, useMemo, useState, useCallback } from 'react';
 
 type TimeSeriesPoint = {
   timestamp: number;
@@ -8,6 +8,15 @@ type TimeSeriesPoint = {
   avgLowPrice?: number | null;
   highPriceVolume?: number | null;
   lowPriceVolume?: number | null;
+};
+
+type HoverData = {
+  x: number;
+  y: number;
+  price: number;
+  volume: number;
+  time: string;
+  idx: number;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -31,21 +40,31 @@ export default function PriceVolumeChart(props: PriceVolumeChartProps) {
   const volumeColor = props.volumeColor ?? 'rgba(39, 194, 103, 0.25)';
 
   const gradientId = useId();
+  const [hoverData, setHoverData] = useState<HoverData | null>(null);
 
-  // Process data
-  const { priceSeries, volumeSeries, priceMin, priceMax, volumeMax, timeLabels } = useMemo(() => {
+  // Process data - include all calculations needed for tooltip
+  const { priceSeries, volumeSeries, priceMin, priceMax, timeLabels, priceCoords, chartWidth, priceChartHeight, volumeStepX, volumeCoords, paddingLeft, paddingRight, paddingTop } = useMemo(() => {
     const validPoints = props.data.filter(
       (p) => typeof p.avgHighPrice === 'number' && Number.isFinite(p.avgHighPrice)
     );
 
-    if (validPoints.length < 2) {
+    const hasData = validPoints.length >= 2;
+
+    if (!hasData) {
       return {
         priceSeries: [],
         volumeSeries: [],
         priceMin: 0,
         priceMax: 0,
-        volumeMax: 0,
         timeLabels: { start: '', middle: '', end: '' },
+        priceCoords: [],
+        chartWidth: 0,
+        priceChartHeight: 0,
+        volumeStepX: 0,
+        volumeCoords: [],
+        paddingLeft: 0,
+        paddingRight: 0,
+        paddingTop: 0,
       };
     }
 
@@ -92,6 +111,33 @@ export default function PriceVolumeChart(props: PriceVolumeChartProps) {
       endLabel = `${now.getHours()}:00`;
     }
 
+    // Chart layout calculations
+    const pChartHeight = height * 0.7;
+    const volHeight = height * 0.2;
+    const volTop = height - volHeight - 10;
+    const pLeft = 55;
+    const pRight = 15;
+    const pTop = 15;
+    const cWidth = width - pLeft - pRight;
+
+    // Calculate price coordinates
+    const pStepX = cWidth / (prices.length - 1);
+    const pCoords = prices.map((v, i) => {
+      const x = pLeft + i * pStepX;
+      const y = pTop + pChartHeight - ((v - pMin) / (pMax - pMin)) * pChartHeight;
+      return { x: clamp(x, pLeft, width - pRight), y: clamp(y, pTop, pTop + pChartHeight), v };
+    });
+
+    // Calculate volume coordinates (bar chart style)
+    const vStepX = cWidth / volumes.length;
+    const vCoords = volumes.map((v, i) => {
+      const x = pLeft + i * vStepX;
+      const barWidth = vStepX * 0.7;
+      const barHeight = (v / vMax) * volHeight;
+      const y = volTop + volHeight - barHeight;
+      return { x, y, width: barWidth, height: barHeight, v };
+    });
+
     return {
       priceSeries: prices,
       volumeSeries: volumes,
@@ -99,8 +145,71 @@ export default function PriceVolumeChart(props: PriceVolumeChartProps) {
       priceMax: pMax,
       volumeMax: vMax,
       timeLabels: { start: startLabel, middle: middleLabel, end: endLabel },
+      priceCoords: pCoords,
+      chartWidth: cWidth,
+      priceChartHeight: pChartHeight,
+      volumeStepX: vStepX,
+      volumeCoords: vCoords,
+      paddingLeft: pLeft,
+      paddingRight: pRight,
+      paddingTop: pTop,
     };
-  }, [props.data, timestep]);
+  }, [props.data, timestep, width, height]);
+
+  // Event handlers for tooltip - MUST be called before any conditional returns
+  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
+    if (priceSeries.length < 2) return;
+    
+    const svg = e.currentTarget;
+    const rect = svg.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Check if within chart area
+    if (x < paddingLeft || x > width - paddingRight || y < paddingTop || y > paddingTop + priceChartHeight) {
+      setHoverData(null);
+      return;
+    }
+
+    // Find closest data point
+    const idx = Math.round(((x - paddingLeft) / chartWidth) * (priceSeries.length - 1));
+    if (idx >= 0 && idx < priceSeries.length) {
+      const price = priceSeries[idx];
+      const volume = volumeSeries[idx] || 0;
+      const priceY = priceCoords[idx]?.y ?? 0;
+      
+      // Generate time label for this point
+      const now = new Date();
+      let timeLabel = '';
+      const minutesAgo = Math.round(((priceSeries.length - 1 - idx) / priceSeries.length) * 
+        (timestep === '5m' ? 5 : timestep === '1h' ? 60 : timestep === '6h' ? 360 : 1440));
+      const pointTime = new Date(now.getTime() - minutesAgo * 60 * 1000);
+      timeLabel = `${pointTime.getHours()}:${String(pointTime.getMinutes()).padStart(2, '0')}`;
+
+      setHoverData({
+        x: priceCoords[idx]?.x ?? x,
+        y: priceY,
+        price,
+        volume,
+        time: timeLabel,
+        idx,
+      });
+    }
+  }, [priceSeries, volumeSeries, priceCoords, chartWidth, priceChartHeight, paddingLeft, paddingRight, paddingTop, width, timestep]);
+
+  const handleMouseLeave = useCallback(() => {
+    setHoverData(null);
+  }, []);
+
+  // Derived values for rendering
+  const volumeHeight = height * 0.2;
+  const volumeTop = height - volumeHeight - 10;
+  const firstPrice = priceSeries[0];
+  const lastPrice = priceSeries[priceSeries.length - 1];
+  const isUp = lastPrice >= firstPrice;
+  const stroke = isUp ? priceColor : 'var(--danger)';
+  const pricePoints = priceCoords.map((p) => `${p.x},${p.y}`).join(' ');
+  const priceAreaPoints = `${pricePoints} ${width - paddingRight},${paddingTop + priceChartHeight} ${paddingLeft},${paddingTop + priceChartHeight}`;
 
   if (priceSeries.length < 2) {
     return (
@@ -120,41 +229,6 @@ export default function PriceVolumeChart(props: PriceVolumeChartProps) {
     );
   }
 
-  // Chart layout calculations
-  const priceChartHeight = height * 0.7;
-  const volumeHeight = height * 0.2;
-  const volumeTop = height - volumeHeight - 10;
-  const paddingLeft = 55;
-  const paddingRight = 15;
-  const paddingTop = 15;
-  const chartWidth = width - paddingLeft - paddingRight;
-
-  // Calculate price coordinates
-  const priceStepX = chartWidth / (priceSeries.length - 1);
-  const priceCoords = priceSeries.map((v, i) => {
-    const x = paddingLeft + i * priceStepX;
-    const y = paddingTop + priceChartHeight - ((v - priceMin) / (priceMax - priceMin)) * priceChartHeight;
-    return { x: clamp(x, paddingLeft, width - paddingRight), y: clamp(y, paddingTop, paddingTop + priceChartHeight), v };
-  });
-
-  // Calculate volume coordinates (bar chart style)
-  const volumeStepX = chartWidth / volumeSeries.length;
-  const volumeCoords = volumeSeries.map((v, i) => {
-    const x = paddingLeft + i * volumeStepX;
-    const barWidth = volumeStepX * 0.7;
-    const barHeight = (v / volumeMax) * volumeHeight;
-    const y = volumeTop + volumeHeight - barHeight;
-    return { x, y, width: barWidth, height: barHeight, v };
-  });
-
-  const firstPrice = priceSeries[0];
-  const lastPrice = priceSeries[priceSeries.length - 1];
-  const isUp = lastPrice >= firstPrice;
-
-  const stroke = isUp ? priceColor : 'var(--danger)';
-  const pricePoints = priceCoords.map((p) => `${p.x},${p.y}`).join(' ');
-  const priceAreaPoints = `${pricePoints} ${width - paddingRight},${paddingTop + priceChartHeight} ${paddingLeft},${paddingTop + priceChartHeight}`;
-
   // Format price labels
   const formatPrice = (v: number) => {
     if (v >= 1000000) return `${(v / 1000000).toFixed(2)}M`;
@@ -163,6 +237,7 @@ export default function PriceVolumeChart(props: PriceVolumeChartProps) {
   };
 
   return (
+    <div style={{ position: 'relative' }}>
     <svg
       width={width}
       height={height}
@@ -171,7 +246,10 @@ export default function PriceVolumeChart(props: PriceVolumeChartProps) {
         borderRadius: 12,
         border: '1px solid var(--border)',
         background: 'var(--surface-2)',
+        cursor: 'crosshair',
       }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       aria-label={`Price and volume chart. Price range ${formatPrice(priceMin)} to ${formatPrice(priceMax)}.`}
       role="img"
     >
@@ -272,6 +350,59 @@ export default function PriceVolumeChart(props: PriceVolumeChartProps) {
         <text x={paddingLeft + chartWidth / 2} y={height - 4} textAnchor="middle" opacity={0.5}>{timeLabels.middle}</text>
         <text x={width - paddingRight} y={height - 4} textAnchor="end" opacity={0.7}>{timeLabels.end}</text>
       </g>
+
+      {/* Hover crosshair */}
+      {hoverData && (
+        <g>
+          <line
+            x1={hoverData.x}
+            y1={paddingTop}
+            x2={hoverData.x}
+            y2={paddingTop + priceChartHeight}
+            stroke="var(--muted)"
+            strokeWidth={1}
+            strokeDasharray="4,4"
+            opacity={0.6}
+          />
+          <circle
+            cx={hoverData.x}
+            cy={hoverData.y}
+            r={6}
+            fill={stroke}
+            fillOpacity={0.3}
+            stroke={stroke}
+            strokeWidth={2}
+          />
+        </g>
+      )}
     </svg>
+
+    {/* Tooltip */}
+    {hoverData && (
+      <div
+        style={{
+          position: 'absolute',
+          left: Math.min(hoverData.x + 10, width - 120),
+          top: Math.max(hoverData.y - 50, 10),
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '8px 12px',
+          fontSize: '0.75rem',
+          pointerEvents: 'none',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          zIndex: 10,
+        }}
+      >
+        <div style={{ color: 'var(--muted)', marginBottom: 4 }}>{hoverData.time}</div>
+        <div style={{ fontWeight: 700, color: '#f5c518', fontSize: '0.9rem' }}>
+          {hoverData.price.toLocaleString()} gp
+        </div>
+        <div style={{ color: 'var(--muted)', marginTop: 2 }}>
+          Vol: {hoverData.volume.toLocaleString()}
+        </div>
+      </div>
+    )}
+    </div>
   );
 }
