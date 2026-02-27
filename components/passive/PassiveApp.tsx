@@ -108,6 +108,7 @@ export default function PassiveApp() {
   const [sparklineValues, setSparklineValues] = useState<number[]>([]);
   const [sparklineLoading, setSparklineLoading] = useState(false);
   const [sparklineError, setSparklineError] = useState<string | null>(null);
+  const [scanLastUpdated, setScanLastUpdated] = useState<Date | null>(null);
 
   // Close modal on Escape key
   useEffect(() => {
@@ -312,6 +313,7 @@ export default function PassiveApp() {
       }
       await loadDashboard();
       await loadTheses();
+      setScanLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Refresh failed.');
       setLoading(false);
@@ -644,6 +646,11 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
             <button className="btn" onClick={() => void refreshScan()} disabled={loading}>
               {loading ? 'Refreshing...' : 'Refresh Watchlists'}
             </button>
+            {scanLastUpdated && (
+              <p className="muted" style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
+                Last updated: {scanLastUpdated.toLocaleTimeString()}
+              </p>
+            )}
           </article>
         </section>
       ) : null}
