@@ -572,7 +572,7 @@ export default function PortfolioView({ positions, loading, onCreateProposal }: 
                     })}
                     style={{ marginTop: '0.5rem', background: '#8b5cf6', fontSize: '0.75rem' }}
                   >
-                    Sell
+                    Sell {position.quantity > 1 && `(${position.quantity})`}
                   </button>
                 )}
 
