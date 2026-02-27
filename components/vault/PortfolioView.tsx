@@ -61,6 +61,25 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
     };
   }, [positions]);
 
+  // Calculate allocation percentages for top holdings
+  const topHoldings = useMemo(() => {
+    if (!stats || positions.length === 0) return [];
+    
+    const withValue = positions.map(p => ({
+      ...p,
+      currentValue: (p.last_price ?? p.avg_buy_price) * p.quantity,
+    }));
+    
+    return withValue
+      .sort((a, b) => b.currentValue - a.currentValue)
+      .slice(0, 5)
+      .map(p => ({
+        name: p.item_name,
+        value: p.currentValue,
+        pct: (p.currentValue / stats.totalValue) * 100,
+      }));
+  }, [positions, stats]);
+
   if (loading) {
     return (
       <div className="card">
@@ -153,6 +172,39 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           </p>
         </article>
       </div>
+
+      {/* Allocation Bar */}
+      {topHoldings.length > 0 && (
+        <article className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem' }}>Top Holdings</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {topHoldings.map((holding, idx) => (
+              <div key={holding.name}>
+                <div className="row-between" style={{ marginBottom: '0.2rem' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{holding.name}</span>
+                  <span className="muted" style={{ fontSize: '0.8rem' }}>{holding.pct.toFixed(1)}%</span>
+                </div>
+                <div style={{ 
+                  height: 8, 
+                  background: 'var(--surface-2)', 
+                  borderRadius: 4, 
+                  overflow: 'hidden',
+                  display: 'flex',
+                }}>
+                  <div 
+                    style={{ 
+                      width: `${holding.pct}%`, 
+                      background: idx === 0 ? '#f5c518' : idx === 1 ? '#22c55e' : idx === 2 ? '#3b82f6' : '#8b5cf6',
+                      borderRadius: 4,
+                      transition: 'width 0.3s ease',
+                    }} 
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+      )}
 
       {/* Positions List */}
       <article className="card">
