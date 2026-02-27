@@ -107,14 +107,14 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     const last = sparklineValues[sparklineValues.length - 1];
     return last >= first ? '#22c55e' : '#ef4444';
   }, [sparklineValues]);
-  const { volatility, priceChange, high24h, low24h } = useMemo(() => {
-    if (timeseries.length < 2) return { volatility: null, priceChange: null, high24h: null, low24h: null };
+  const { volatility, priceChange, high24h, low24h, avgPrice, priceRangePct } = useMemo(() => {
+    if (timeseries.length < 2) return { volatility: null, priceChange: null, high24h: null, low24h: null, avgPrice: null, priceRangePct: null };
     
     const prices = timeseries
       .map((t) => t.avgHighPrice)
       .filter((p): p is number => typeof p === 'number' && Number.isFinite(p));
     
-    if (prices.length < 2) return { volatility: null, priceChange: null, high24h: null, low24h: null };
+    if (prices.length < 2) return { volatility: null, priceChange: null, high24h: null, low24h: null, avgPrice: null, priceRangePct: null };
     
     // Calculate volatility (coefficient of variation)
     const mean = prices.reduce((a, b) => a + b, 0) / prices.length;
@@ -135,7 +135,13 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     const high24h = Math.max(...prices);
     const low24h = Math.min(...prices);
     
-    return { volatility, priceChange, high24h, low24h };
+    // Calculate average price
+    const avgPrice = mean;
+    
+    // Calculate range percentage
+    const priceRangePct = low24h > 0 ? ((high24h - low24h) / low24h) * 100 : null;
+    
+    return { volatility, priceChange, high24h, low24h, avgPrice, priceRangePct };
   }, [timeseries]);
 
   useEffect(() => {
@@ -359,6 +365,35 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>{price.sell_at.toLocaleString()} gp</p>
           </article>
         </div>
+      )}
+
+      {/* Price Statistics */}
+      {avgPrice !== null && high24h !== null && low24h !== null && priceRangePct !== null && (
+        <article className="card" style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
+          <h2 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '0.6rem' }}>
+            📊 {timestep} Price Statistics
+          </h2>
+          <div className="grid grid-3" style={{ gap: '0.75rem' }}>
+            <div style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Average</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f5c518' }}>{Math.round(avgPrice).toLocaleString()} gp</p>
+            </div>
+            <div style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Highest</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#22c55e' }}>{high24h.toLocaleString()} gp</p>
+            </div>
+            <div style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lowest</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ef4444' }}>{low24h.toLocaleString()} gp</p>
+            </div>
+          </div>
+          <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="muted" style={{ fontSize: '0.75rem' }}>Range Width</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: priceRangePct > 10 ? '#f59e0b' : '#9ab4aa' }}>
+              {priceRangePct.toFixed(1)}%
+            </span>
+          </div>
+        </article>
       )}
 
       {/* Signals Panel */}
