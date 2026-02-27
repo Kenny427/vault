@@ -3,13 +3,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   const supabase = createServerSupabaseClient();
-  const { data: auth } = await supabase.auth.getUser();
-  const userId = auth.user?.id;
-
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+  
+  // Allow unauthenticated search for command palette
   const query = request.nextUrl.searchParams.get('q')?.toLowerCase() ?? '';
   const limit = Math.min(Number(request.nextUrl.searchParams.get('limit') ?? 20), 50);
 
@@ -27,5 +22,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ items: data ?? [] });
+  // Map to simpler format for command palette
+  const items = (data ?? []).map(item => ({
+    id: item.item_id,
+    name: item.name,
+  }));
+
+  return NextResponse.json(items);
 }
