@@ -66,6 +66,7 @@ type PortfolioPosition = {
   realized_profit: number | null;
   unrealized_profit: number | null;
   updated_at: string | null;
+  icon_url: string | null;
 };
 
 const tabs = ['Opportunities', 'Portfolio', 'Proposals', 'Approvals'] as const;

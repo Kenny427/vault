@@ -10,6 +10,7 @@ export type PortfolioPosition = {
   realized_profit: number | null;
   unrealized_profit: number | null;
   updated_at: string | null;
+  icon_url: string | null;
 };
 
 export async function GET() {
@@ -23,7 +24,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('positions')
-    .select('item_id,item_name,quantity,avg_buy_price,last_price,realized_profit,unrealized_profit,updated_at')
+    .select('item_id,item_name,quantity,avg_buy_price,last_price,realized_profit,unrealized_profit,updated_at,items(icon_url)')
     .eq('user_id', userId)
     .order('updated_at', { ascending: false });
 
@@ -31,7 +32,18 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const positions = (data ?? []) as PortfolioPosition[];
+  // Map joined data to flatten icon_url
+  const positions = (data ?? []).map((row: any) => ({
+    item_id: row.item_id,
+    item_name: row.item_name,
+    quantity: row.quantity,
+    avg_buy_price: row.avg_buy_price,
+    last_price: row.last_price,
+    realized_profit: row.realized_profit,
+    unrealized_profit: row.unrealized_profit,
+    updated_at: row.updated_at,
+    icon_url: row.items?.icon_url ?? null,
+  })) as PortfolioPosition[];
 
   // Calculate totals
   let totalValue = 0;
