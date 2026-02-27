@@ -41,7 +41,7 @@ export async function GET() {
       .from('market_snapshots')
       .select('item_id,last_price,last_high,last_low,margin,volume_1h,volume_5m,snapshot_at')
       .eq('user_id', userId),
-    supabase.from('positions').select('id,item_id,item_name,quantity,avg_buy_price,last_price,unrealized_profit').eq('user_id', userId).neq('quantity', 0),
+    supabase.from('positions').select('id,item_id,item_name,quantity,avg_buy_price,last_price,unrealized_profit,realized_profit').eq('user_id', userId).neq('quantity', 0),
     supabase.from('theses').select('id,item_id,item_name,target_buy,target_sell,priority,active').eq('user_id', userId).eq('active', true),
     supabase.from('alerts').select('id,item_id,severity,title,resolved_at').eq('user_id', userId).is('resolved_at', null),
     supabase.from('order_attempts').select('id,item_id,item_name,created_at,status,side').eq('user_id', userId).eq('status', 'open').lt('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString()),

@@ -28,6 +28,7 @@ type Position = {
   avg_buy_price: number;
   last_price: number | null;
   unrealized_profit: number | null;
+  realized_profit: number | null;
 };
 
 type DashboardPayload = {
@@ -112,6 +113,7 @@ export default function PassiveApp() {
   const [selectedItem, setSelectedItem] = useState<{ id: number; name: string } | null>(null);
   const [sparklineStep, setSparklineStep] = useState<'5m' | '1h' | '6h' | '24h'>('5m');
   const [sparklineValues, setSparklineValues] = useState<number[]>([]);
+  const [sparklineVolumes, setSparklineVolumes] = useState<number[]>([]);
   const [sparklineLoading, setSparklineLoading] = useState(false);
   const [sparklineError, setSparklineError] = useState<string | null>(null);
   const [scanLastUpdated, setScanLastUpdated] = useState<Date | null>(null);
@@ -140,14 +142,21 @@ export default function PassiveApp() {
     if (typeof first !== 'number' || typeof last !== 'number') return null;
     const delta = last - first;
     const pct = first !== 0 ? (delta / first) * 100 : null;
-    return { min, max, first, last, delta, pct };
-  }, [sparklineValues]);
+    
+    // Calculate average volume
+    const avgVolume = sparklineVolumes.length > 0
+      ? sparklineVolumes.reduce((a, b) => a + b, 0) / sparklineVolumes.length
+      : null;
+    
+    return { min, max, first, last, delta, pct, avgVolume };
+  }, [sparklineValues, sparklineVolumes]);
 
   // Portfolio calculations
   const portfolioStats = useMemo(() => {
     if (positions.length === 0) return null;
     let totalInvested = 0;
     let currentValue = 0;
+    let totalRealized = 0;
     let topPerformer: { name: string; roi: number } | null = null;
     let worstPerformer: { name: string; roi: number } | null = null;
     let totalPositionRoi = 0;
@@ -158,6 +167,7 @@ export default function PassiveApp() {
       const value = (p.last_price ?? p.avg_buy_price) * p.quantity;
       totalInvested += invested;
       currentValue += value;
+      totalRealized += Number(p.realized_profit ?? 0);
 
       // Calculate individual position ROI
       const positionRoi = invested > 0 ? ((value - invested) / invested) * 100 : 0;
@@ -183,7 +193,7 @@ export default function PassiveApp() {
     const profit = currentValue - totalInvested;
     const roi = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
     const avgPositionRoi = positions.length > 0 ? totalPositionRoi / positions.length : 0;
-    return { totalInvested, currentValue, profit, roi, avgPositionRoi, topPerformer, worstPerformer, topAllocations };
+    return { totalInvested, currentValue, profit, roi, avgPositionRoi, topPerformer, worstPerformer, topAllocations, realizedProfit: totalRealized };
   }, [positions]);
 
   useEffect(() => {
@@ -197,15 +207,20 @@ export default function PassiveApp() {
       setSparklineError(null);
       try {
         const res = await fetch(`/api/market/timeseries?timestep=${encodeURIComponent(sparklineStep)}&id=${encodeURIComponent(String(itemId))}`);
-        const payload = (await res.json().catch(() => null)) as { data?: Array<{ avgHighPrice?: number | null; avgLowPrice?: number | null }> ; error?: string } | null;
+        const payload = (await res.json().catch(() => null)) as { data?: Array<{ avgHighPrice?: number | null; avgLowPrice?: number | null; highPriceVolume?: number | null; lowPriceVolume?: number | null }> ; error?: string } | null;
         if (!res.ok) throw new Error(payload?.error ? payload.error : `Failed to load chart (${res.status})`);
 
         const values = (payload?.data ?? [])
           .map((point) => (typeof point.avgHighPrice === 'number' ? point.avgHighPrice : point.avgLowPrice ?? null))
           .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
 
+        const volumes = (payload?.data ?? [])
+          .map((point) => (typeof point.highPriceVolume === 'number' ? point.highPriceVolume : point.lowPriceVolume ?? null))
+          .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+
         if (!mounted) return;
         setSparklineValues(values);
+        setSparklineVolumes(volumes);
       } catch (err) {
         if (!mounted) return;
         setSparklineError(err instanceof Error ? err.message : 'Failed to load chart.');
@@ -580,6 +595,14 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                   {portfolioStats.avgPositionRoi >= 0 ? '+' : ''}{portfolioStats.avgPositionRoi.toFixed(1)}%
                 </p>
               </article>
+              {portfolioStats.realizedProfit !== undefined && portfolioStats.realizedProfit !== 0 ? (
+                <article className="card" style={{ gridColumn: 'span 2', background: 'linear-gradient(135deg, var(--surface) 0%, rgba(59, 130, 246, 0.08) 100%)' }}>
+                  <p className="muted">Realized Profit (Total)</p>
+                  <p className="kpi" style={{ color: portfolioStats.realizedProfit >= 0 ? 'var(--accent)' : 'var(--danger)', fontSize: '1.15rem' }}>
+                    {portfolioStats.realizedProfit >= 0 ? '+' : ''}{Math.round(portfolioStats.realizedProfit).toLocaleString()} gp
+                  </p>
+                </article>
+              ) : null}
               {portfolioStats.topPerformer ? (
                 <article
                   className="card"
@@ -1302,6 +1325,21 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                         title={`Spread: high-low range as % of current price`}
                       >
                         ⟐ {(((sparkStats.max - sparkStats.min) / sparkStats.last) * 100).toFixed(1)}% volatility
+                      </span>
+                    ) : null}
+                    {typeof sparkStats.avgVolume === 'number' && sparkStats.avgVolume > 0 ? (
+                      <span 
+                        className="muted" 
+                        style={{ 
+                          fontSize: '0.75rem',
+                          padding: '0.15rem 0.4rem',
+                          background: 'var(--surface-2)',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                        }}
+                        title={`Average volume over selected timeframe`}
+                      >
+                        📊 {(sparkStats.avgVolume / 1000).toFixed(1)}k avg vol
                       </span>
                     ) : null}
                   </div>
