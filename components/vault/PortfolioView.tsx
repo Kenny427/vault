@@ -107,6 +107,33 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
     };
   }, [positions]);
 
+  // Worst performer (lowest ROI)
+  const worstPerformer = useMemo(() => {
+    if (positions.length === 0) return null;
+    let worst: PortfolioPosition | null = null;
+    let worstRoi = Infinity;
+    
+    for (const p of positions) {
+      const invested = p.avg_buy_price * p.quantity;
+      if (invested <= 0) continue;
+      const currentValue = (p.last_price ?? p.avg_buy_price) * p.quantity;
+      const roi = ((currentValue - invested) / invested) * 100;
+      if (roi < worstRoi) {
+        worstRoi = roi;
+        worst = p;
+      }
+    }
+    
+    if (!worst) return null;
+    const invested = worst.avg_buy_price * worst.quantity;
+    const currentValue = (worst.last_price ?? worst.avg_buy_price) * worst.quantity;
+    return {
+      ...worst,
+      roi: worstRoi,
+      profit: currentValue - invested,
+    };
+  }, [positions]);
+
   if (loading) {
     return (
       <div className="card">
@@ -189,6 +216,31 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
               </p>
               <p className="muted" style={{ fontSize: '0.75rem' }}>
                 +{Math.round(bestPerformer.profit).toLocaleString()} gp
+              </p>
+            </div>
+          </div>
+        </article>
+      )}
+
+      {/* Worst Performer */}
+      {worstPerformer && worstPerformer.roi < 0 && (
+        <article className="card" style={{ 
+          background: 'linear-gradient(135deg, #7f1d1d 0%, #450a0a 50%, #0f172a 100%)',
+          border: '1px solid #ef4444',
+        }}>
+          <div className="row-between">
+            <div>
+              <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📉 Worst Performer</p>
+              <Link href={`/item/${worstPerformer.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 800, fontSize: '1.2rem' }}>
+                {worstPerformer.item_name}
+              </Link>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ef4444' }}>
+                {worstPerformer.roi.toFixed(1)}%
+              </p>
+              <p className="muted" style={{ fontSize: '0.75rem' }}>
+                {Math.round(worstPerformer.profit).toLocaleString()} gp
               </p>
             </div>
           </div>
