@@ -169,6 +169,7 @@ export default function VaultDashboard() {
     if (authChecked) {
       void loadData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authChecked, isAuthed]);
 
   // Sign out handler
