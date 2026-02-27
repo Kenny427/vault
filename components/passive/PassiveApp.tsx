@@ -96,8 +96,6 @@ export default function PassiveApp() {
   const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
   const [inboxFilter, setInboxFilter] = useState<'pending' | 'all'>('pending');
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [decisionNotes, setDecisionNotes] = useState<Record<string, string>>({});
-  const [inboxBootstrapped, setInboxBootstrapped] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -219,7 +217,6 @@ export default function PassiveApp() {
     if (activeTab !== 'More') return;
     if (!isAuthed) {
       setReconciliationTasks([]);
-      setInboxBootstrapped(false);
       return;
     }
 
@@ -231,7 +228,6 @@ export default function PassiveApp() {
         if (res.status === 401) {
           setIsAuthed(false);
           setReconciliationTasks([]);
-          setInboxBootstrapped(false);
           return;
         }
         setError(`Failed to load inbox (${res.status})${details?.error ? `: ${details.error}` : ''}`);
@@ -240,7 +236,6 @@ export default function PassiveApp() {
 
       const payload = (await res.json()) as { tasks: ReconciliationTask[] };
       setReconciliationTasks(payload.tasks ?? []);
-      setInboxBootstrapped(true);
     })();
   }, [activeTab, isAuthed, inboxFilter]);
 
@@ -876,155 +871,80 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
 
           <article className="card">
             <div className="row-between" style={{ marginBottom: '0.65rem' }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Inbox (Approvals)</h2>
-              <button className="btn btn-secondary" disabled={loading} onClick={() => void loadReconciliationTasks()}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Reconciliation Inbox</h2>
+              <button className="btn btn-secondary" disabled={loading} onClick={() => void loadReconciliationTasks(inboxFilter)}>
                 Refresh
               </button>
             </div>
-            <p className="muted" style={{ marginBottom: '0.65rem' }}>
-              Pending: <strong>{pendingReconCount}</strong>
-            </p>
-            <ul className="list">
-              {reconciliationTasks.filter((task) => task.status === 'pending').length === 0 ? (
-                <li className="muted">Nothing pending.</li>
-              ) : (
-                reconciliationTasks
-                  .filter((task) => task.status === 'pending')
-                  .slice(0, 10)
-                  .map((task) => (
-                    <li key={task.id} className="card" style={{ padding: '0.7rem' }}>
-                      <div className="row-between" style={{ gap: '0.75rem' }}>
-                        <div>
-                          <strong>{task.item_name ?? `Item ${task.item_id ?? ''}`}</strong>
-                          <p className="muted" style={{ marginTop: '0.2rem' }}>
-                            {task.task_type.split('_').join(' ')} · {new Date(task.created_at).toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="row" style={{ gap: '0.4rem' }}>
-                          <button
-                            className="btn"
-                            disabled={loading}
-                            onClick={async () => {
-                              setLoading(true);
-                              setError(null);
-                              try {
-                                const res = await fetch('/api/reconciliation-tasks', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ id: task.id, status: 'approved', decision_note: decisionNotes[task.id] || undefined }),
-                                });
-                                const payload = (await res.json().catch(() => null)) as { error?: string } | null;
-                                if (!res.ok) throw new Error(payload?.error ? payload.error : `Approve failed (${res.status})`);
-                                await loadReconciliationTasks();
-                                setDecisionNotes((prev) => {
-                                  const next = { ...prev };
-                                  delete next[task.id];
-                                  return next;
-                                });
-                              } catch (err) {
-                                setError(err instanceof Error ? err.message : 'Approve failed.');
-                              } finally {
-                                setLoading(false);
-                              }
-                            }}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            className="btn btn-secondary"
-                            disabled={loading}
-                            onClick={async () => {
-                              setLoading(true);
-                              setError(null);
-                              try {
-                                const res = await fetch('/api/reconciliation-tasks', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ id: task.id, status: 'rejected', decision_note: decisionNotes[task.id] || undefined }),
-                                });
-                                const payload = (await res.json().catch(() => null)) as { error?: string } | null;
-                                if (!res.ok) throw new Error(payload?.error ? payload.error : `Reject failed (${res.status})`);
-                                await loadReconciliationTasks();
-                                setDecisionNotes((prev) => {
-                                  const next = { ...prev };
-                                  delete next[task.id];
-                                  return next;
-                                });
-                              } catch (err) {
-                                setError(err instanceof Error ? err.message : 'Reject failed.');
-                              } finally {
-                                setLoading(false);
-                              }
-                            }}
-                          >
-                            Reject
-                          </button>
-                        </div>
+
+            {isAuthed ? (
+              <div className="row" style={{ gap: '0.5rem', marginBottom: '0.65rem' }}>
+                <button
+                  className={`btn btn-secondary ${inboxFilter === 'pending' ? 'active' : ''}`}
+                  disabled={loading}
+                  onClick={() => {
+                    setInboxFilter('pending');
+                    void loadReconciliationTasks('pending');
+                  }}
+                >
+                  Pending
+                </button>
+                <button
+                  className={`btn btn-secondary ${inboxFilter === 'all' ? 'active' : ''}`}
+                  disabled={loading}
+                  onClick={() => {
+                    setInboxFilter('all');
+                    void loadReconciliationTasks('all');
+                  }}
+                >
+                  All
+                </button>
+                <span className="muted" style={{ marginLeft: 'auto' }}>
+                  Pending: <strong>{pendingInboxCount}</strong>
+                </span>
+              </div>
+            ) : null}
+
+            {!isAuthed ? (
+              <p className="muted">Sign in to view reconciliation tasks.</p>
+            ) : reconciliationTasks.length === 0 ? (
+              <p className="muted">No tasks.</p>
+            ) : (
+              <ul className="list">
+                {reconciliationTasks.map((task) => (
+                  <li key={task.id} className="card" style={{ padding: '0.7rem' }}>
+                    <div className="row-between">
+                      <strong>{task.item_name ?? `Item ${task.item_id ?? ''}`}</strong>
+                      <span className="muted">
+                        {task.side.toUpperCase()}
+                        {inboxFilter === 'all' ? ` · ${String(task.status).toUpperCase()}` : ''}
+                      </span>
+                    </div>
+                    <p className="muted" style={{ marginTop: '0.25rem' }}>
+                      Qty: {Number(task.quantity ?? 0).toLocaleString()} | Price: {Math.round(Number(task.price ?? 0)).toLocaleString()} gp
+                    </p>
+                    <p className="muted" style={{ marginTop: '0.25rem' }}>
+                      When: {task.occurred_at ? new Date(task.occurred_at).toLocaleString() : '-'}
+                    </p>
+                    {task.reason ? (
+                      <p className="muted" style={{ marginTop: '0.25rem' }}>
+                        Reason: {task.reason}
+                      </p>
+                    ) : null}
+                    {task.status === 'pending' ? (
+                      <div className="row" style={{ marginTop: '0.5rem' }}>
+                        <button className="btn btn-secondary" disabled={loading} onClick={() => void resolveReconciliationTask(task.id, 'approved')}>
+                          Approve
+                        </button>
+                        <button className="btn btn-secondary" disabled={loading} onClick={() => void resolveReconciliationTask(task.id, 'rejected')}>
+                          Reject
+                        </button>
                       </div>
-                      {task.details?.reason ? (
-                        <p className="muted" style={{ marginTop: '0.35rem' }}>{String(task.details.reason)}</p>
-                      ) : null}
-
-                      <div style={{ marginTop: '0.45rem' }}>
-                        <input
-                          placeholder="Decision note (optional)"
-                          value={decisionNotes[task.id] ?? ''}
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            setDecisionNotes((prev) => ({ ...prev, [task.id]: value }));
-                          }}
-                        />
-                      </div>
-
-                      <details style={{ marginTop: '0.35rem' }}>
-                        <summary className="muted" style={{ cursor: 'pointer' }}>Details</summary>
-                        <pre style={{ marginTop: '0.35rem', fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}>
-{JSON.stringify(task.details ?? {}, null, 2)}
-                        </pre>
-                      </details>
-                    </li>
-                  ))
-              )}
-            </ul>
-
-            <details style={{ marginTop: '0.65rem' }}>
-              <summary className="muted" style={{ cursor: 'pointer' }}>Recent decisions</summary>
-              <ul className="list" style={{ marginTop: '0.65rem' }}>
-                {reconciliationTasks.filter((task) => task.status !== 'pending').length === 0 ? (
-                  <li className="muted">No decisions yet.</li>
-                ) : (
-                  reconciliationTasks
-                    .filter((task) => task.status !== 'pending')
-                    .slice(0, 10)
-                    .map((task) => (
-                      <li key={task.id} className="card" style={{ padding: '0.7rem' }}>
-                        <div className="row-between" style={{ gap: '0.75rem' }}>
-                          <div>
-                            <strong>{task.item_name ?? `Item ${task.item_id ?? ''}`}</strong>
-                            <p className="muted" style={{ marginTop: '0.2rem' }}>
-                              {task.task_type.split('_').join(' ')} · {new Date(task.created_at).toLocaleString()}
-                            </p>
-                          </div>
-                          <span
-                            className="badge"
-                            style={{
-                              background: task.status === 'approved' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                              color: task.status === 'approved' ? 'rgb(34,197,94)' : 'rgb(239,68,68)',
-                              border: '1px solid rgba(255,255,255,0.08)',
-                            }}
-                          >
-                            {task.status.toUpperCase()}
-                          </span>
-                        </div>
-                        {task.decision_note ? (
-                          <p className="muted" style={{ marginTop: '0.35rem' }}>{task.decision_note}</p>
-                        ) : null}
-                      </li>
-                    ))
-                )}
+                    ) : null}
+                  </li>
+                ))}
               </ul>
-            </details>
-
+            )}
           </article>
 
           <article className="card">
