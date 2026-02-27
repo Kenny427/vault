@@ -221,7 +221,13 @@ export default function VaultDashboard() {
       const data = await res.json();
       return { refreshed: data.refreshed ?? 0 };
     }
-    return { error: 'Failed to refresh prices' };
+    // Surface server error for easier QA
+    try {
+      const data = await res.json();
+      return { error: data?.error ?? `Failed to refresh prices (HTTP ${res.status})` };
+    } catch {
+      return { error: `Failed to refresh prices (HTTP ${res.status})` };
+    }
   };
 
   const handleSendMagicLink = async () => {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createSupabaseAdmin } from '@/lib/supabase/admin';
 
 type PoolItem = {
   item_id: number;
@@ -26,8 +27,11 @@ export async function POST() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Use admin client for DB ops to avoid RLS/privilege issues on server routes.
+  const admin = createSupabaseAdmin();
+
   // Pull enabled pool items (curated list lives here)
-  const poolRes = await supabase
+  const poolRes = await admin
     .from('custom_pool_items')
     .select('item_id,item_name,priority,enabled')
     .eq('enabled', true)
@@ -43,7 +47,7 @@ export async function POST() {
   }
 
   // Existing theses for user
-  const existingRes = await supabase.from('theses').select('item_id').eq('user_id', userId);
+  const existingRes = await admin.from('theses').select('item_id').eq('user_id', userId);
   if (existingRes.error) {
     return NextResponse.json({ error: existingRes.error.message }, { status: 500 });
   }
@@ -67,7 +71,7 @@ export async function POST() {
     return NextResponse.json({ inserted: 0, reason: 'Already seeded' });
   }
 
-  const insertRes = await supabase.from('theses').insert(toInsert);
+  const insertRes = await admin.from('theses').insert(toInsert);
   if (insertRes.error) {
     return NextResponse.json({ error: insertRes.error.message }, { status: 500 });
   }
