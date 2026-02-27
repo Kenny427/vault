@@ -96,6 +96,7 @@ export default function PassiveApp() {
   const [reconciliationTasks, setReconciliationTasks] = useState<ReconciliationTask[]>([]);
   const [inboxFilter, setInboxFilter] = useState<'pending' | 'all'>('pending');
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [opportunitiesLastUpdated, setOpportunitiesLastUpdated] = useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -405,6 +406,7 @@ export default function PassiveApp() {
     }
     const payload = (await res.json()) as { opportunities: Opportunity[] };
     setOpportunities(payload.opportunities ?? []);
+    setOpportunitiesLastUpdated(new Date());
   }
 
   // Item search effect
@@ -689,7 +691,12 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
           <article className="card">
             <div className="row-between" style={{ marginBottom: '0.65rem' }}>
               <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Opportunities</h2>
-              <button className="btn" onClick={() => void loadOpportunities()} disabled={loading}>Refresh</button>
+              <div className="row-between" style={{ gap: '0.5rem' }}>
+                {opportunitiesLastUpdated && (
+                  <span className="muted" style={{ fontSize: '0.7rem' }}>{opportunitiesLastUpdated.toLocaleTimeString()}</span>
+                )}
+                <button className="btn" onClick={() => void loadOpportunities()} disabled={loading}>Refresh</button>
+              </div>
             </div>
             {opportunities.length > 0 ? (
               <p className="muted" style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}>
