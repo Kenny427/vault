@@ -8,7 +8,7 @@ import { HTMLAttributes, forwardRef } from 'react';
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   /** Card variant */
-  variant?: 'default' | 'glass' | 'flat';
+  variant?: 'default' | 'glass' | 'flat' | 'premium';
   /** Hover effect */
   hoverable?: boolean;
   /** Padding size */
@@ -45,6 +45,13 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       flat: `
         bg-surface-2 border-border/50
         dark:bg-surface-2 dark:border-border/10
+      `,
+      premium: `
+        bg-gradient-to-br from-surface to-surface-2
+        border-accent/30 dark:border-accent/20
+        shadow-[0_4px_20px_rgba(31,138,66,0.12)]
+        dark:shadow-[0_4px_20px_rgba(31,138,66,0.15)]
+        dark:backdrop-blur-sm
       `,
     };
     

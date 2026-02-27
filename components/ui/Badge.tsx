@@ -53,8 +53,8 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
         dark:bg-blue-900/30 dark:text-blue-400
       `,
       accent: `
-        bg-accent/15 text-accent
-        dark:bg-accent/25 dark:text-accent-2
+        bg-accent/15 text-accent-accent/25
+        dark:bg dark:text-accent-2
       `,
     };
     
