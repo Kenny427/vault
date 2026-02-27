@@ -29,9 +29,15 @@ interface PortfolioViewProps {
   positions: PortfolioPosition[];
   summary: PortfolioSummary | null;
   loading: boolean;
+  onCreateProposal?: (data: {
+    item_name: string;
+    side: 'buy' | 'sell';
+    quantity: number;
+    price: number;
+  }) => void;
 }
 
-export default function PortfolioView({ positions, loading }: PortfolioViewProps) {
+export default function PortfolioView({ positions, loading, onCreateProposal }: PortfolioViewProps) {
   // Calculate portfolio stats
   const stats = useMemo(() => {
     if (positions.length === 0) return null;
@@ -554,6 +560,21 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
                     </p>
                   </div>
                 </div>
+
+                {typeof onCreateProposal === 'function' && (
+                  <button
+                    className="btn-small"
+                    onClick={() => onCreateProposal({
+                      item_name: position.item_name,
+                      side: 'sell',
+                      quantity: position.quantity,
+                      price: position.last_price ?? position.avg_buy_price,
+                    })}
+                    style={{ marginTop: '0.5rem', background: '#8b5cf6', fontSize: '0.75rem' }}
+                  >
+                    Sell {position.quantity > 1 && `(${position.quantity})`}
+                  </button>
+                )}
 
                 {position.realized_profit && position.realized_profit !== 0 && (
                   <p className="muted" style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}>

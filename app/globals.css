@@ -1,3 +1,6 @@
+/* Design tokens - Import first */
+@import url('./styles/tokens.css');
+
 :root {
   --bg: #f3f7f2;
   --surface: #ffffff;

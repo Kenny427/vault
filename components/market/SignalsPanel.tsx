@@ -32,9 +32,9 @@ function SignalTag({ tag }: { tag: SignalTag }) {
       border: 'rgba(245, 158, 11, 0.3)',
     },
     low: {
-      bg: 'rgba(148, 163, 184, 0.15)',
-      color: 'var(--muted)',
-      border: 'rgba(148, 163, 184, 0.3)',
+      bg: 'rgba(148, 163, 184, 0.18)',
+      color: '#94a3b8',
+      border: 'rgba(148, 163, 184, 0.35)',
     },
     neutral: {
       bg: 'rgba(99, 102, 241, 0.15)',
