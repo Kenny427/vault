@@ -125,58 +125,58 @@ export default function PriceChart({
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-4" style={{ background: 'var(--surface)', borderRadius: '14px', padding: '1rem' }}>
       {showStats && (
         <>
           {/* Price Overview Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-              <div className="text-slate-400 text-xs font-medium mb-1">CURRENT PRICE</div>
-              <div className="text-2xl font-bold text-osrs-accent">{formatGp(currentPrice)}</div>
+            <div style={{ background: 'var(--surface-2)', borderRadius: '14px', padding: '1rem', border: '1px solid var(--border)' }}>
+              <div className="text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>CURRENT PRICE</div>
+              <div className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>{formatGp(currentPrice)}</div>
             </div>
             
-            <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-              <div className="text-slate-400 text-xs font-medium mb-1">7D CHANGE</div>
-              <div className={`text-2xl font-bold ${priceChange7d >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div style={{ background: 'var(--surface-2)', borderRadius: '14px', padding: '1rem', border: '1px solid var(--border)' }}>
+              <div className="text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>7D CHANGE</div>
+              <div className={`text-2xl font-bold ${priceChange7d >= 0 ? 'text-green-400' : 'text-red-400'}`} style={{ color: priceChange7d >= 0 ? '#4ade80' : '#f87171' }}>
                 {priceChange7d >= 0 ? '+' : ''}{priceChange7d.toFixed(1)}%
               </div>
             </div>
             
-            <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-              <div className="text-slate-400 text-xs font-medium mb-1">30D CHANGE</div>
-              <div className={`text-2xl font-bold ${priceChange30d >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <div style={{ background: 'var(--surface-2)', borderRadius: '14px', padding: '1rem', border: '1px solid var(--border)' }}>
+              <div className="text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>30D CHANGE</div>
+              <div className={`text-2xl font-bold ${priceChange30d >= 0 ? 'text-green-400' : 'text-red-400'}`} style={{ color: priceChange30d >= 0 ? '#4ade80' : '#f87171' }}>
                 {priceChange30d >= 0 ? '+' : ''}{priceChange30d.toFixed(1)}%
               </div>
             </div>
             
-            <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
-              <div className="text-slate-400 text-xs font-medium mb-1">VOLATILITY</div>
-              <div className="text-2xl font-bold text-blue-400">{volatility.toFixed(1)}%</div>
+            <div style={{ background: 'var(--surface-2)', borderRadius: '14px', padding: '1rem', border: '1px solid var(--border)' }}>
+              <div className="text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>VOLATILITY</div>
+              <div className="text-2xl font-bold text-blue-400" style={{ color: '#60a5fa' }}>{volatility.toFixed(1)}%</div>
             </div>
           </div>
 
           {/* Detailed Price Stats */}
-          <div className="bg-slate-900 rounded-lg p-4 border border-slate-700">
+          <div style={{ background: 'var(--surface-2)', borderRadius: '14px', padding: '1rem', border: '1px solid var(--border)' }}>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div>
-                <div className="text-slate-400 text-xs mb-1">{timeframeLabel} Average</div>
-                <div className="text-slate-100 font-semibold">{formatGp(averagePrice)}</div>
+                <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{timeframeLabel} Average</div>
+                <div className="font-semibold" style={{ color: 'var(--text)' }}>{formatGp(averagePrice)}</div>
               </div>
               <div>
-                <div className="text-slate-400 text-xs mb-1">7D Average</div>
-                <div className="text-slate-100 font-semibold">{formatGp(avg7d)}</div>
+                <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>7D Average</div>
+                <div className="font-semibold" style={{ color: 'var(--text)' }}>{formatGp(avg7d)}</div>
               </div>
               <div>
-                <div className="text-slate-400 text-xs mb-1">{timeframeLabel} High</div>
-                <div className="text-green-400 font-semibold">{formatGp(max)}</div>
+                <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{timeframeLabel} High</div>
+                <div className="font-semibold" style={{ color: '#4ade80' }}>{formatGp(max)}</div>
               </div>
               <div>
-                <div className="text-slate-400 text-xs mb-1">{timeframeLabel} Low</div>
-                <div className="text-red-400 font-semibold">{formatGp(min)}</div>
+                <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{timeframeLabel} Low</div>
+                <div className="font-semibold" style={{ color: '#f87171' }}>{formatGp(min)}</div>
               </div>
               <div>
-                <div className="text-slate-400 text-xs mb-1">Trading Activity</div>
-                <div className="text-slate-100 font-semibold">
+                <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>Trading Activity</div>
+                <div className="font-semibold" style={{ color: 'var(--text)' }}>
                   {volumeIndicator > 60 ? 'High' : volumeIndicator > 30 ? 'Medium' : 'Low'}
                 </div>
               </div>
@@ -186,38 +186,41 @@ export default function PriceChart({
       )}
 
       {/* Main Chart */}
-      <div className="bg-slate-900 rounded-lg p-6 border border-slate-700">
+      <div style={{ background: 'var(--surface-2)', borderRadius: '14px', padding: '1.5rem', border: '1px solid var(--border)' }}>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h3 className="text-lg font-semibold text-slate-100">{itemName} - {timeframeLabel} Price History</h3>
+          <h3 className="text-lg font-semibold" style={{ color: 'var(--text)' }}>{itemName} - {timeframeLabel} Price History</h3>
           {showLineToggles && (
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <button
                 onClick={() => toggleLine('current')}
-                className={`px-2 py-1 rounded-full border transition-colors ${
-                  visibleLines.current
-                    ? 'bg-slate-700 border-slate-600 text-slate-100'
-                    : 'bg-slate-900 border-slate-800 text-slate-400'
-                }`}
+                className={`px-2 py-1 rounded-full border transition-colors`}
+                style={{
+                  background: visibleLines.current ? 'var(--surface-2)' : 'transparent',
+                  borderColor: visibleLines.current ? 'var(--border)' : 'var(--border)',
+                  color: visibleLines.current ? 'var(--text)' : 'var(--muted)'
+                }}
               >
                 Current
               </button>
               <button
                 onClick={() => toggleLine('avg7d')}
-                className={`px-2 py-1 rounded-full border transition-colors ${
-                  visibleLines.avg7d
-                    ? 'bg-slate-700 border-slate-600 text-slate-100'
-                    : 'bg-slate-900 border-slate-800 text-slate-400'
-                }`}
+                className={`px-2 py-1 rounded-full border transition-colors`}
+                style={{
+                  background: visibleLines.avg7d ? 'var(--surface-2)' : 'transparent',
+                  borderColor: visibleLines.avg7d ? 'var(--border)' : 'var(--border)',
+                  color: visibleLines.avg7d ? 'var(--text)' : 'var(--muted)'
+                }}
               >
                 7D Avg
               </button>
               <button
                 onClick={() => toggleLine('avg30d')}
-                className={`px-2 py-1 rounded-full border transition-colors ${
-                  visibleLines.avg30d
-                    ? 'bg-slate-700 border-slate-600 text-slate-100'
-                    : 'bg-slate-900 border-slate-800 text-slate-400'
-                }`}
+                className={`px-2 py-1 rounded-full border transition-colors`}
+                style={{
+                  background: visibleLines.avg30d ? 'var(--surface-2)' : 'transparent',
+                  borderColor: visibleLines.avg30d ? 'var(--border)' : 'var(--border)',
+                  color: visibleLines.avg30d ? 'var(--text)' : 'var(--muted)'
+                }}
               >
                 30D Avg
               </button>
@@ -225,11 +228,12 @@ export default function PriceChart({
                 <button
                   key={line.id}
                   onClick={() => toggleLine(line.id)}
-                  className={`px-2 py-1 rounded-full border transition-colors ${
-                    visibleLines[line.id]
-                      ? 'bg-slate-700 border-slate-600 text-slate-100'
-                      : 'bg-slate-900 border-slate-800 text-slate-400'
-                  }`}
+                  className={`px-2 py-1 rounded-full border transition-colors`}
+                  style={{
+                    background: visibleLines[line.id] ? 'var(--surface-2)' : 'transparent',
+                    borderColor: visibleLines[line.id] ? 'var(--border)' : 'var(--border)',
+                    color: visibleLines[line.id] ? 'var(--text)' : 'var(--muted)'
+                  }}
                 >
                   {line.label}
                 </button>
@@ -243,34 +247,34 @@ export default function PriceChart({
             <ComposedChart data={chartData}>
               <defs>
                 <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="var(--accent)" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+              <XAxis
               <XAxis
                 dataKey="tsMs"
                 type="number"
                 scale="time"
-                domain={['dataMin', 'dataMax']}
-                stroke="#94a3b8"
-                style={{ fontSize: '12px' }}
+                domain={[x27dataMinx27, x27dataMaxx27]}
+                stroke="var(--muted)"                style={{ fontSize: '12px' }}
                 tickFormatter={(ms: number) => format(new Date(ms), 'MMM dd')}
               />
               <YAxis
-                stroke="#94a3b8"
+                stroke="var(--muted)"
                 style={{ fontSize: '12px' }}
                 domain={[min * 0.95, max * 1.05]}
                 tickFormatter={(value) => formatCompact(value)}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #334155',
+                  backgroundColor: 'var(--surface)',
+                  border: '1px solid var(--border)',
                   borderRadius: '8px',
                   padding: '12px',
                 }}
-                labelStyle={{ color: '#e2e8f0', fontWeight: 'bold', marginBottom: '4px' }}
+                labelStyle={{ color: 'var(--text)', fontWeight: 'bold', marginBottom: '4px' }}
                 formatter={(value: number) => [formatGp(value), 'Price']}
                 labelFormatter={(ms) => {
                   const num = typeof ms === 'number' ? ms : Number(ms);
@@ -348,7 +352,7 @@ export default function PriceChart({
               <Line
                 type="monotone"
                 dataKey="price"
-                stroke="#3b82f6"
+                stroke="var(--accent)"
                 strokeWidth={3}
                 dot={false}
                 isAnimationActive={true}

@@ -16,8 +16,7 @@ export default function PriceSparkline(props: {
   showGrid?: boolean;
 }) {
   const width = props.width ?? 240;
-  const height = props.height ?? 64;
-  const stroke = props.stroke ?? 'var(--accent)';
+  const height = props.height ?? 140;
   const showArea = props.showArea ?? true;
   const showLastDot = props.showLastDot ?? true;
   const showGrid = props.showGrid ?? true;
@@ -57,6 +56,12 @@ export default function PriceSparkline(props: {
     const y = height - ((v - minV) / range) * height;
     return { x: clamp(x, 0, width), y: clamp(y, 0, height), v };
   });
+
+  const firstVal = series[0];
+  const lastVal = series[series.length - 1];
+  const isUp = lastVal >= firstVal;
+
+  const stroke = props.stroke ?? (isUp ? 'var(--accent)' : 'var(--danger)');
 
   const points = coords.map((p) => `${p.x},${p.y}`).join(' ');
   const areaPoints = showArea ? `${points} ${width},${height} 0,${height}` : '';

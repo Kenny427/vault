@@ -1019,10 +1019,13 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                   <p className="muted" style={{ fontSize: '0.8rem' }}>
                     Range: {Math.round(sparkStats.min).toLocaleString()} → {Math.round(sparkStats.max).toLocaleString()} gp · Last: {Math.round(sparkStats.last).toLocaleString()} gp
                     {typeof sparkStats.pct === 'number' ? (
-                      <>
-                        {' '}· Δ {sparkStats.pct >= 0 ? '+' : ''}
-                        {sparkStats.pct.toFixed(1)}%
-                      </>
+                      <span style={{ 
+                        color: sparkStats.pct >= 0 ? 'var(--accent)' : 'var(--danger)',
+                        fontWeight: 700,
+                        marginLeft: '0.5rem'
+                      }}>
+                        {sparkStats.pct >= 0 ? '↑' : '↓'} {sparkStats.pct >= 0 ? '+' : ''}{sparkStats.pct.toFixed(1)}%
+                      </span>
                     ) : null}
                   </p>
                 ) : null}
