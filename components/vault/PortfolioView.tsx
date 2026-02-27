@@ -82,6 +82,26 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
       }));
   }, [positions, stats]);
 
+  // Profit/loss breakdown
+  const profitStats = useMemo(() => {
+    if (positions.length === 0) return null;
+    let inProfit = 0;
+    let inLoss = 0;
+    let atBreakEven = 0;
+    
+    for (const p of positions) {
+      const invested = p.avg_buy_price * p.quantity;
+      if (invested <= 0) continue;
+      const currentValue = (p.last_price ?? p.avg_buy_price) * p.quantity;
+      const roi = ((currentValue - invested) / invested) * 100;
+      if (roi > 0) inProfit++;
+      else if (roi < 0) inLoss++;
+      else atBreakEven++;
+    }
+    
+    return { inProfit, inLoss, atBreakEven };
+  }, [positions]);
+
   // Best performer (highest ROI)
   const bestPerformer = useMemo(() => {
     if (positions.length === 0) return null;
@@ -158,24 +178,25 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
   return (
     <section className="grid" style={{ gap: '0.75rem' }}>
       {/* Summary Cards */}
-      <div className="grid grid-2" style={{ gap: '0.5rem' }}>
+      <div className="grid grid-4" style={{ gap: '0.5rem' }}>
         <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-          <p className="muted" style={{ fontSize: '0.75rem' }}>Portfolio Value</p>
-          <p style={{ fontSize: '1.3rem', fontWeight: 900, color: '#f5c518' }}>
+          <p className="muted" style={{ fontSize: '0.7rem' }}>Portfolio Value</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: 900, color: '#f5c518' }}>
             {Math.round(stats?.totalValue ?? 0).toLocaleString()} gp
           </p>
+          <p className="muted" style={{ fontSize: '0.65rem' }}>{positions.length} items</p>
         </article>
         <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-          <p className="muted" style={{ fontSize: '0.75rem' }}>Total Invested</p>
-          <p style={{ fontSize: '1.3rem', fontWeight: 900 }}>
+          <p className="muted" style={{ fontSize: '0.7rem' }}>Invested</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: 900 }}>
             {Math.round(stats?.totalInvested ?? 0).toLocaleString()} gp
           </p>
         </article>
         <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-          <p className="muted" style={{ fontSize: '0.75rem' }}>Total Profit</p>
+          <p className="muted" style={{ fontSize: '0.7rem' }}>Total Profit</p>
           <p
             style={{
-              fontSize: '1.3rem',
+              fontSize: '1.25rem',
               fontWeight: 900,
               color: (stats?.profit ?? 0) >= 0 ? '#22c55e' : '#ef4444',
             }}
@@ -185,10 +206,10 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           </p>
         </article>
         <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-          <p className="muted" style={{ fontSize: '0.75rem' }}>ROI</p>
+          <p className="muted" style={{ fontSize: '0.7rem' }}>ROI</p>
           <p
             style={{
-              fontSize: '1.3rem',
+              fontSize: '1.25rem',
               fontWeight: 900,
               color: (stats?.roi ?? 0) >= 0 ? '#22c55e' : '#ef4444',
             }}
@@ -318,6 +339,49 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           </p>
         </article>
       </div>
+
+      {/* Positions at a glance */}
+      {profitStats && positions.length > 0 && (
+        <article className="card">
+          <h2 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '0.6rem' }}>Positions at a glance</h2>
+          <div style={{ display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', background: 'var(--surface-2)' }}>
+            {profitStats.inProfit > 0 && (
+              <div 
+                style={{ 
+                  width: `${(profitStats.inProfit / positions.length) * 100}%`, 
+                  background: '#22c55e',
+                  transition: 'width 0.3s ease',
+                }} 
+                title={`${profitStats.inProfit} in profit`}
+              />
+            )}
+            {profitStats.atBreakEven > 0 && (
+              <div 
+                style={{ 
+                  width: `${(profitStats.atBreakEven / positions.length) * 100}%`, 
+                  background: '#6b7280',
+                }}
+                title={`${profitStats.atBreakEven} at break-even`}
+              />
+            )}
+            {profitStats.inLoss > 0 && (
+              <div 
+                style={{ 
+                  width: `${(profitStats.inLoss / positions.length) * 100}%`, 
+                  background: '#ef4444',
+                  transition: 'width 0.3s ease',
+                }}
+                title={`${profitStats.inLoss} in loss`}
+              />
+            )}
+          </div>
+          <div className="row" style={{ gap: '1rem', marginTop: '0.5rem', fontSize: '0.75rem' }}>
+            <span style={{ color: '#22c55e' }}>● {profitStats.inProfit} profit</span>
+            {profitStats.atBreakEven > 0 && <span style={{ color: '#6b7280' }}>● {profitStats.atBreakEven} even</span>}
+            {profitStats.inLoss > 0 && <span style={{ color: '#ef4444' }}>● {profitStats.inLoss} loss</span>}
+          </div>
+        </article>
+      )}
 
       {/* Allocation Bar */}
       {topHoldings.length > 0 && (
