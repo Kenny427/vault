@@ -30,6 +30,7 @@ type PriceData = {
   spread_pct: number;
   volume_5m: number | null;
   volume_1h: number | null;
+  freshness?: number | null;
 };
 
 type TimeSeriesPoint = {
@@ -218,16 +219,20 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   }
 
   return (
-    <main style={{ padding: '1rem', maxWidth: '800px', margin: '0 auto' }}>
+    <main style={{ padding: '1rem', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1rem' }}>
         <Link href="/" style={{ color: '#f5c518', textDecoration: 'none', fontSize: '0.9rem' }}>
           ← Back to Vault
         </Link>
       </div>
 
-      {/* Item Header */}
-      <div className="card" style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
+      {/* Two-column layout: Main Content + Right Stats Panel */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '1rem' }}>
+        {/* Left Column - Main Content */}
+        <div style={{ minWidth: 0 }}>
+          {/* Item Header */}
+          <div className="card" style={{ marginBottom: '0.75rem', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
         <div className="row" style={{ gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {item.icon_url && (
             <Image src={item.icon_url} alt={item.name} width={64} height={64} style={{ imageRendering: 'pixelated' }} unoptimized />
@@ -341,7 +346,37 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         </div>
       </div>
 
-      {/* Price Info Grid */}
+      {/* Tabs - Segmented Control */}
+      <div className="card" style={{ marginBottom: '0.75rem', padding: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.25rem', background: 'var(--surface-2)', padding: '0.25rem', borderRadius: 8 }}>
+          {(['overview', 'signals', 'history', 'notes'] as const).map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                flex: 1,
+                padding: '0.5rem 0.75rem',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                background: activeTab === tab ? 'var(--surface)' : 'transparent',
+                color: activeTab === tab ? 'var(--text)' : 'var(--muted)',
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                textTransform: 'capitalize',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && price && (
+      <div>
+        {/* Price Info Grid */}
       {price && (
         <div className="grid grid-2" style={{ gap: '0.5rem', marginBottom: '1rem' }}>
           <article className="card">
@@ -502,6 +537,169 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           </div>
         )}
       </article>
+      </div>
+      )}
+
+      {activeTab === 'signals' && price && (
+        <article className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem' }}>Market Signals</h2>
+          <SignalsPanel
+            spreadPct={price.spread_pct}
+            spreadGp={price.margin}
+            volume5m={price.volume_5m}
+            volume1h={price.volume_1h}
+            volatility={volatility}
+            price={price.last_price}
+          />
+        </article>
+      )}
+
+      {activeTab === 'history' && (
+        <article className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem' }}>Price History</h2>
+          <p className="muted" style={{ fontSize: '0.85rem' }}>Historical price data for {item.name}.</p>
+          {timeseries.length > 0 ? (
+            <div style={{ marginTop: '1rem', maxHeight: '400px', overflow: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ textAlign: 'left', padding: '0.5rem', color: 'var(--muted)' }}>Time</th>
+                    <th style={{ textAlign: 'right', padding: '0.5rem', color: 'var(--muted)' }}>High</th>
+                    <th style={{ textAlign: 'right', padding: '0.5rem', color: 'var(--muted)' }}>Low</th>
+                    <th style={{ textAlign: 'right', padding: '0.5rem', color: 'var(--muted)' }}>Vol</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {timeseries.slice(-20).reverse().map((point, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '0.4rem 0.5rem' }}>{new Date(point.timestamp).toLocaleString()}</td>
+                      <td style={{ textAlign: 'right', padding: '0.4rem 0.5rem', color: '#22c55e' }}>{point.avgHighPrice?.toLocaleString() ?? '—'}</td>
+                      <td style={{ textAlign: 'right', padding: '0.4rem 0.5rem', color: '#ef4444' }}>{point.avgLowPrice?.toLocaleString() ?? '—'}</td>
+                      <td style={{ textAlign: 'right', padding: '0.4rem 0.5rem', color: '#3b82f6' }}>{point.highPriceVolume ? point.highPriceVolume.toLocaleString() : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="muted" style={{ marginTop: '1rem' }}>No history available</p>
+          )}
+        </article>
+      )}
+
+      {activeTab === 'notes' && (
+        <article className="card">
+          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem' }}>📝 Notes</h2>
+          <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '0.75rem' }}>Keep research notes for {item.name}.</p>
+          <textarea 
+            value={notes} 
+            onChange={(e) => setNotes(e.target.value)} 
+            placeholder="Add your notes here..." 
+            style={{ 
+              width: '100%', 
+              minHeight: '300px', 
+              padding: '0.75rem', 
+              background: 'var(--surface-2)', 
+              border: '1px solid var(--border)', 
+              borderRadius: 8, 
+              color: 'var(--text)', 
+              fontSize: '0.9rem', 
+              fontFamily: 'inherit', 
+              resize: 'vertical' 
+            }} 
+          />
+        </article>
+      )}
+        </div>
+
+        {/* Right Column - Dense Stats Panel */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)', padding: '0.875rem' }}>
+            <h3 style={{ fontSize: '0.75rem', fontWeight: 800, color: '#f5c518', marginBottom: '0.6rem', textTransform: 'uppercase' }}>Quick Stats</h3>
+            
+            {/* Spread */}
+            <div style={{ marginBottom: '0.5rem' }}>
+              <p className="muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase' }}>Spread</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 800 }}>{price?.spread_pct.toFixed(1) ?? '—'}%</span>
+                <span style={{ 
+                  fontSize: '0.7rem', 
+                  padding: '0.1rem 0.4rem', 
+                  borderRadius: 4,
+                  background: price && price.spread_pct <= 1 ? 'rgba(34,197,94,0.2)' : price && price.spread_pct <= 3 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)',
+                  color: price && price.spread_pct <= 1 ? '#22c55e' : price && price.spread_pct <= 3 ? '#f59e0b' : '#ef4444'
+                }}>
+                  {price && price.spread_pct <= 1 ? '✓' : price && price.spread_pct <= 3 ? '○' : '✕'}
+                </span>
+              </div>
+            </div>
+
+            {/* 5m Volume */}
+            <div style={{ marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+              <p className="muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase' }}>Vol 5m</p>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: price?.volume_5m && price.volume_5m > 0 ? '#3b82f6' : 'var(--muted)' }}>
+                {price?.volume_5m?.toLocaleString() ?? '—'}
+              </span>
+            </div>
+
+            {/* 1h Volume */}
+            <div style={{ marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+              <p className="muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase' }}>Vol 1h</p>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: price?.volume_1h && price.volume_1h > 0 ? '#8b5cf6' : 'var(--muted)' }}>
+                {price?.volume_1h?.toLocaleString() ?? '—'}
+              </span>
+            </div>
+
+            {/* Volatility */}
+            <div style={{ marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+              <p className="muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase' }}>Volatility</p>
+              <span style={{ fontSize: '1rem', fontWeight: 800, color: volatility !== null ? (volatility > 10 ? '#f59e0b' : '#9ab4aa') : 'var(--muted)' }}>
+                {volatility !== null ? `${volatility.toFixed(1)}%` : '—'}
+              </span>
+            </div>
+
+            {/* Buy Limit */}
+            {item.buy_limit && (
+              <div style={{ marginBottom: '0.5rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border)' }}>
+                <p className="muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase' }}>Buy Limit</p>
+                <span style={{ fontSize: '1rem', fontWeight: 800, color: '#f5c518' }}>
+                  {item.buy_limit.toLocaleString()}
+                </span>
+              </div>
+            )}
+
+            {/* Freshness */}
+            <div>
+              <p className="muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase' }}>Freshness</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '1rem', fontWeight: 800 }}>{freshnessDisplay}</span>
+                <span style={{ 
+                  fontSize: '0.7rem', 
+                  padding: '0.1rem 0.3rem', 
+                  borderRadius: 4, 
+                  background: freshnessMinutes !== null && freshnessMinutes < 30 ? 'rgba(34,197,94,0.2)' : freshnessMinutes !== null && freshnessMinutes < 60 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)', 
+                  color: freshnessMinutes !== null && freshnessMinutes < 30 ? '#22c55e' : freshnessMinutes !== null && freshnessMinutes < 60 ? '#f59e0b' : '#ef4444' 
+                }}>
+                  {freshnessMinutes !== null && freshnessMinutes < 30 ? 'Fresh' : freshnessMinutes !== null && freshnessMinutes < 60 ? 'Stale' : 'Old'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 24h Range mini card */}
+          {high24h !== null && low24h !== null && (
+            <div className="card" style={{ padding: '0.75rem' }}>
+              <p className="muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '0.3rem' }}>24h Range</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#22c55e' }}>{high24h.toLocaleString()}</span>
+                <span style={{ color: 'var(--muted)' }}>→</span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ef4444' }}>{low24h.toLocaleString()}</span>
+              </div>
+              <p className="muted" style={{ fontSize: '0.6rem', marginTop: '0.2rem' }}>{priceRangePct?.toFixed(1)}%</p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Flip Calculator Modal */}
       {showFlipCalc && (
