@@ -108,14 +108,32 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     return last >= first ? '#22c55e' : '#ef4444';
   }, [sparklineValues]);
   const { volatility, priceChange, high24h, low24h, avgPrice, priceRangePct } = useMemo(() => {
-    if (timeseries.length < 2) return { volatility: null, priceChange: null, high24h: null, low24h: null, avgPrice: null, priceRangePct: null };
-    
+    if (timeseries.length < 2) {
+      return {
+        volatility: null,
+        priceChange: null,
+        high24h: null,
+        low24h: null,
+        avgPrice: null,
+        priceRangePct: null,
+      };
+    }
+
     const prices = timeseries
       .map((t) => t.avgHighPrice)
       .filter((p): p is number => typeof p === 'number' && Number.isFinite(p));
-    
-    if (prices.length < 2) return { volatility: null, priceChange: null, high24h: null, low24h: null, avgPrice: null, priceRangePct: null };
-    
+
+    if (prices.length < 2) {
+      return {
+        volatility: null,
+        priceChange: null,
+        high24h: null,
+        low24h: null,
+        avgPrice: null,
+        priceRangePct: null,
+      };
+    }
+
     // Calculate volatility (coefficient of variation)
     const mean = prices.reduce((a, b) => a + b, 0) / prices.length;
     let volatility: number | null = null;
@@ -125,22 +143,22 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       const stdDev = Math.sqrt(variance);
       volatility = (stdDev / mean) * 100;
     }
-    
+
     // Calculate price change
     const first = prices[0];
     const last = prices[prices.length - 1];
     const priceChange = ((last - first) / first) * 100;
-    
+
     // Calculate 24h high/low from timeseries
     const high24h = Math.max(...prices);
     const low24h = Math.min(...prices);
-    
+
     // Calculate average price
     const avgPrice = mean;
-    
+
     // Calculate range percentage
     const priceRangePct = low24h > 0 ? ((high24h - low24h) / low24h) * 100 : null;
-    
+
     return { volatility, priceChange, high24h, low24h, avgPrice, priceRangePct };
   }, [timeseries]);
 
@@ -339,6 +357,19 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               </p>
             )}
           </article>
+          {high24h !== null && low24h !== null && (
+            <article className="card">
+              <p className="muted" style={{ fontSize: '0.75rem' }}>24h Range</p>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+                <span style={{ color: '#22c55e' }}>{high24h.toLocaleString()}</span>
+                <span className="muted" style={{ margin: '0 0.4rem' }}>→</span>
+                <span style={{ color: '#ef4444' }}>{low24h.toLocaleString()}</span>
+              </div>
+              <p className="muted" style={{ fontSize: '0.7rem' }}>
+                {((high24h - low24h) / low24h * 100).toFixed(1)}% range
+              </p>
+            </article>
+          )}
           <article className="card">
             <p className="muted" style={{ fontSize: '0.75rem' }}>5m Volume</p>
             <p style={{ fontSize: '1.1rem', fontWeight: 700, color: price.volume_5m && price.volume_5m > 0 ? '#3b82f6' : 'var(--muted)' }}>
