@@ -523,7 +523,9 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
           </div>
 
           {portfolioStats && portfolioStats.totalInvested > 0 ? (
-            <div className="grid grid-2">
+            <div>
+              <h3 className="section-header">Portfolio Overview</h3>
+              <div className="grid grid-2">
               <article className="card">
                 <p className="muted">Total Invested</p>
                 <p className="kpi">{Math.round(portfolioStats.totalInvested).toLocaleString()} gp</p>
@@ -577,6 +579,7 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                   </div>
                 </article>
               ) : null}
+            </div>
             </div>
           ) : null}
 
