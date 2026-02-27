@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
-import OpportunitiesCard from './OpportunitiesCard';
+import OpportunitiesTable from './OpportunitiesTable';
 import PortfolioView from './PortfolioView';
 import ProposalsInbox from './ProposalsInbox';
 import ApprovalsInbox from './ApprovalsInbox';
@@ -200,6 +200,20 @@ export default function VaultDashboard() {
   const [email, setEmail] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
+  // Check price freshness
+  const getPriceFreshness = (lastUpdated: string | null | undefined): { status: 'fresh' | 'stale' | 'unknown'; text: string; color: string } => {
+    if (!lastUpdated) return { status: 'unknown', text: 'No data', color: '#6b7280' };
+    const date = new Date(lastUpdated);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 15) return { status: 'fresh', text: 'Fresh', color: '#22c55e' };
+    if (diffMins < 60) return { status: 'stale', text: `${diffMins}m old`, color: '#f59e0b' };
+    return { status: 'stale', text: `${Math.floor(diffMins / 60)}h old`, color: '#ef4444' };
+  };
+
+  const priceFreshness = getPriceFreshness(opportunitiesLastUpdated);
+
   // Refresh prices handler
   const handleRefreshPrices = async () => {
     const res = await fetch('/api/market/refresh-watchlists', { method: 'POST' });
@@ -233,10 +247,29 @@ export default function VaultDashboard() {
       {/* Header */}
       <div className="row-between" style={{ marginBottom: '1rem' }}>
         <div>
-          <h1 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#f5c518' }}>Vault</h1>
-          <p className="muted" style={{ fontSize: '0.85rem' }}>OSRS Investment Dashboard</p>
+          <h1 className="text-2xl font-extrabold text-accent tracking-tight">Vault</h1>
+          <p className="text-sm text-text-muted mt-1">OSRS Investment Dashboard</p>
         </div>
-        <div className="row" style={{ gap: '0.5rem' }}>
+        <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+          {/* Price freshness indicator */}
+          <div 
+            className="row" 
+            style={{ 
+              gap: 'var(--space-2)', 
+              padding: 'var(--space-1) var(--space-2)', 
+              borderRadius: 'var(--radius-md)', 
+              background: 'rgba(255,255,255,0.05)',
+              border: `1px solid ${priceFreshness.color}40`,
+              cursor: 'pointer',
+            }}
+            onClick={() => void loadData()}
+            title="Click to refresh prices"
+          >
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: priceFreshness.color }} />
+            <span className="text-xs font-semibold" style={{ color: priceFreshness.color }}>
+              {priceFreshness.text}
+            </span>
+          </div>
           {isAuthed && (
             <button className="btn btn-secondary" onClick={handleSignOut}>
               Sign Out
@@ -304,7 +337,7 @@ export default function VaultDashboard() {
 
           {/* Tab Content */}
           {activeTab === 'Opportunities' && (
-            <OpportunitiesCard
+            <OpportunitiesTable
               opportunities={opportunities}
               loading={loading}
               onRefresh={() => void loadData()}
@@ -323,7 +356,15 @@ export default function VaultDashboard() {
           )}
 
           {activeTab === 'Portfolio' && (
-            <PortfolioView positions={portfolioPositions} summary={portfolioSummary} loading={loading} />
+            <PortfolioView 
+              positions={portfolioPositions} 
+              summary={portfolioSummary} 
+              loading={loading}
+              onCreateProposal={(data) => {
+                setPrefillProposal(data);
+                setActiveTab('Proposals');
+              }}
+            />
           )}
 
           {activeTab === 'Proposals' && (

@@ -14,6 +14,8 @@ type PortfolioPosition = {
   unrealized_profit: number | null;
   updated_at: string | null;
   icon_url: string | null;
+  recommendation?: 'hold' | 'exit' | 'sell';
+  recommendation_reason?: string;
 };
 
 type PortfolioSummary = {
@@ -29,9 +31,32 @@ interface PortfolioViewProps {
   positions: PortfolioPosition[];
   summary: PortfolioSummary | null;
   loading: boolean;
+  onCreateProposal?: (data: {
+    item_name: string;
+    side: 'buy' | 'sell';
+    quantity: number;
+    price: number;
+  }) => void;
 }
 
-export default function PortfolioView({ positions, loading }: PortfolioViewProps) {
+export default function PortfolioView({ positions, loading, onCreateProposal }: PortfolioViewProps) {
+  // Determine recommendation based on ROI
+  const getRecommendation = (roi: number): { action: 'hold' | 'exit' | 'sell'; reason: string } => {
+    if (roi > 20) return { action: 'hold', reason: 'Strong performer (+20% ROI)' };
+    if (roi > 5) return { action: 'hold', reason: 'Positive momentum' };
+    if (roi > -5) return { action: 'hold', reason: 'Near break-even, monitor' };
+    if (roi > -15) return { action: 'exit', reason: 'Underperforming (-5-15% loss)' };
+    return { action: 'sell', reason: 'Significant loss (-15%+), consider cutting' };
+  };
+
+  // Calculate recommendation for a position
+  const calcRecommendation = (position: PortfolioPosition) => {
+    const invested = position.avg_buy_price * position.quantity;
+    if (invested <= 0) return { action: 'hold' as const, reason: 'No investment data' };
+    const currentValue = (position.last_price ?? position.avg_buy_price) * position.quantity;
+    const roi = ((currentValue - invested) / invested) * 100;
+    return getRecommendation(roi);
+  };
   // Calculate portfolio stats
   const stats = useMemo(() => {
     if (positions.length === 0) return null;
@@ -248,6 +273,192 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           </p>
         </article>
       </div>
+
+      {/* Action Panel - Recommendations Summary */}
+      {positions.length > 0 && (
+        <article className="card" style={{ 
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #172554 50%, #0f172a 100%)',
+          border: '1px solid #6366f1',
+          padding: '0.875rem',
+        }}>
+          <div className="row-between" style={{ marginBottom: '0.75rem' }}>
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#a5b4fc' }}>📋 Action Panel — Next Steps</h2>
+          </div>
+          
+          {/* Recommendation buttons */}
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+            {/* Hold positions */}
+            {(() => {
+              const holdPositions = positions.filter(p => {
+                const rec = calcRecommendation(p);
+                return rec.action === 'hold';
+              }).slice(0, 3);
+              return (
+                <button
+                  disabled={holdPositions.length === 0}
+                  style={{
+                    padding: '0.6rem 0.5rem',
+                    borderRadius: 8,
+                    background: holdPositions.length > 0 ? 'rgba(34, 197, 94, 0.15)' : 'rgba(107, 114, 128, 0.1)',
+                    border: `1px solid ${holdPositions.length > 0 ? '#22c55e40' : '#374151'}`,
+                    cursor: holdPositions.length > 0 ? 'pointer' : 'default',
+                    textAlign: 'center',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (holdPositions.length > 0) {
+                      e.currentTarget.style.background = 'rgba(34, 197, 94, 0.25)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = holdPositions.length > 0 ? 'rgba(34, 197, 94, 0.15)' : 'rgba(107, 114, 128, 0.1)';
+                  }}
+                >
+                  <p style={{ fontSize: '1rem', fontWeight: 900, color: holdPositions.length > 0 ? '#22c55e' : '#6b7280' }}>
+                    {holdPositions.length}
+                  </p>
+                  <p style={{ fontSize: '0.65rem', color: holdPositions.length > 0 ? '#86efac' : '#6b7280', fontWeight: 600 }}>
+                    HOLD
+                  </p>
+                </button>
+              );
+            })()}
+            
+            {/* Exit positions */}
+            {(() => {
+              const exitPositions = positions.filter(p => {
+                const rec = calcRecommendation(p);
+                return rec.action === 'exit';
+              }).slice(0, 3);
+              return (
+                <button
+                  disabled={exitPositions.length === 0}
+                  style={{
+                    padding: '0.6rem 0.5rem',
+                    borderRadius: 8,
+                    background: exitPositions.length > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(107, 114, 128, 0.1)',
+                    border: `1px solid ${exitPositions.length > 0 ? '#f59e0b40' : '#374151'}`,
+                    cursor: exitPositions.length > 0 ? 'pointer' : 'default',
+                    textAlign: 'center',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (exitPositions.length > 0) {
+                      e.currentTarget.style.background = 'rgba(245, 158, 11, 0.25)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = exitPositions.length > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(107, 114, 128, 0.1)';
+                  }}
+                >
+                  <p style={{ fontSize: '1rem', fontWeight: 900, color: exitPositions.length > 0 ? '#f59e0b' : '#6b7280' }}>
+                    {exitPositions.length}
+                  </p>
+                  <p style={{ fontSize: '0.65rem', color: exitPositions.length > 0 ? '#fcd34d' : '#6b7280', fontWeight: 600 }}>
+                    EXIT
+                  </p>
+                </button>
+              );
+            })()}
+            
+            {/* Sell positions */}
+            {(() => {
+              const sellPositions = positions.filter(p => {
+                const rec = calcRecommendation(p);
+                return rec.action === 'sell';
+              }).slice(0, 3);
+              return (
+                <button
+                  disabled={sellPositions.length === 0}
+                  style={{
+                    padding: '0.6rem 0.5rem',
+                    borderRadius: 8,
+                    background: sellPositions.length > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(107, 114, 128, 0.1)',
+                    border: `1px solid ${sellPositions.length > 0 ? '#ef444440' : '#374151'}`,
+                    cursor: sellPositions.length > 0 ? 'pointer' : 'default',
+                    textAlign: 'center',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (sellPositions.length > 0) {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = sellPositions.length > 0 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(107, 114, 128, 0.1)';
+                  }}
+                >
+                  <p style={{ fontSize: '1rem', fontWeight: 900, color: sellPositions.length > 0 ? '#ef4444' : '#6b7280' }}>
+                    {sellPositions.length}
+                  </p>
+                  <p style={{ fontSize: '0.65rem', color: sellPositions.length > 0 ? '#fca5a5' : '#6b7280', fontWeight: 600 }}>
+                    SELL
+                  </p>
+                </button>
+              );
+            })()}
+          </div>
+
+          {/* Quick sell prompt for worst performers */}
+          {(() => {
+            const worstPositions = positions
+              .map(p => {
+                const invested = p.avg_buy_price * p.quantity;
+                if (invested <= 0) return { ...p, roi: 0 };
+                const currentValue = (p.last_price ?? p.avg_buy_price) * p.quantity;
+                return { ...p, roi: ((currentValue - invested) / invested) * 100 };
+              })
+              .filter(p => p.roi < 0)
+              .sort((a, b) => a.roi - b.roi)
+              .slice(0, 2);
+            
+            if (worstPositions.length === 0) return null;
+            
+            return (
+              <div style={{ marginTop: '0.75rem', paddingTop: '0.6rem', borderTop: '1px solid #374151' }}>
+                <p className="muted" style={{ fontSize: '0.7rem', marginBottom: '0.4rem' }}>
+                  ⚠️ Consider selling losing positions:
+                </p>
+                <div className="grid" style={{ gap: '0.4rem' }}>
+                  {worstPositions.map(p => (
+                    <div key={p.item_id} className="row" style={{ gap: '0.5rem', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div className="row" style={{ gap: '0.4rem', alignItems: 'center' }}>
+                        {p.icon_url && (
+                          <Image src={p.icon_url} alt="" width={18} height={18} style={{ imageRendering: 'pixelated', borderRadius: 3 }} unoptimized />
+                        )}
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{p.item_name}</span>
+                        <span style={{ fontSize: '0.75rem', color: '#ef4444' }}>{p.roi.toFixed(1)}%</span>
+                      </div>
+                      {typeof onCreateProposal === 'function' && (
+                        <button
+                          onClick={() => onCreateProposal({
+                            item_name: p.item_name,
+                            side: 'sell',
+                            quantity: p.quantity,
+                            price: p.last_price ?? p.avg_buy_price,
+                          })}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            fontSize: '0.7rem',
+                            fontWeight: 700,
+                            background: '#ef4444',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 4,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          SELL
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </article>
+      )}
 
       {/* Best Performer */}
       {bestPerformer && (
@@ -507,6 +718,34 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
                   <Link href={`/item/${position.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 700 }}>
                     {position.item_name}
                   </Link>
+                  {/* Recommendation Badge */}
+                  {(() => {
+                    const rec = calcRecommendation(position);
+                    const badgeColors = {
+                      hold: { bg: 'rgba(34, 197, 94, 0.2)', border: '#22c55e', text: '#22c55e' },
+                      exit: { bg: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b', text: '#f59e0b' },
+                      sell: { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444', text: '#ef4444' },
+                    };
+                    const colors = badgeColors[rec.action];
+                    return (
+                      <span 
+                        style={{ 
+                          padding: '0.15rem 0.4rem', 
+                          borderRadius: 4, 
+                          fontSize: '0.65rem', 
+                          fontWeight: 700,
+                          background: colors.bg,
+                          border: `1px solid ${colors.border}`,
+                          color: colors.text,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.03em',
+                        }}
+                        title={rec.reason}
+                      >
+                        {rec.action}
+                      </span>
+                    );
+                  })()}
                   <span className="muted" style={{ marginLeft: 'auto' }}>{position.quantity.toLocaleString()} qty</span>
                 </div>
 
@@ -554,6 +793,46 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
                     </p>
                   </div>
                 </div>
+
+                {typeof onCreateProposal === 'function' && (
+                  <button
+                    onClick={() => onCreateProposal({
+                      item_name: position.item_name,
+                      side: 'sell',
+                      quantity: position.quantity,
+                      price: position.last_price ?? position.avg_buy_price,
+                    })}
+                    style={{ 
+                      marginTop: '0.5rem', 
+                      padding: '0.4rem 0.75rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                      color: '#fff',
+                      border: '1px solid #ef4444',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.02)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  >
+                    <span>💰</span>
+                    <span>Sell Position</span>
+                    {position.quantity > 1 && (
+                      <span style={{ opacity: 0.8, fontSize: '0.7rem' }}>({position.quantity.toLocaleString()} qty)</span>
+                    )}
+                  </button>
+                )}
 
                 {position.realized_profit && position.realized_profit !== 0 && (
                   <p className="muted" style={{ fontSize: '0.75rem', marginTop: '0.35rem' }}>

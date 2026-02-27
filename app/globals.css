@@ -1,3 +1,6 @@
+/* Design tokens - Import first */
+@import url('./styles/tokens.css');
+
 :root {
   --bg: #f3f7f2;
   --surface: #ffffff;
@@ -98,12 +101,38 @@ main {
   border-color: var(--accent);
 }
 
-/* Premium dark mode cards */
+/* Article cards (used in item pages) */
+article.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem;
+  transition: all 140ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  article.card {
+    background: var(--surface-gradient);
+    border-color: rgba(231, 243, 238, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  
+  article.card:hover {
+    border-color: rgba(39, 194, 103, 0.25);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 12px var(--card-glow);
+  }
+}
+
+/* Premium dark mode cards with glassmorphism */
 @media (prefers-color-scheme: dark) {
   .card {
     background: var(--surface-gradient);
     border-color: rgba(231, 243, 238, 0.08);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
   }
   
   .card:hover {
@@ -451,6 +480,27 @@ select {
   color: var(--muted);
   margin-bottom: 0.6rem;
   margin-top: 0.3rem;
+}
+
+/* Skeleton shimmer animation */
+.skeleton-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 

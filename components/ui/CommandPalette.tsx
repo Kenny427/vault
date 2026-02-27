@@ -19,6 +19,7 @@ export default function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  // Search items from API
   const searchItems = useCallback(async (searchQuery: string) => {
     if (searchQuery.length < 2) {
       setResults([]);
@@ -29,7 +30,7 @@ export default function CommandPalette() {
     try {
       const res = await fetch(`/api/items/search?q=${encodeURIComponent(searchQuery)}`);
       const data = await res.json();
-      setResults(data.slice(0, 10));
+      setResults(data.slice(0, 10)); // Limit to 10 results
       setSelectedIndex(0);
     } catch (error) {
       console.error('Search error:', error);
@@ -39,6 +40,7 @@ export default function CommandPalette() {
     }
   }, []);
 
+  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       searchItems(query);
@@ -46,6 +48,7 @@ export default function CommandPalette() {
     return () => clearTimeout(timer);
   }, [query, searchItems]);
 
+  // Keyboard shortcut to open
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -60,12 +63,14 @@ export default function CommandPalette() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Focus input when opened
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isOpen]);
 
+  // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -87,6 +92,7 @@ export default function CommandPalette() {
 
   if (!isOpen) return null;
 
+  // Quick actions
   const quickActions = [
     { id: 'dashboard', name: 'Go to Dashboard', action: () => { setIsOpen(false); router.push('/'); }},
     { id: 'portfolio', name: 'View Portfolio', action: () => { setIsOpen(false); router.push('/portfolio'); }},
