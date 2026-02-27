@@ -80,6 +80,33 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
       }));
   }, [positions, stats]);
 
+  // Best performer (highest ROI)
+  const bestPerformer = useMemo(() => {
+    if (positions.length === 0) return null;
+    let best: PortfolioPosition | null = null;
+    let bestRoi = -Infinity;
+    
+    for (const p of positions) {
+      const invested = p.avg_buy_price * p.quantity;
+      if (invested <= 0) continue;
+      const currentValue = (p.last_price ?? p.avg_buy_price) * p.quantity;
+      const roi = ((currentValue - invested) / invested) * 100;
+      if (roi > bestRoi) {
+        bestRoi = roi;
+        best = p;
+      }
+    }
+    
+    if (!best) return null;
+    const invested = best.avg_buy_price * best.quantity;
+    const currentValue = (best.last_price ?? best.avg_buy_price) * best.quantity;
+    return {
+      ...best,
+      roi: bestRoi,
+      profit: currentValue - invested,
+    };
+  }, [positions]);
+
   if (loading) {
     return (
       <div className="card">
@@ -142,6 +169,31 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           </p>
         </article>
       </div>
+
+      {/* Best Performer */}
+      {bestPerformer && (
+        <article className="card" style={{ 
+          background: 'linear-gradient(135deg, #166534 0%, #14532d 50%, #0f172a 100%)',
+          border: '1px solid #22c55e',
+        }}>
+          <div className="row-between">
+            <div>
+              <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏆 Best Performer</p>
+              <Link href={`/item/${bestPerformer.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 800, fontSize: '1.2rem' }}>
+                {bestPerformer.item_name}
+              </Link>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: '1.4rem', fontWeight: 900, color: '#22c55e' }}>
+                +{bestPerformer.roi.toFixed(1)}%
+              </p>
+              <p className="muted" style={{ fontSize: '0.75rem' }}>
+                +{Math.round(bestPerformer.profit).toLocaleString()} gp
+              </p>
+            </div>
+          </div>
+        </article>
+      )}
 
       {/* Profit Breakdown */}
       <div className="grid grid-2" style={{ gap: '0.5rem' }}>
