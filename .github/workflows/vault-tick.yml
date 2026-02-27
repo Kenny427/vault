@@ -1,9 +1,11 @@
 name: Vault tick
 
 on:
-  schedule:
-    - cron: '*/15 8-23 * * *'
-    - cron: '0 */2 * * *'
+  # Disabled scheduled runs for now (was spamming failing runs/emails).
+  # Re-enable when `/api/cron/tick` is stable in production.
+  # schedule:
+  #   - cron: '*/15 8-23 * * *'
+  #   - cron: '0 */2 * * *'
   workflow_dispatch: {}
 
 jobs:
