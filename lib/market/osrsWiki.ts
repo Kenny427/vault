@@ -122,6 +122,8 @@ export type TimeSeriesStep = '5m' | '1h' | '6h' | '24h';
 
 export async function getTimeSeries(params: { id: number; timestep: TimeSeriesStep }) {
   const { id, timestep } = params;
-  const payload = await cachedFetch(`/timeseries?timestep=${encodeURIComponent(timestep)}&id=${encodeURIComponent(String(id))}`, 60);
+  // 6h and 24h data changes less frequently, cache longer
+  const revalidate = timestep === '6h' || timestep === '24h' ? 300 : 60;
+  const payload = await cachedFetch(`/timeseries?timestep=${encodeURIComponent(timestep)}&id=${encodeURIComponent(String(id))}`, revalidate);
   return (payload?.data ?? []) as TimeSeriesPoint[];
 }
