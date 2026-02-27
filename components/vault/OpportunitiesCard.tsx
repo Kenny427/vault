@@ -341,7 +341,9 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                         `Buy ${opp.item_name} @ ${opp.buy_at.toLocaleString()} | Sell @ ${opp.sell_at.toLocaleString()} | Qty ${opp.suggested_qty.toLocaleString()} | Est ${opp.est_profit.toLocaleString()}gp`
                       )
                     }
-                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', transition: 'all 0.15s ease' }}
+                    onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+                    onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                   >
                     Copy
                   </button>
@@ -352,7 +354,17 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                       className="btn-small"
                       onClick={() => handleAddToWatchlist(opp.item_id, opp.item_name)}
                       disabled={adding.has(opp.item_id)}
-                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', transition: 'all 0.15s ease' }}
+                      onMouseOver={(e) => {
+                        if (!adding.has(opp.item_id)) {
+                          e.currentTarget.style.transform = 'scale(1.02)';
+                          e.currentTarget.style.background = 'var(--color-success)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.background = '';
+                      }}
                     >
                       {adding.has(opp.item_id) ? '...' : '+ Watch'}
                     </button>
@@ -361,7 +373,15 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                     <button
                       className="btn-small"
                       onClick={() => onCreateProposal(opp)}
-                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', background: '#22c55e' }}
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', background: '#22c55e', transition: 'all 0.15s ease' }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.transform = 'scale(1.02)';
+                        e.currentTarget.style.filter = 'brightness(1.1)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
+                        e.currentTarget.style.filter = 'brightness(1)';
+                      }}
                     >
                       Buy
                     </button>
@@ -412,10 +432,10 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                         fontWeight: 600,
                         color:
                           (opp.volume_5m ?? opp.volume_1h ?? 0) > 100000
-                            ? '#f5c518'
+                            ? 'var(--color-warning)'
                             : (opp.volume_5m ?? opp.volume_1h ?? 0) > 50000
-                            ? '#22c55e'
-                            : '#6b7280',
+                            ? 'var(--color-success)'
+                            : 'var(--color-text-muted)',
                       }}
                     >
                       {(opp.volume_5m ?? opp.volume_1h ?? 0) > 100000
