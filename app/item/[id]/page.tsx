@@ -504,10 +504,48 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                   onChange={(e) => setFlipQty(Math.max(1, parseInt(e.target.value) || 1))}
                   style={{ fontSize: '1rem', padding: '0.6rem' }}
                 />
+                <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                  {[10, 100, 500, 1000].map(q => (
+                    <button
+                      key={q}
+                      onClick={() => setFlipQty(q)}
+                      style={{
+                        fontSize: '0.7rem',
+                        padding: '0.25rem 0.5rem',
+                        background: flipQty === q ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                        color: flipQty === q ? '#000' : 'var(--text-muted)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="grid grid-2" style={{ gap: '0.5rem' }}>
                 <div>
-                  <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Buy Price (gp)</label>
+                  <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Buy Price (gp)
+                    {price && (
+                      <button
+                        onClick={() => setFlipBuyPrice(String(price.buy_at))}
+                        style={{
+                          marginLeft: '0.4rem',
+                          fontSize: '0.65rem',
+                          padding: '0.15rem 0.4rem',
+                          background: 'rgba(34,197,94,0.15)',
+                          color: '#22c55e',
+                          border: '1px solid rgba(34,197,94,0.3)',
+                          borderRadius: 4,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Fill
+                      </button>
+                    )}
+                  </label>
                   <input
                     type="number"
                     placeholder={price ? String(price.buy_at) : '0'}
@@ -517,7 +555,25 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                   />
                 </div>
                 <div>
-                  <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Sell Price (gp)</label>
+                  <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Sell Price (gp)
+                    {price && (
+                      <button
+                        onClick={() => setFlipSellPrice(String(price.sell_at))}
+                        style={{
+                          marginLeft: '0.4rem',
+                          fontSize: '0.65rem',
+                          padding: '0.15rem 0.4rem',
+                          background: 'rgba(239,68,68,0.15)',
+                          color: '#ef4444',
+                          border: '1px solid rgba(239,68,68,0.3)',
+                          borderRadius: 4,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Fill
+                      </button>
+                    )}
+                  </label>
                   <input
                     type="number"
                     placeholder={price ? String(price.sell_at) : '0'}
