@@ -254,17 +254,6 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
               <option value="cool">Cool (20+)</option>
             </select>
             <select
-              value={scoreFilter}
-              onChange={(e) => setScoreFilter(e.target.value as ScoreFilter)}
-              style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px' }}
-            >
-              <option value="all">All Scores</option>
-              <option value="sizzler">Sizzler (80+)</option>
-              <option value="hot">Hot (60+)</option>
-              <option value="warm">Warm (40+)</option>
-              <option value="cool">Cool (20+)</option>
-            </select>
-            <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px' }}
