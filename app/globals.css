@@ -203,6 +203,22 @@ select {
   background: var(--surface);
 }
 
+.btn-small {
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.btn-small:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .btn:focus-visible,
 .btn-secondary:focus-visible,
 .tab:focus-visible,
