@@ -339,6 +339,20 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               </p>
             )}
           </article>
+          <article className="card">
+            <p className="muted" style={{ fontSize: '0.75rem' }}>5m Volume</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 700, color: price.volume_5m && price.volume_5m > 0 ? '#3b82f6' : 'var(--muted)' }}>
+              {price.volume_5m ? price.volume_5m.toLocaleString() : '—'} trades
+            </p>
+            <p className="muted" style={{ fontSize: '0.65rem' }}>Last 5 minutes</p>
+          </article>
+          <article className="card">
+            <p className="muted" style={{ fontSize: '0.75rem' }}>1h Volume</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 700, color: price.volume_1h && price.volume_1h > 0 ? '#8b5cf6' : 'var(--muted)' }}>
+              {price.volume_1h ? price.volume_1h.toLocaleString() : '—'} trades
+            </p>
+            <p className="muted" style={{ fontSize: '0.65rem' }}>Last hour</p>
+          </article>
           {high24h !== null && low24h !== null && (
             <article className="card">
               <p className="muted" style={{ fontSize: '0.75rem' }}>24h Range</p>
