@@ -202,7 +202,18 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
         <article className="card" style={{ 
           background: 'linear-gradient(135deg, #166534 0%, #14532d 50%, #0f172a 100%)',
           border: '1px solid #22c55e',
-        }}>
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.01)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(34,197,94,0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
+        >
           <div className="row-between">
             <div>
               <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏆 Best Performer</p>
@@ -227,7 +238,18 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
         <article className="card" style={{ 
           background: 'linear-gradient(135deg, #7f1d1d 0%, #450a0a 50%, #0f172a 100%)',
           border: '1px solid #ef4444',
-        }}>
+          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          cursor: 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.01)';
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(239,68,68,0.2)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
+        >
           <div className="row-between">
             <div>
               <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📉 Worst Performer</p>
@@ -329,6 +351,17 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
                 style={{
                   padding: '0.75rem',
                   borderLeft: `3px solid ${roi >= 0 ? '#22c55e' : '#ef4444'}`,
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+                  cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                  e.currentTarget.style.borderColor = roi >= 0 ? '#22c55e' : '#ef4444';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateX(0)';
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <div className="row-between" style={{ marginBottom: '0.35rem' }}>
