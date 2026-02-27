@@ -1,0 +1,192 @@
+'use client';
+
+type Opportunity = {
+  item_id: number;
+  item_name: string;
+  last_price: number;
+  margin: number;
+  spread_pct: number;
+  buy_at: number;
+  sell_at: number;
+  buy_limit: number | null;
+  suggested_qty: number;
+  est_profit: number;
+  score: number;
+  volume_5m: number | null;
+  volume_1h: number | null;
+};
+
+interface OpportunitiesCardProps {
+  opportunities: Opportunity[];
+  loading: boolean;
+  onRefresh: () => void;
+}
+
+function ScoreBadge({ score }: { score: number }) {
+  let color = '#6b7280';
+  let label = 'Cold';
+  
+  if (score >= 80) {
+    color = '#f5c518';
+    label = 'Sizzler';
+  } else if (score >= 60) {
+    color = '#22c55e';
+    label = 'Hot';
+  } else if (score >= 40) {
+    color = '#3b82f6';
+    label = 'Warm';
+  } else if (score >= 20) {
+    color = '#8b5cf6';
+    label = 'Cool';
+  }
+
+  return (
+    <span
+      style={{
+        background: color,
+        color: '#000',
+        padding: '0.15rem 0.5rem',
+        borderRadius: '4px',
+        fontSize: '0.7rem',
+        fontWeight: 700,
+      }}
+      title={`Score: ${score}`}
+    >
+      {label} {score}
+    </span>
+  );
+}
+
+export default function OpportunitiesCard({ opportunities, loading, onRefresh }: OpportunitiesCardProps) {
+  const totalEstProfit = opportunities.reduce((sum, o) => sum + o.est_profit, 0);
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Clipboard failed
+    }
+  };
+
+  return (
+    <section className="grid" style={{ gap: '0.75rem' }}>
+      {/* Summary Card */}
+      <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
+        <div className="row-between">
+          <div>
+            <p className="muted" style={{ fontSize: '0.8rem' }}>Active Opportunities</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f5c518' }}>{opportunities.length}</p>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <p className="muted" style={{ fontSize: '0.8rem' }}>Est. Profit Potential</p>
+            <p style={{ fontSize: '1.2rem', fontWeight: 700, color: '#22c55e' }}>
+              ~{totalEstProfit.toLocaleString()} gp
+            </p>
+          </div>
+        </div>
+      </article>
+
+      {/* Opportunities List */}
+      <article className="card">
+        <div className="row-between" style={{ marginBottom: '0.75rem' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Flipping Opportunities</h2>
+          <button className="btn btn-secondary" onClick={onRefresh} disabled={loading}>
+            Refresh
+          </button>
+        </div>
+
+        {opportunities.length === 0 ? (
+          <p className="muted">No opportunities found. Add theses and refresh watchlists.</p>
+        ) : (
+          <ul className="list">
+            {opportunities.map((opp) => (
+              <li
+                key={opp.item_id}
+                className="card"
+                style={{
+                  padding: '0.75rem',
+                  borderLeft: `3px solid ${opp.score >= 60 ? '#22c55e' : opp.score >= 40 ? '#3b82f6' : '#6b7280'}`,
+                }}
+              >
+                <div className="row-between" style={{ marginBottom: '0.35rem' }}>
+                  <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+                    <strong>{opp.item_name}</strong>
+                    <ScoreBadge score={opp.score} />
+                  </div>
+                  <button
+                    className="btn-small"
+                    onClick={() =>
+                      copyToClipboard(
+                        `Buy ${opp.item_name} @ ${opp.buy_at.toLocaleString()} | Sell @ ${opp.sell_at.toLocaleString()} | Qty ${opp.suggested_qty.toLocaleString()} | Est ${opp.est_profit.toLocaleString()}gp`
+                      )
+                    }
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                  >
+                    Copy
+                  </button>
+                </div>
+
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', fontSize: '0.85rem' }}>
+                  <div>
+                    <p className="muted" style={{ fontSize: '0.7rem' }}>Buy</p>
+                    <p style={{ fontWeight: 600 }}>{opp.buy_at.toLocaleString()} gp</p>
+                  </div>
+                  <div>
+                    <p className="muted" style={{ fontSize: '0.7rem' }}>Sell</p>
+                    <p style={{ fontWeight: 600 }}>{opp.sell_at.toLocaleString()} gp</p>
+                  </div>
+                  <div>
+                    <p className="muted" style={{ fontSize: '0.7rem' }}>Margin</p>
+                    <p style={{ fontWeight: 600, color: '#22c55e' }}>{opp.margin.toLocaleString()} gp</p>
+                  </div>
+                  <div>
+                    <p className="muted" style={{ fontSize: '0.7rem' }}>Spread</p>
+                    <p style={{ fontWeight: 600 }}>{opp.spread_pct.toFixed(1)}%</p>
+                  </div>
+                  <div>
+                    <p className="muted" style={{ fontSize: '0.7rem' }}>Qty</p>
+                    <p style={{ fontWeight: 600 }}>{opp.suggested_qty.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="muted" style={{ fontSize: '0.7rem' }}>Est Profit</p>
+                    <p style={{ fontWeight: 600, color: '#22c55e' }}>{opp.est_profit.toLocaleString()} gp</p>
+                  </div>
+                </div>
+
+                {(opp.volume_5m || opp.volume_1h) && (
+                  <div className="row-between" style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
+                    <span className="muted">
+                      Vol:{' '}
+                      {opp.volume_5m
+                        ? `${(opp.volume_5m / 1000).toFixed(1)}k (5m)`
+                        : ''}
+                      {opp.volume_5m && opp.volume_1h ? ' · ' : ''}
+                      {opp.volume_1h ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)` : ''}
+                    </span>
+                    <span
+                      style={{
+                        fontWeight: 600,
+                        color:
+                          (opp.volume_5m ?? 0) > 100000
+                            ? '#f5c518'
+                            : (opp.volume_5m ?? 0) > 50000
+                            ? '#22c55e'
+                            : '#6b7280',
+                      }}
+                    >
+                      {(opp.volume_5m ?? 0) > 100000
+                        ? '🔥 HOT'
+                        : (opp.volume_5m ?? 0) > 50000
+                        ? '⚡ Warm'
+                        : '💧 Cold'}
+                    </span>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
+    </section>
+  );
+}

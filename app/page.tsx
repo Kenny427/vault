@@ -1,5 +1,5 @@
-import PassiveApp from '@/components/passive/PassiveApp';
+import VaultDashboard from '@/components/vault/VaultDashboard';
 
 export default function HomePage() {
-  return <PassiveApp />;
+  return <VaultDashboard />;
 }
