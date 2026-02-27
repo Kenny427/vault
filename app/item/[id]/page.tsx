@@ -107,14 +107,14 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     const last = sparklineValues[sparklineValues.length - 1];
     return last >= first ? '#22c55e' : '#ef4444';
   }, [sparklineValues]);
-  const { volatility, priceChange } = useMemo(() => {
-    if (timeseries.length < 2) return { volatility: null, priceChange: null };
+  const { volatility, priceChange, high24h, low24h } = useMemo(() => {
+    if (timeseries.length < 2) return { volatility: null, priceChange: null, high24h: null, low24h: null };
     
     const prices = timeseries
       .map((t) => t.avgHighPrice)
       .filter((p): p is number => typeof p === 'number' && Number.isFinite(p));
     
-    if (prices.length < 2) return { volatility: null, priceChange: null };
+    if (prices.length < 2) return { volatility: null, priceChange: null, high24h: null, low24h: null };
     
     // Calculate volatility (coefficient of variation)
     const mean = prices.reduce((a, b) => a + b, 0) / prices.length;
@@ -131,7 +131,11 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     const last = prices[prices.length - 1];
     const priceChange = ((last - first) / first) * 100;
     
-    return { volatility, priceChange };
+    // Calculate 24h high/low from timeseries
+    const high24h = Math.max(...prices);
+    const low24h = Math.min(...prices);
+    
+    return { volatility, priceChange, high24h, low24h };
   }, [timeseries]);
 
   useEffect(() => {
@@ -329,6 +333,19 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               </p>
             )}
           </article>
+          {high24h !== null && low24h !== null && (
+            <article className="card">
+              <p className="muted" style={{ fontSize: '0.75rem' }}>24h Range</p>
+              <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+                <span style={{ color: '#22c55e' }}>{high24h.toLocaleString()}</span>
+                <span className="muted" style={{ margin: '0 0.4rem' }}>→</span>
+                <span style={{ color: '#ef4444' }}>{low24h.toLocaleString()}</span>
+              </div>
+              <p className="muted" style={{ fontSize: '0.7rem' }}>
+                {((high24h - low24h) / low24h * 100).toFixed(1)}% range
+              </p>
+            </article>
+          )}
           <article className="card">
             <p className="muted" style={{ fontSize: '0.75rem' }}>Margin</p>
             <p style={{ fontSize: '1.3rem', fontWeight: 900, color: '#22c55e' }}>{price.margin.toLocaleString()} gp</p>

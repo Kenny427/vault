@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 type ReconciliationTask = {
   id: string;
   item_id: number | null;
@@ -11,6 +13,7 @@ type ReconciliationTask = {
   reason: string | null;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
+  raw_payload?: Record<string, unknown> | null;
 };
 
 interface ApprovalsInboxProps {
@@ -20,6 +23,7 @@ interface ApprovalsInboxProps {
 }
 
 export default function ApprovalsInbox({ tasks, loading, onRefresh }: ApprovalsInboxProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const pendingTasks = tasks.filter((t) => t.status === 'pending');
   const processedTasks = tasks.filter((t) => t.status !== 'pending');
 
@@ -163,6 +167,32 @@ export default function ApprovalsInbox({ tasks, loading, onRefresh }: ApprovalsI
                   <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem', fontStyle: 'italic' }}>
                     Reason: {task.reason}
                   </p>
+                )}
+
+                {task.raw_payload && (
+                  <button
+                    className="btn-small btn-secondary"
+                    onClick={() => setExpandedId(expandedId === task.id ? null : task.id)}
+                    style={{ fontSize: '0.7rem', marginBottom: '0.5rem' }}
+                  >
+                    {expandedId === task.id ? '▼ Hide Raw Data' : '▶ Show Raw Data'}
+                  </button>
+                )}
+
+                {expandedId === task.id && task.raw_payload && (
+                  <pre
+                    style={{
+                      background: '#111827',
+                      padding: '0.5rem',
+                      borderRadius: '4px',
+                      fontSize: '0.7rem',
+                      overflow: 'auto',
+                      maxHeight: '150px',
+                      marginBottom: '0.5rem',
+                    }}
+                  >
+                    {JSON.stringify(task.raw_payload, null, 2)}
+                  </pre>
                 )}
 
                 <div className="row" style={{ gap: '0.5rem' }}>

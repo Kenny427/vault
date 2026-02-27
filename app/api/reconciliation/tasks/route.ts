@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from('reconciliation_tasks')
-    .select('id,item_id,item_name,side,quantity,price,occurred_at,reason,status,created_at')
+    .select('id,item_id,item_name,side,quantity,price,occurred_at,reason,status,created_at,raw_payload')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
