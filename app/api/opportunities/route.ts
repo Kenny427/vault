@@ -13,6 +13,8 @@ export type Opportunity = {
   suggested_qty: number;
   est_profit: number;
   score: number;
+  volume_5m: number | null;
+  volume_1h: number | null;
 };
 
 const PER_FLIP_CAP_GP = 50_000_000; // keep aligned with /api/nba
@@ -35,7 +37,7 @@ export async function GET() {
     supabase.from('theses').select('item_id,item_name').eq('user_id', userId).eq('active', true),
     supabase
       .from('market_snapshots')
-      .select('item_id,last_price,margin,snapshot_at')
+      .select('item_id,last_price,margin,snapshot_at,volume_5m,volume_1h')
       .eq('user_id', userId),
   ]);
 
@@ -62,11 +64,13 @@ export async function GET() {
     if (limit > 0) buyLimitById.set(Number(row.item_id), limit);
   }
 
-  const snapshotById = new Map<number, { last_price: number | null; margin: number | null }>();
+  const snapshotById = new Map<number, { last_price: number | null; margin: number | null; volume_5m: number | null; volume_1h: number | null }>();
   for (const row of snapshotsRes.data ?? []) {
     snapshotById.set(Number(row.item_id), {
       last_price: row.last_price,
       margin: row.margin,
+      volume_5m: row.volume_5m,
+      volume_1h: row.volume_1h,
     });
   }
 
@@ -77,6 +81,8 @@ export async function GET() {
     const snapshot = snapshotById.get(itemId);
     const lastPrice = Number(snapshot?.last_price ?? 0);
     const margin = Number(snapshot?.margin ?? 0);
+    const volume5m = snapshot?.volume_5m ?? null;
+    const volume1h = snapshot?.volume_1h ?? null;
 
     if (!lastPrice || !margin || margin <= 0) continue;
 
@@ -107,6 +113,8 @@ export async function GET() {
       suggested_qty: suggestedQty,
       est_profit: estProfit,
       score,
+      volume_5m: volume5m,
+      volume_1h: volume1h,
     });
   }
 

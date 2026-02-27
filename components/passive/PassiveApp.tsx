@@ -72,6 +72,8 @@ type Opportunity = {
   suggested_qty: number;
   est_profit: number;
   score: number;
+  volume_5m: number | null;
+  volume_1h: number | null;
 };
 
 const tabs = ['Home', 'Scan', 'Queue', 'Positions', 'More'] as const;
@@ -446,6 +448,15 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
               <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Opportunities</h2>
               <button className="btn" onClick={() => void loadOpportunities()} disabled={loading}>Refresh</button>
             </div>
+            {opportunities.length > 0 ? (
+              <p className="muted" style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+                Top {opportunities.slice(0, 8).length} opps: ≈{' '}
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>
+                  {opportunities.slice(0, 8).reduce((sum, o) => sum + o.est_profit, 0).toLocaleString()} gp
+                </span>{' '}
+                potential profit
+              </p>
+            ) : null}
             <ul className="list">
               {opportunities.length === 0 ? (
                 <li className="muted">No opportunities yet. Run Scan → Refresh Watchlists, then Sync.</li>
@@ -475,8 +486,13 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                       <span className="muted">Score {opp.score}</span>
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>
-                      Buy ~{opp.buy_at.toLocaleString()} | Sell ~{opp.sell_at.toLocaleString()} | Spread ~{opp.spread_pct.toFixed(1)}% | Qty {opp.suggested_qty.toLocaleString()} | Est profit ~{opp.est_profit.toLocaleString()} gp
+                      Buy ~{opp.buy_at.toLocaleString()} | Sell ~{opp.sell_at.toLocaleString()} | Margin ~{opp.margin.toLocaleString()} gp ({opp.spread_pct.toFixed(1)}%) | Qty {opp.suggested_qty.toLocaleString()} | Est profit ~{opp.est_profit.toLocaleString()} gp
                     </p>
+                    {(opp.volume_5m || opp.volume_1h) ? (
+                      <p className="muted" style={{ marginTop: '0.15rem', fontSize: '0.8rem' }}>
+                        Vol: {opp.volume_5m ? `${(opp.volume_5m/1000).toFixed(1)}k (5m)` : ''}{opp.volume_5m && opp.volume_1h ? ' · ' : ''}{opp.volume_1h ? `${(opp.volume_1h/1000).toFixed(1)}k (1h)` : ''}
+                      </p>
+                    ) : null}
                   </li>
                 ))
               )}
@@ -557,9 +573,23 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                     <p className="muted" style={{ marginTop: '0.2rem' }}>
                       Avg buy: {position.avg_buy_price.toLocaleString()} gp | Last: {Math.round(position.last_price ?? 0).toLocaleString()} gp
                     </p>
-                    <p style={{ marginTop: '0.2rem', color: (position.unrealized_profit ?? 0) >= 0 ? 'var(--accent-2)' : 'var(--danger)' }}>
-                      Unrealized: {Math.round(position.unrealized_profit ?? 0).toLocaleString()} gp
-                    </p>
+                    <div className="row-between" style={{ marginTop: '0.2rem' }}>
+                      <p style={{ color: (position.unrealized_profit ?? 0) >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
+                        {Math.round(position.unrealized_profit ?? 0).toLocaleString()} gp
+                      </p>
+                      {position.last_price && position.avg_buy_price > 0 ? (
+                        <span
+                          style={{
+                            color: position.last_price >= position.avg_buy_price ? 'var(--accent)' : 'var(--danger)',
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          {position.last_price >= position.avg_buy_price ? '+' : ''}
+                          {(((position.last_price - position.avg_buy_price) / position.avg_buy_price) * 100).toFixed(1)}%
+                        </span>
+                      ) : null}
+                    </div>
                   </li>
                 ))
               )}
