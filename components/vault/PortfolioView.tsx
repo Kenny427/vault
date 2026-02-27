@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 type PortfolioPosition = {
   item_id: number;
@@ -240,10 +241,13 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           <div className="row-between">
             <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
               {bestPerformer.icon_url && (
-                <img 
+                <Image 
                   src={bestPerformer.icon_url} 
                   alt="" 
-                  style={{ width: 36, height: 36, imageRendering: 'pixelated', borderRadius: 6 }}
+                  width={36}
+                  height={36}
+                  style={{ imageRendering: 'pixelated', borderRadius: 6 }}
+                  unoptimized
                 />
               )}
               <div>
@@ -285,10 +289,13 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           <div className="row-between">
             <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
               {worstPerformer.icon_url && (
-                <img 
+                <Image 
                   src={worstPerformer.icon_url} 
                   alt="" 
-                  style={{ width: 36, height: 36, imageRendering: 'pixelated', borderRadius: 6 }}
+                  width={36}
+                  height={36}
+                  style={{ imageRendering: 'pixelated', borderRadius: 6 }}
+                  unoptimized
                 />
               )}
               <div>
@@ -392,10 +399,13 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
               <div key={holding.name}>
                 <div className="row" style={{ gap: '0.5rem', marginBottom: '0.2rem', alignItems: 'center' }}>
                   {holding.icon_url && (
-                    <img 
+                    <Image 
                       src={holding.icon_url} 
                       alt="" 
-                      style={{ width: 20, height: 20, imageRendering: 'pixelated', borderRadius: 3 }}
+                      width={20}
+                      height={20}
+                      style={{ imageRendering: 'pixelated', borderRadius: 3 }}
+                      unoptimized
                     />
                   )}
                   <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{holding.name}</span>
@@ -457,10 +467,13 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
               >
                 <div className="row" style={{ gap: '0.6rem', marginBottom: '0.35rem', alignItems: 'center' }}>
                   {position.icon_url && (
-                    <img 
+                    <Image 
                       src={position.icon_url} 
                       alt="" 
-                      style={{ width: 28, height: 28, imageRendering: 'pixelated', borderRadius: 4 }}
+                      width={28}
+                      height={28}
+                      style={{ imageRendering: 'pixelated', borderRadius: 4 }}
+                      unoptimized
                     />
                   )}
                   <Link href={`/item/${position.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 700 }}>
