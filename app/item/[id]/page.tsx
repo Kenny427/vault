@@ -134,8 +134,27 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       {price && (
         <div className="grid grid-2" style={{ gap: '0.5rem', marginBottom: '1rem' }}>
           <article className="card">
-            <p className="muted" style={{ fontSize: '0.75rem' }}>Last Price</p>
+            <p className="muted" style={{ fontSize: '0.75rem' }}>Current Price</p>
             <p style={{ fontSize: '1.3rem', fontWeight: 900 }}>{price.last_price.toLocaleString()} gp</p>
+            {timeseries.length >= 2 && (
+              <p style={{ 
+                fontSize: '0.85rem', 
+                fontWeight: 700, 
+                color: (() => {
+                  const first = timeseries[0]?.price || 0;
+                  const last = timeseries[timeseries.length - 1]?.price || 0;
+                  const change = ((last - first) / first) * 100;
+                  return change >= 0 ? '#22c55e' : '#ef4444';
+                })()
+              }}>
+                {(() => {
+                  const first = timeseries[0]?.price || 0;
+                  const last = timeseries[timeseries.length - 1]?.price || 0;
+                  const change = ((last - first) / first) * 100;
+                  return `${change >= 0 ? '↑' : '↓'} ${Math.abs(change).toFixed(1)}% (${timestep})`;
+                })()}
+              </p>
+            )}
           </article>
           <article className="card">
             <p className="muted" style={{ fontSize: '0.75rem' }}>Margin</p>
