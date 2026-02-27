@@ -107,15 +107,33 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     const last = sparklineValues[sparklineValues.length - 1];
     return last >= first ? '#22c55e' : '#ef4444';
   }, [sparklineValues]);
-  const { volatility, priceChange, high24h, low24h } = useMemo(() => {
-    if (timeseries.length < 2) return { volatility: null, priceChange: null, high24h: null, low24h: null };
-    
+  const { volatility, priceChange, high24h, low24h, avgPrice, priceRangePct } = useMemo(() => {
+    if (timeseries.length < 2) {
+      return {
+        volatility: null,
+        priceChange: null,
+        high24h: null,
+        low24h: null,
+        avgPrice: null,
+        priceRangePct: null,
+      };
+    }
+
     const prices = timeseries
       .map((t) => t.avgHighPrice)
       .filter((p): p is number => typeof p === 'number' && Number.isFinite(p));
-    
-    if (prices.length < 2) return { volatility: null, priceChange: null, high24h: null, low24h: null };
-    
+
+    if (prices.length < 2) {
+      return {
+        volatility: null,
+        priceChange: null,
+        high24h: null,
+        low24h: null,
+        avgPrice: null,
+        priceRangePct: null,
+      };
+    }
+
     // Calculate volatility (coefficient of variation)
     const mean = prices.reduce((a, b) => a + b, 0) / prices.length;
     let volatility: number | null = null;
@@ -125,17 +143,23 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       const stdDev = Math.sqrt(variance);
       volatility = (stdDev / mean) * 100;
     }
-    
+
     // Calculate price change
     const first = prices[0];
     const last = prices[prices.length - 1];
     const priceChange = ((last - first) / first) * 100;
-    
+
     // Calculate 24h high/low from timeseries
     const high24h = Math.max(...prices);
     const low24h = Math.min(...prices);
-    
-    return { volatility, priceChange, high24h, low24h };
+
+    // Calculate average price
+    const avgPrice = mean;
+
+    // Calculate range percentage
+    const priceRangePct = low24h > 0 ? ((high24h - low24h) / low24h) * 100 : null;
+
+    return { volatility, priceChange, high24h, low24h, avgPrice, priceRangePct };
   }, [timeseries]);
 
   useEffect(() => {
@@ -347,6 +371,32 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             </article>
           )}
           <article className="card">
+            <p className="muted" style={{ fontSize: '0.75rem' }}>5m Volume</p>
+            <p
+              style={{
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                color: price.volume_5m && price.volume_5m > 0 ? '#3b82f6' : 'var(--muted)',
+              }}
+            >
+              {price.volume_5m ? price.volume_5m.toLocaleString() : '—'} trades
+            </p>
+            <p className="muted" style={{ fontSize: '0.65rem' }}>Last 5 minutes</p>
+          </article>
+          <article className="card">
+            <p className="muted" style={{ fontSize: '0.75rem' }}>1h Volume</p>
+            <p
+              style={{
+                fontSize: '1.1rem',
+                fontWeight: 700,
+                color: price.volume_1h && price.volume_1h > 0 ? '#8b5cf6' : 'var(--muted)',
+              }}
+            >
+              {price.volume_1h ? price.volume_1h.toLocaleString() : '—'} trades
+            </p>
+            <p className="muted" style={{ fontSize: '0.65rem' }}>Last hour</p>
+          </article>
+          <article className="card">
             <p className="muted" style={{ fontSize: '0.75rem' }}>Margin</p>
             <p style={{ fontSize: '1.3rem', fontWeight: 900, color: '#22c55e' }}>{price.margin.toLocaleString()} gp</p>
           </article>
@@ -358,7 +408,43 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             <p className="muted" style={{ fontSize: '0.75rem' }}>Sell At</p>
             <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>{price.sell_at.toLocaleString()} gp</p>
           </article>
+          <article className="card">
+            <p className="muted" style={{ fontSize: '0.75rem' }}>Spread</p>
+            <p style={{ fontSize: '1.3rem', fontWeight: 900, color: price.spread_pct <= 1 ? '#22c55e' : price.spread_pct <= 3 ? '#f5c518' : '#ef4444' }}>
+              {price.spread_pct.toFixed(1)}%
+            </p>
+            <p className="muted" style={{ fontSize: '0.65rem' }}>{price.spread_pct <= 1 ? 'Great' : price.spread_pct <= 3 ? 'OK' : 'High'} spread</p>
+          </article>
         </div>
+      )}
+
+      {/* Price Statistics */}
+      {avgPrice !== null && high24h !== null && low24h !== null && priceRangePct !== null && (
+        <article className="card" style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
+          <h2 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '0.6rem' }}>
+            📊 {timestep} Price Statistics
+          </h2>
+          <div className="grid grid-3" style={{ gap: '0.75rem' }}>
+            <div style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Average</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f5c518' }}>{Math.round(avgPrice).toLocaleString()} gp</p>
+            </div>
+            <div style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Highest</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#22c55e' }}>{high24h.toLocaleString()} gp</p>
+            </div>
+            <div style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
+              <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lowest</p>
+              <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ef4444' }}>{low24h.toLocaleString()} gp</p>
+            </div>
+          </div>
+          <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="muted" style={{ fontSize: '0.75rem' }}>Range Width</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: priceRangePct > 10 ? '#f59e0b' : '#9ab4aa' }}>
+              {priceRangePct.toFixed(1)}%
+            </span>
+          </div>
+        </article>
       )}
 
       {/* Signals Panel */}
@@ -448,10 +534,48 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                   onChange={(e) => setFlipQty(Math.max(1, parseInt(e.target.value) || 1))}
                   style={{ fontSize: '1rem', padding: '0.6rem' }}
                 />
+                <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                  {[10, 100, 500, 1000].map(q => (
+                    <button
+                      key={q}
+                      onClick={() => setFlipQty(q)}
+                      style={{
+                        fontSize: '0.7rem',
+                        padding: '0.25rem 0.5rem',
+                        background: flipQty === q ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                        color: flipQty === q ? '#000' : 'var(--text-muted)',
+                        border: '1px solid var(--border)',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="grid grid-2" style={{ gap: '0.5rem' }}>
                 <div>
-                  <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Buy Price (gp)</label>
+                  <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Buy Price (gp)
+                    {price && (
+                      <button
+                        onClick={() => setFlipBuyPrice(String(price.buy_at))}
+                        style={{
+                          marginLeft: '0.4rem',
+                          fontSize: '0.65rem',
+                          padding: '0.15rem 0.4rem',
+                          background: 'rgba(34,197,94,0.15)',
+                          color: '#22c55e',
+                          border: '1px solid rgba(34,197,94,0.3)',
+                          borderRadius: 4,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Fill
+                      </button>
+                    )}
+                  </label>
                   <input
                     type="number"
                     placeholder={price ? String(price.buy_at) : '0'}
@@ -461,7 +585,25 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                   />
                 </div>
                 <div>
-                  <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Sell Price (gp)</label>
+                  <label className="muted" style={{ fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem' }}>Sell Price (gp)
+                    {price && (
+                      <button
+                        onClick={() => setFlipSellPrice(String(price.sell_at))}
+                        style={{
+                          marginLeft: '0.4rem',
+                          fontSize: '0.65rem',
+                          padding: '0.15rem 0.4rem',
+                          background: 'rgba(239,68,68,0.15)',
+                          color: '#ef4444',
+                          border: '1px solid rgba(239,68,68,0.3)',
+                          borderRadius: 4,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Fill
+                      </button>
+                    )}
+                  </label>
                   <input
                     type="number"
                     placeholder={price ? String(price.sell_at) : '0'}

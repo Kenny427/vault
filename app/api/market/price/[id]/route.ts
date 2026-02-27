@@ -34,20 +34,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const margin = high && low ? high - low : 0;
   const spreadPct = high && low && high > 0 ? ((high - low) / high) * 100 : 0;
 
-  // Get volume data from snapshots
+  // Get volume data from market_snapshots
   const { data: snapshotData } = await supabase
-    .from('snapshots')
-    .select('high_price_volume, low_price_volume')
+    .from('market_snapshots')
+    .select('volume_5m, volume_1h')
+    .eq('user_id', userId)
     .eq('item_id', itemId)
-    .order('created_at', { ascending: false })
+    .order('snapshot_at', { ascending: false })
     .limit(1)
     .single();
 
-  const volume5m = snapshotData 
-    ? (snapshotData.high_price_volume ?? 0) + (snapshotData.low_price_volume ?? 0)
-    : null;
-
-  const volume1h = volume5m; // Using same data as 5m for now
+  const volume5m = snapshotData?.volume_5m ?? null;
+  const volume1h = snapshotData?.volume_1h ?? null;
 
   return NextResponse.json({
     last_price: lastPrice,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { sendDiscordAlert } from '@/lib/server/discord';
 
 type Proposal = {
   id: string;
@@ -98,6 +99,12 @@ export async function PATCH(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Send Discord notification for the decision
+  const statusText = body.status === 'approved' ? '✅ Approved' : '❌ Rejected';
+  const proposalId = body.id.slice(0, 8);
+  const itemName = data?.item_name ? ` · ${data.item_name}` : '';
+  sendDiscordAlert(`${statusText} proposal \`${proposalId}\`${itemName}`).catch(() => {});
 
   return NextResponse.json({ proposal: data as Proposal });
 }

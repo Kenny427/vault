@@ -200,6 +200,20 @@ export default function VaultDashboard() {
   const [email, setEmail] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
+  // Check price freshness
+  const getPriceFreshness = (lastUpdated: string | null | undefined): { status: 'fresh' | 'stale' | 'unknown'; text: string; color: string } => {
+    if (!lastUpdated) return { status: 'unknown', text: 'No data', color: '#6b7280' };
+    const date = new Date(lastUpdated);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 15) return { status: 'fresh', text: 'Fresh', color: '#22c55e' };
+    if (diffMins < 60) return { status: 'stale', text: `${diffMins}m old`, color: '#f59e0b' };
+    return { status: 'stale', text: `${Math.floor(diffMins / 60)}h old`, color: '#ef4444' };
+  };
+
+  const priceFreshness = getPriceFreshness(opportunitiesLastUpdated);
+
   // Refresh prices handler
   const handleRefreshPrices = async () => {
     const res = await fetch('/api/market/refresh-watchlists', { method: 'POST' });
@@ -236,7 +250,26 @@ export default function VaultDashboard() {
           <h1 style={{ fontSize: '1.3rem', fontWeight: 900, color: '#f5c518' }}>Vault</h1>
           <p className="muted" style={{ fontSize: '0.85rem' }}>OSRS Investment Dashboard</p>
         </div>
-        <div className="row" style={{ gap: '0.5rem' }}>
+        <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+          {/* Price freshness indicator */}
+          <div 
+            className="row" 
+            style={{ 
+              gap: '0.35rem', 
+              padding: '0.25rem 0.5rem', 
+              borderRadius: 6, 
+              background: 'rgba(255,255,255,0.05)',
+              border: `1px solid ${priceFreshness.color}40`,
+              cursor: 'pointer',
+            }}
+            onClick={() => void loadData()}
+            title="Click to refresh prices"
+          >
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: priceFreshness.color }} />
+            <span style={{ fontSize: '0.7rem', color: priceFreshness.color, fontWeight: 600 }}>
+              {priceFreshness.text}
+            </span>
+          </div>
           {isAuthed && (
             <button className="btn btn-secondary" onClick={handleSignOut}>
               Sign Out
@@ -288,6 +321,11 @@ export default function VaultDashboard() {
                 onClick={() => setActiveTab(tab)}
               >
                 {tab}
+                {tab === 'Proposals' && proposals.filter(p => p.status === 'pending').length > 0 && (
+                  <span className="badge badge-high" style={{ marginLeft: '0.35rem' }}>
+                    {proposals.filter(p => p.status === 'pending').length}
+                  </span>
+                )}
                 {tab === 'Approvals' && reconciliationTasks.filter(t => t.status === 'pending').length > 0 && (
                   <span className="badge badge-high" style={{ marginLeft: '0.35rem' }}>
                     {reconciliationTasks.filter(t => t.status === 'pending').length}

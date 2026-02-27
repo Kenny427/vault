@@ -384,13 +384,15 @@ export default function PriceVolumeChart(props: PriceVolumeChartProps) {
           position: 'absolute',
           left: Math.min(hoverData.x + 10, width - 120),
           top: Math.max(hoverData.y - 50, 10),
-          background: 'var(--surface)',
+          background: 'rgba(13, 21, 19, 0.9)',
           border: '1px solid var(--border)',
           borderRadius: 8,
           padding: '8px 12px',
           fontSize: '0.75rem',
           pointerEvents: 'none',
           boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           zIndex: 10,
         }}
       >
