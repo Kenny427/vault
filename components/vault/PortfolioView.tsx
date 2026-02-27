@@ -53,6 +53,20 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
     const profit = totalValue - totalInvested + totalRealized;
     const roi = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
 
+    // Calculate average ROI per position (simple average, not weighted)
+    let avgPositionRoi = 0;
+    let positionCount = 0;
+    for (const p of positions) {
+      const invested = p.avg_buy_price * p.quantity;
+      if (invested > 0) {
+        const currentValue = (p.last_price ?? p.avg_buy_price) * p.quantity;
+        const positionRoi = ((currentValue - invested) / invested) * 100;
+        avgPositionRoi += positionRoi;
+        positionCount++;
+      }
+    }
+    avgPositionRoi = positionCount > 0 ? avgPositionRoi / positionCount : 0;
+
     return {
       totalInvested,
       totalValue,
@@ -60,6 +74,7 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
       totalUnrealized,
       profit,
       roi,
+      avgPositionRoi,
     };
   }, [positions]);
 
@@ -179,7 +194,7 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
   return (
     <section className="grid" style={{ gap: '0.75rem' }}>
       {/* Summary Cards */}
-      <div className="grid grid-4" style={{ gap: '0.5rem' }}>
+      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.5rem' }}>
         <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
           <p className="muted" style={{ fontSize: '0.7rem' }}>Portfolio Value</p>
           <p style={{ fontSize: '1.25rem', fontWeight: 900, color: '#f5c518' }}>
@@ -207,7 +222,7 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           </p>
         </article>
         <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-          <p className="muted" style={{ fontSize: '0.7rem' }}>ROI</p>
+          <p className="muted" style={{ fontSize: '0.7rem' }}>Portfolio ROI</p>
           <p
             style={{
               fontSize: '1.25rem',
@@ -217,6 +232,19 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           >
             {(stats?.roi ?? 0) >= 0 ? '+' : ''}
             {(stats?.roi ?? 0).toFixed(2)}%
+          </p>
+        </article>
+        <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
+          <p className="muted" style={{ fontSize: '0.7rem' }}>Avg Position ROI</p>
+          <p
+            style={{
+              fontSize: '1.25rem',
+              fontWeight: 900,
+              color: (stats?.avgPositionRoi ?? 0) >= 0 ? '#22c55e' : '#ef4444',
+            }}
+          >
+            {(stats?.avgPositionRoi ?? 0) >= 0 ? '+' : ''}
+            {(stats?.avgPositionRoi ?? 0).toFixed(1)}%
           </p>
         </article>
       </div>

@@ -131,7 +131,20 @@ export async function GET() {
     });
   }
 
+  // Get latest snapshot timestamp for "last updated" display
+  let lastUpdated: string | null = null;
+  if (snapshotsRes.data && snapshotsRes.data.length > 0) {
+    const timestamps = snapshotsRes.data
+      .map((s) => s.snapshot_at)
+      .filter((t): t is string => !!t)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    if (timestamps[0]) lastUpdated = timestamps[0];
+  }
+
   opportunities.sort((a, b) => b.score - a.score);
 
-  return NextResponse.json({ opportunities: opportunities.slice(0, 15) });
+  return NextResponse.json({ 
+    opportunities: opportunities.slice(0, 15),
+    lastUpdated,
+  });
 }

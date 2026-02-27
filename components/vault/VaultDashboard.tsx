@@ -93,6 +93,7 @@ export default function VaultDashboard() {
 
   // Data states
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [opportunitiesLastUpdated, setOpportunitiesLastUpdated] = useState<string | null>(null);
   const [portfolioPositions, setPortfolioPositions] = useState<PortfolioPosition[]>([]);
   const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -144,6 +145,7 @@ export default function VaultDashboard() {
       if (oppRes.ok) {
         const oppData = await oppRes.json();
         setOpportunities(oppData.opportunities || []);
+        setOpportunitiesLastUpdated(oppData.lastUpdated || null);
       }
 
       // Load portfolio if authed
@@ -197,6 +199,16 @@ export default function VaultDashboard() {
   // Auth - send magic link
   const [email, setEmail] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  // Refresh prices handler
+  const handleRefreshPrices = async () => {
+    const res = await fetch('/api/market/refresh-watchlists', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      return { refreshed: data.refreshed ?? 0 };
+    }
+    return { error: 'Failed to refresh prices' };
+  };
 
   const handleSendMagicLink = async () => {
     if (!supabase || !email) return;
@@ -276,6 +288,11 @@ export default function VaultDashboard() {
                 onClick={() => setActiveTab(tab)}
               >
                 {tab}
+                {tab === 'Proposals' && proposals.filter(p => p.status === 'pending').length > 0 && (
+                  <span className="badge badge-high" style={{ marginLeft: '0.35rem' }}>
+                    {proposals.filter(p => p.status === 'pending').length}
+                  </span>
+                )}
                 {tab === 'Approvals' && reconciliationTasks.filter(t => t.status === 'pending').length > 0 && (
                   <span className="badge badge-high" style={{ marginLeft: '0.35rem' }}>
                     {reconciliationTasks.filter(t => t.status === 'pending').length}
@@ -291,6 +308,8 @@ export default function VaultDashboard() {
               opportunities={opportunities}
               loading={loading}
               onRefresh={() => void loadData()}
+              lastUpdated={opportunitiesLastUpdated}
+              onRefreshPrices={handleRefreshPrices}
               onCreateProposal={(opp) => {
                 setPrefillProposal({
                   item_name: opp.item_name,
