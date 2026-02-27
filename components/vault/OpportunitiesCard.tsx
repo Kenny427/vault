@@ -28,6 +28,7 @@ interface OpportunitiesCardProps {
   opportunities: Opportunity[];
   loading: boolean;
   onRefresh: () => void;
+  onCreateProposal?: (opp: Opportunity) => void;
 }
 
 async function addToWatchlist(itemId: number, itemName: string): Promise<boolean> {
@@ -74,7 +75,7 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-export default function OpportunitiesCard({ opportunities, loading, onRefresh }: OpportunitiesCardProps) {
+export default function OpportunitiesCard({ opportunities, loading, onRefresh, onCreateProposal }: OpportunitiesCardProps) {
   const totalEstProfit = opportunities.reduce((sum, o) => sum + o.est_profit, 0);
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const [added, setAdded] = useState<Set<number>>(new Set());
@@ -241,6 +242,15 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
                       style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
                     >
                       {adding.has(opp.item_id) ? '...' : '+ Watch'}
+                    </button>
+                  )}
+                  {typeof onCreateProposal === 'function' && (
+                    <button
+                      className="btn-small"
+                      onClick={() => onCreateProposal(opp)}
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', background: '#22c55e' }}
+                    >
+                      Buy
                     </button>
                   )}
                 </div>
