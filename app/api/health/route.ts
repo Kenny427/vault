@@ -14,7 +14,11 @@ export async function GET() {
     if (error) throw error;
     checks.supabase = { ok: true, message: 'Connected' };
   } catch (err) {
-    checks.supabase = { ok: false, message: err instanceof Error ? err.message : 'Connection failed' };
+    const msg =
+      err instanceof Error
+        ? err.message
+        : (err as any)?.message || (err as any)?.error_description || JSON.stringify(err);
+    checks.supabase = { ok: false, message: msg || 'Connection failed' };
   }
 
   // Check OSRS Wiki API reachability (cheap HEAD)
