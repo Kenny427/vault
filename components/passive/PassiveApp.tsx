@@ -149,6 +149,8 @@ export default function PassiveApp() {
     let totalInvested = 0;
     let currentValue = 0;
     let topPerformer: { name: string; roi: number } | null = null;
+    let worstPerformer: { name: string; roi: number } | null = null;
+    let totalPositionRoi = 0;
     const positionAllocations: Array<{ name: string; value: number; pct: number }> = [];
     
     for (const p of positions) {
@@ -159,8 +161,12 @@ export default function PassiveApp() {
 
       // Calculate individual position ROI
       const positionRoi = invested > 0 ? ((value - invested) / invested) * 100 : 0;
+      totalPositionRoi += positionRoi;
       if (!topPerformer || positionRoi > topPerformer.roi) {
         topPerformer = { name: p.item_name, roi: positionRoi };
+      }
+      if (!worstPerformer || positionRoi < worstPerformer.roi) {
+        worstPerformer = { name: p.item_name, roi: positionRoi };
       }
       positionAllocations.push({ name: p.item_name, value, pct: 0 }); // pct will be calc'd after
     }
@@ -176,7 +182,8 @@ export default function PassiveApp() {
     
     const profit = currentValue - totalInvested;
     const roi = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
-    return { totalInvested, currentValue, profit, roi, topPerformer, topAllocations };
+    const avgPositionRoi = positions.length > 0 ? totalPositionRoi / positions.length : 0;
+    return { totalInvested, currentValue, profit, roi, avgPositionRoi, topPerformer, worstPerformer, topAllocations };
   }, [positions]);
 
   useEffect(() => {
@@ -567,6 +574,12 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                 <p className="muted">Positions</p>
                 <p className="kpi">{positions.length}</p>
               </article>
+              <article className="card">
+                <p className="muted">Avg Position ROI</p>
+                <p className="kpi" style={{ color: portfolioStats.avgPositionRoi >= 0 ? 'var(--accent-2)' : 'var(--danger)' }}>
+                  {portfolioStats.avgPositionRoi >= 0 ? '+' : ''}{portfolioStats.avgPositionRoi.toFixed(1)}%
+                </p>
+              </article>
               {portfolioStats.topPerformer ? (
                 <article
                   className="card"
@@ -588,6 +601,30 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                   >
                     {portfolioStats.topPerformer.roi >= 0 ? '+' : ''}
                     {portfolioStats.topPerformer.roi.toFixed(1)}% ROI
+                  </p>
+                </article>
+              ) : null}
+              {portfolioStats.worstPerformer ? (
+                <article
+                  className="card"
+                  style={{
+                    gridColumn: 'span 2',
+                    background: 'linear-gradient(135deg, var(--surface) 0%, rgba(251, 113, 133, 0.08) 100%)',
+                  }}
+                >
+                  <p className="muted">Worst Performer</p>
+                  <p className="kpi" style={{ fontSize: '1.1rem' }}>
+                    {portfolioStats.worstPerformer.name}
+                  </p>
+                  <p
+                    style={{
+                      color: portfolioStats.worstPerformer.roi >= 0 ? 'var(--accent)' : 'var(--danger)',
+                      fontWeight: 700,
+                      fontSize: '0.95rem',
+                    }}
+                  >
+                    {portfolioStats.worstPerformer.roi >= 0 ? '+' : ''}
+                    {portfolioStats.worstPerformer.roi.toFixed(1)}% ROI
                   </p>
                 </article>
               ) : null}
