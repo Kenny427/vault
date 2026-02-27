@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useId } from 'react';
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -12,10 +12,18 @@ export default function PriceSparkline(props: {
   height?: number;
   stroke?: string;
   showArea?: boolean;
+  showLastDot?: boolean;
+  showGrid?: boolean;
+  timestep?: '5m' | '1h' | '6h' | '24h';
 }) {
   const width = props.width ?? 240;
   const height = props.height ?? 140;
   const showArea = props.showArea ?? true;
+  const showLastDot = props.showLastDot ?? true;
+  const showGrid = props.showGrid ?? true;
+  const timestep = props.timestep ?? '5m';
+
+  const gradientId = useId();
 
   const series = props.values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
 
@@ -45,30 +53,21 @@ export default function PriceSparkline(props: {
 
   const stepX = width / (series.length - 1);
 
-  const points = series
-    .map((v, i) => {
-      const x = i * stepX;
-      const y = height - ((v - minV) / range) * height;
-      return `${clamp(x, 0, width)},${clamp(y, 0, height)}`;
-    })
-    .join(' ');
+  const coords = series.map((v, i) => {
+    const x = i * stepX;
+    const y = height - ((v - minV) / range) * height;
+    return { x: clamp(x, 0, width), y: clamp(y, 0, height), v };
+  });
 
-  // Area fill points (from first point to last point, then down to bottom)
-  const areaPoints = showArea
-    ? `${series
-        .map((v, i) => {
-          const x = i * stepX;
-          const y = height - ((v - minV) / range) * height;
-          return `${clamp(x, 0, width)},${clamp(y, 0, height)}`;
-        })
-        .join(' ')} ${width},${height} 0,${height}`
-    : '';
-
-  // Determine gradient direction based on price movement
+  // Infer stroke color from trend unless explicitly provided
   const firstVal = series[0];
   const lastVal = series[series.length - 1];
-  const isUp = lastVal >= firstVal;
-  const strokeColor = isUp ? 'var(--accent)' : 'var(--danger)';
+  const inferredStroke = lastVal >= firstVal ? 'var(--accent)' : 'var(--danger)';
+  const stroke = props.stroke ?? inferredStroke;
+
+  const points = coords.map((p) => `${p.x},${p.y}`).join(' ');
+  const areaPoints = showArea ? `${points} ${width},${height} 0,${height}` : '';
+  const last = coords[coords.length - 1];
 
   return (
     <svg
@@ -80,29 +79,70 @@ export default function PriceSparkline(props: {
         border: '1px solid var(--border)',
         background: 'var(--surface-2)',
       }}
-      aria-label="Price sparkline"
+      aria-label={`Price sparkline. Min ${Math.round(minV).toLocaleString()}, max ${Math.round(maxV).toLocaleString()}, last ${Math.round(last?.v ?? 0).toLocaleString()}.`}
       role="img"
     >
       <defs>
-        <linearGradient id="sparklineGradient" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={isUp ? 'var(--accent)' : 'var(--danger)'} stopOpacity="0.35" />
-          <stop offset="100%" stopColor={isUp ? 'var(--accent)' : 'var(--danger)'} stopOpacity="0.02" />
+        <linearGradient id={`spark-stroke-${gradientId}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor={stroke} stopOpacity={0.65} />
+          <stop offset="55%" stopColor={stroke} stopOpacity={1} />
+          <stop offset="100%" stopColor={stroke} stopOpacity={0.85} />
+        </linearGradient>
+        <linearGradient id={`spark-area-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={stroke} stopOpacity={0.22} />
+          <stop offset="100%" stopColor={stroke} stopOpacity={0} />
         </linearGradient>
       </defs>
-      {showArea && (
-        <polygon
-          fill="url(#sparklineGradient)"
-          points={areaPoints}
-        />
-      )}
+
+      {showGrid ? (
+        <g stroke="var(--border)" strokeOpacity={0.55}>
+          <line x1={0} y1={Math.round(height * 0.25)} x2={width} y2={Math.round(height * 0.25)} />
+          <line x1={0} y1={Math.round(height * 0.5)} x2={width} y2={Math.round(height * 0.5)} />
+          <line x1={0} y1={Math.round(height * 0.75)} x2={width} y2={Math.round(height * 0.75)} />
+        </g>
+      ) : null}
+
+      {/* Y-axis price labels */}
+      <g fill="var(--muted)" fontSize="8" fontWeight={500}>
+        <text x={4} y={10} opacity={0.7}>
+          {maxV >= 1000 ? `${(maxV / 1000).toFixed(1)}k` : Math.round(maxV)}
+        </text>
+        <text x={4} y={height / 2 + 3} opacity={0.5}>
+          {range >= 1000 ? `${((maxV + minV) / 2 / 1000).toFixed(1)}k` : Math.round((maxV + minV) / 2)}
+        </text>
+        <text x={4} y={height - 4} opacity={0.7}>
+          {minV >= 1000 ? `${(minV / 1000).toFixed(1)}k` : Math.round(minV)}
+        </text>
+      </g>
+
+      {/* Time axis labels */}
+      <g fill="var(--muted)" fontSize="9" fontWeight={500}>
+        <text x={4} y={height - 4} opacity={0.7}>now</text>
+        <text x={width / 2} y={height - 4} textAnchor="middle" opacity={0.5}>
+          {timestep === '5m' ? '2.5m' : timestep === '1h' ? '30m' : timestep === '6h' ? '3h' : '12h'}
+        </text>
+        <text x={width - 4} y={height - 4} textAnchor="end" opacity={0.7}>
+          {timestep === '5m' ? '5m ago' : timestep === '1h' ? '1h ago' : timestep === '6h' ? '6h ago' : '24h ago'}
+        </text>
+      </g>
+
+      {showArea ? <polygon points={areaPoints} fill={`url(#spark-area-${gradientId})`} /> : null}
+
       <polyline
         fill="none"
-        stroke={strokeColor}
-        strokeWidth={2}
+        stroke={`url(#spark-stroke-${gradientId})`}
+        strokeWidth={2.25}
         strokeLinejoin="round"
         strokeLinecap="round"
         points={points}
       />
+
+      {showLastDot && last ? (
+        <g>
+          <circle cx={last.x} cy={last.y} r={4.5} fill={stroke} fillOpacity={0.25} />
+          <circle cx={last.x} cy={last.y} r={2.25} fill={stroke} />
+        </g>
+      ) : null}
     </svg>
   );
 }

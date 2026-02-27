@@ -68,9 +68,7 @@ async function cachedFetch(path: string, revalidate: number) {
 
       if (!retryable || attempt === maxAttempts) {
         const text = await res.text().catch(() => '');
-        throw new Error(
-          `OSRS Wiki request failed (${res.status}) for ${path}${text ? `: ${text.slice(0, 200)}` : ''}`,
-        );
+        throw new Error(`OSRS Wiki request failed (${res.status}) for ${path}${text ? `: ${text.slice(0, 200)}` : ''}`);
       }
 
       const retryAfterMs = parseRetryAfterMs(res);
@@ -93,8 +91,12 @@ export async function getMapping() {
   return Array.isArray(payload) ? payload : [];
 }
 
+export async function getLatestPayload() {
+  return cachedFetch('/latest', 60);
+}
+
 export async function getLatest() {
-  const payload = await cachedFetch('/latest', 60);
+  const payload = await getLatestPayload();
   return (payload?.data ?? {}) as Record<string, LatestEntry>;
 }
 
@@ -120,6 +122,8 @@ export type TimeSeriesStep = '5m' | '1h' | '6h' | '24h';
 
 export async function getTimeSeries(params: { id: number; timestep: TimeSeriesStep }) {
   const { id, timestep } = params;
-  const payload = await cachedFetch(`/timeseries?timestep=${encodeURIComponent(timestep)}&id=${encodeURIComponent(String(id))}`, 60);
+  // 6h and 24h data changes less frequently, cache longer
+  const revalidate = timestep === '6h' || timestep === '24h' ? 300 : 60;
+  const payload = await cachedFetch(`/timeseries?timestep=${encodeURIComponent(timestep)}&id=${encodeURIComponent(String(id))}`, revalidate);
   return (payload?.data ?? []) as TimeSeriesPoint[];
 }

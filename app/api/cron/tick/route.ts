@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase/admin';
-import { getFiveMinute, getLatest, getMapping, getOneHour } from '@/lib/market/osrsWiki';
+import { getFiveMinute, getLatestPayload, getMapping, getOneHour } from '@/lib/market/osrsWiki';
 
 type MappingItem = {
   id: number;
@@ -50,7 +50,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ refreshed: 0, skipped: true, reason: 'No active theses or positions' });
   }
 
-  const [mapping, latest, fiveMinute, oneHour] = await Promise.all([getMapping(), getLatest(), getFiveMinute(), getOneHour()]);
+  const [mapping, latestPayload, fiveMinute, oneHour] = await Promise.all([
+    getMapping(),
+    getLatestPayload(),
+    getFiveMinute(),
+    getOneHour(),
+  ]);
+
+  const latest = (latestPayload?.data ?? {}) as Record<string, { high?: number | null; low?: number | null }>;
+
+  // Best-effort raw store for debugging/scoring iterations.
+  // This should never break the cron tick itself.
+  const rawStoreInsert = await supabase.from('osrs_wiki_latest_ingests').insert({
+    source: 'prices.runescape.wiki/api/v1/osrs/latest',
+    payload: latestPayload ?? { data: latest },
+  });
+  const rawStoreError = rawStoreInsert.error?.message ?? null;
+  if (rawStoreInsert.error) {
+    console.error('Failed to insert osrs_wiki_latest_ingests:', rawStoreInsert.error);
+  }
+
   const mappingById = new Map<number, MappingItem>();
   for (const entry of mapping as MappingItem[]) {
     mappingById.set(entry.id, entry);
@@ -111,5 +130,9 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 
-  return NextResponse.json({ refreshed: watchItemIdList.length, at: nowIso });
+  return NextResponse.json({
+    refreshed: watchItemIdList.length,
+    at: nowIso,
+    raw_latest_store: rawStoreError ? { ok: false, error: rawStoreError } : { ok: true },
+  });
 }
