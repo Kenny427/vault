@@ -37,11 +37,29 @@ export async function POST() {
     .eq('enabled', true)
     .order('priority', { ascending: false });
 
+  // If the pool table isn't set up in prod yet, fall back to a small starter list
+  // so first-time users aren't blocked.
+  const fallbackPool: PoolItem[] = [
+    { item_id: 4151, item_name: 'Abyssal whip', priority: 90, enabled: true },
+    { item_id: 11840, item_name: 'Dragon boots', priority: 85, enabled: true },
+    { item_id: 1127, item_name: 'Rune platebody', priority: 80, enabled: true },
+    { item_id: 385, item_name: 'Shark', priority: 75, enabled: true },
+    { item_id: 1513, item_name: 'Magic logs', priority: 70, enabled: true },
+    { item_id: 2363, item_name: 'Runite bar', priority: 70, enabled: true },
+    { item_id: 560, item_name: 'Death rune', priority: 65, enabled: true },
+    { item_id: 7937, item_name: 'Pure essence', priority: 60, enabled: true },
+  ];
+
+  let poolItems = (poolRes.data ?? []) as PoolItem[];
   if (poolRes.error) {
-    return NextResponse.json({ error: poolRes.error.message }, { status: 500 });
+    const msg = poolRes.error.message ?? '';
+    if (msg.includes('custom_pool_items') || msg.includes('schema cache')) {
+      poolItems = fallbackPool;
+    } else {
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
   }
 
-  const poolItems = (poolRes.data ?? []) as PoolItem[];
   if (poolItems.length === 0) {
     return NextResponse.json({ inserted: 0, reason: 'Pool is empty' });
   }
