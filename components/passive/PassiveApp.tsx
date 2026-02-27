@@ -1228,6 +1228,21 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                         </span>
                       ) : null}
                     </span>
+                    {sparkStats.max > 0 && sparkStats.min > 0 ? (
+                      <span 
+                        className="muted" 
+                        style={{ 
+                          fontSize: '0.75rem',
+                          padding: '0.15rem 0.4rem',
+                          background: 'var(--surface-2)',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                        }}
+                        title={`Spread: high-low range as % of current price`}
+                      >
+                        ⟐ {(((sparkStats.max - sparkStats.min) / sparkStats.last) * 100).toFixed(1)}% volatility
+                      </span>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
