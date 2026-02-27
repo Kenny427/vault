@@ -78,6 +78,14 @@ export default function VaultDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Pre-fill proposal from opportunity
+  const [prefillProposal, setPrefillProposal] = useState<{
+    item_name: string;
+    side: 'buy' | 'sell';
+    quantity: number;
+    price: number;
+  } | null>(null);
+  
   // Auth state
   const [supabase, setSupabase] = useState<ReturnType<typeof createBrowserSupabaseClient> | null>(null);
   const [isAuthed, setIsAuthed] = useState(false);
@@ -279,7 +287,20 @@ export default function VaultDashboard() {
 
           {/* Tab Content */}
           {activeTab === 'Opportunities' && (
-            <OpportunitiesCard opportunities={opportunities} loading={loading} onRefresh={() => void loadData()} />
+            <OpportunitiesCard
+              opportunities={opportunities}
+              loading={loading}
+              onRefresh={() => void loadData()}
+              onCreateProposal={(opp) => {
+                setPrefillProposal({
+                  item_name: opp.item_name,
+                  side: 'buy',
+                  quantity: opp.suggested_qty,
+                  price: opp.buy_at,
+                });
+                setActiveTab('Proposals');
+              }}
+            />
           )}
 
           {activeTab === 'Portfolio' && (
@@ -287,7 +308,12 @@ export default function VaultDashboard() {
           )}
 
           {activeTab === 'Proposals' && (
-            <ProposalsInbox proposals={proposals} onRefresh={() => void loadData()} />
+            <ProposalsInbox
+              proposals={proposals}
+              onRefresh={() => void loadData()}
+              prefill={prefillProposal}
+              onPrefillConsumed={() => setPrefillProposal(null)}
+            />
           )}
 
           {activeTab === 'Approvals' && (

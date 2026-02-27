@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 type Proposal = {
   id: string;
@@ -17,9 +17,16 @@ type Proposal = {
 interface ProposalsInboxProps {
   proposals: Proposal[];
   onRefresh: () => void;
+  prefill?: {
+    item_name: string;
+    side: 'buy' | 'sell';
+    quantity: number;
+    price: number;
+  } | null;
+  onPrefillConsumed?: () => void;
 }
 
-export default function ProposalsInbox({ proposals, onRefresh }: ProposalsInboxProps) {
+export default function ProposalsInbox({ proposals, onRefresh, prefill, onPrefillConsumed }: ProposalsInboxProps) {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
@@ -30,6 +37,21 @@ export default function ProposalsInbox({ proposals, onRefresh }: ProposalsInboxP
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Handle prefill from opportunity
+  useEffect(() => {
+    if (prefill) {
+      setFormData({
+        description: `Buy proposal for ${prefill.item_name}`,
+        item_name: prefill.item_name,
+        side: prefill.side,
+        quantity: String(prefill.quantity),
+        price: String(prefill.price),
+      });
+      setShowForm(true);
+      onPrefillConsumed?.();
+    }
+  }, [prefill, onPrefillConsumed]);
 
   const pendingProposals = proposals.filter((p) => p.status === 'pending');
   const processedProposals = proposals.filter((p) => p.status !== 'pending');

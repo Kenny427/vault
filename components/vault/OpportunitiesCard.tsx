@@ -28,6 +28,7 @@ interface OpportunitiesCardProps {
   opportunities: Opportunity[];
   loading: boolean;
   onRefresh: () => void;
+  onCreateProposal?: (opp: Opportunity) => void;
 }
 
 async function addToWatchlist(itemId: number, itemName: string): Promise<boolean> {
@@ -74,11 +75,13 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-export default function OpportunitiesCard({ opportunities, loading, onRefresh }: OpportunitiesCardProps) {
+export default function OpportunitiesCard({ opportunities, loading, onRefresh, onCreateProposal }: OpportunitiesCardProps) {
   const totalEstProfit = opportunities.reduce((sum, o) => sum + o.est_profit, 0);
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const [added, setAdded] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>('score');
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<string | null>(null);
 
   const sortedOpportunities = useMemo(() => {
     const sorted = [...opportunities];
@@ -115,6 +118,25 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
       await navigator.clipboard.writeText(text);
     } catch {
       // Clipboard failed
+    }
+  };
+
+  const handleSeedDemo = async () => {
+    setSeeding(true);
+    setSeedResult(null);
+    try {
+      const res = await fetch('/api/theses/seed', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setSeedResult(`✓ Added ${data.inserted} items to watchlist!`);
+        onRefresh();
+      } else {
+        setSeedResult(data.error || 'Failed to seed');
+      }
+    } catch {
+      setSeedResult('Failed to seed demo data');
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -158,7 +180,19 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
         </div>
 
         {sortedOpportunities.length === 0 ? (
-          <p className="muted">No opportunities found. Add theses and refresh watchlists.</p>
+          <div style={{ textAlign: 'center', padding: '1.5rem' }}>
+            <p className="muted" style={{ marginBottom: '1rem' }}>No opportunities found. Add theses and refresh watchlists.</p>
+            {seedResult ? (
+              <p style={{ color: seedResult.startsWith('✓') ? '#22c55e' : '#ef4444', fontSize: '0.9rem' }}>{seedResult}</p>
+            ) : (
+              <button className="btn" onClick={handleSeedDemo} disabled={seeding}>
+                {seeding ? 'Seeding...' : 'Seed Demo Watchlist'}
+              </button>
+            )}
+            <p className="muted" style={{ fontSize: '0.75rem', marginTop: '0.75rem' }}>
+              This will add popular pool items to your watchlist.
+            </p>
+          </div>
         ) : (
           <ul className="list">
             {sortedOpportunities.map((opp) => (
@@ -208,6 +242,15 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
                       style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
                     >
                       {adding.has(opp.item_id) ? '...' : '+ Watch'}
+                    </button>
+                  )}
+                  {typeof onCreateProposal === 'function' && (
+                    <button
+                      className="btn-small"
+                      onClick={() => onCreateProposal(opp)}
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', background: '#22c55e' }}
+                    >
+                      Buy
                     </button>
                   )}
                 </div>
