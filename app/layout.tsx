@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import Topbar from '@/components/ui/Topbar';
+import CommandPalette from '@/components/ui/CommandPalette';
 
 export const metadata: Metadata = {
   title: 'Vault',
@@ -9,7 +11,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Topbar />
+        <main>{children}</main>
+        <CommandPalette />
+      </body>
     </html>
   );
 }

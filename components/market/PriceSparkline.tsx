@@ -139,8 +139,12 @@ export default function PriceSparkline(props: {
 
       {showLastDot && last ? (
         <g>
-          <circle cx={last.x} cy={last.y} r={4.5} fill={stroke} fillOpacity={0.25} />
-          <circle cx={last.x} cy={last.y} r={2.25} fill={stroke} />
+          {/* Outer glow */}
+          <circle cx={last.x} cy={last.y} r={8} fill={stroke} fillOpacity={0.15} />
+          {/* Middle glow */}
+          <circle cx={last.x} cy={last.y} r={5.5} fill={stroke} fillOpacity={0.25} />
+          {/* Inner dot */}
+          <circle cx={last.x} cy={last.y} r={2.5} fill={stroke} />
         </g>
       ) : null}
     </svg>

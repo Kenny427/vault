@@ -170,6 +170,7 @@ export default function Topbar() {
           font-weight: 700;
         }
 
+<<<<<<< HEAD
         .topbar-footer-hint {
           display: none;
           justify-content: center;
@@ -196,6 +197,8 @@ export default function Topbar() {
           margin: 0 0.2rem;
         }
 
+=======
+>>>>>>> origin/main
         @media (max-width: 640px) {
           .topbar-nav-label {
             display: none;
@@ -205,12 +208,15 @@ export default function Topbar() {
             display: none;
           }
         }
+<<<<<<< HEAD
 
         @media (min-width: 641px) {
           .topbar-footer-hint {
             display: flex;
           }
         }
+=======
+>>>>>>> origin/main
       `}</style>
     </header>
   );
