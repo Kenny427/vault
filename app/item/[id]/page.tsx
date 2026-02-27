@@ -112,7 +112,25 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   if (loading) {
     return (
       <main style={{ padding: '1rem' }}>
-        <p className="muted">Loading item...</p>
+        <div className="row" style={{ gap: '0.5rem', alignItems: 'center', marginBottom: '1rem' }}>
+          <Link href="/" style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 700 }}>← Back</Link>
+        </div>
+        <div style={{ 
+          background: 'var(--card-bg, #1f2937)', 
+          borderRadius: 8, 
+          padding: '1.5rem',
+          animation: 'pulse 2s infinite'
+        }}>
+          <div style={{ width: '60%', height: 24, background: 'var(--muted-bg, #374151)', borderRadius: 4, marginBottom: '1rem' }} />
+          <div style={{ width: '40%', height: 16, background: 'var(--muted-bg, #374151)', borderRadius: 4, marginBottom: '0.5rem' }} />
+          <div style={{ width: '70%', height: 16, background: 'var(--muted-bg, #374151)', borderRadius: 4 }} />
+        </div>
+        <style jsx>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+          }
+        `}</style>
       </main>
     );
   }
