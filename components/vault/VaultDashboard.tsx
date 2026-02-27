@@ -356,7 +356,15 @@ export default function VaultDashboard() {
           )}
 
           {activeTab === 'Portfolio' && (
-            <PortfolioView positions={portfolioPositions} summary={portfolioSummary} loading={loading} />
+            <PortfolioView 
+              positions={portfolioPositions} 
+              summary={portfolioSummary} 
+              loading={loading}
+              onCreateProposal={(data) => {
+                setPrefillProposal(data);
+                setActiveTab('Proposals');
+              }}
+            />
           )}
 
           {activeTab === 'Proposals' && (
