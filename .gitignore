@@ -38,3 +38,6 @@ yarn-error.log*
 
 # OS
 Thumbs.db
+
+# Build
+tsconfig.tsbuildinfo

@@ -280,6 +280,30 @@ export default function PassiveApp() {
     })();
   }, [activeTab, isAuthed, inboxFilter]);
 
+  // Auto-load opportunities when switching to Scan tab
+  useEffect(() => {
+    if (activeTab !== 'Scan') return;
+    if (!isAuthed) {
+      setOpportunities([]);
+      return;
+    }
+
+    // Only fetch if we don't have data yet (lazy load on first visit)
+    if (opportunities.length === 0) {
+      void (async () => {
+        try {
+          const res = await fetch('/api/opportunities', { method: 'GET' });
+          if (!res.ok) return;
+          const payload = (await res.json()) as { opportunities: Opportunity[] };
+          setOpportunities(payload.opportunities ?? []);
+          setOpportunitiesLastUpdated(new Date());
+        } catch {
+          // Silently fail - user can manually refresh
+        }
+      })();
+    }
+  }, [activeTab, isAuthed, opportunities.length]);
+
   async function loadDashboard() {
     setLoading(true);
     setError(null);
