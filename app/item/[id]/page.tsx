@@ -109,6 +109,17 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
     }
   }, [itemId, timestep]);
 
+  // ESC key to go back
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        window.history.back();
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   if (loading) {
     return (
       <main style={{ padding: '1rem' }}>
@@ -151,6 +162,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         <Link href="/" style={{ color: '#f5c518', textDecoration: 'none', fontSize: '0.9rem' }}>
           ← Back to Vault
         </Link>
+        <span className="muted" style={{ fontSize: '0.75rem', marginLeft: '0.5rem' }}>ESC</span>
       </div>
 
       {/* Item Header */}
