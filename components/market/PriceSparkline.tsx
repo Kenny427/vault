@@ -14,8 +14,7 @@ export default function PriceSparkline(props: {
   showArea?: boolean;
 }) {
   const width = props.width ?? 240;
-  const height = props.height ?? 64;
-  const stroke = props.stroke ?? 'var(--accent)';
+  const height = props.height ?? 140;
   const showArea = props.showArea ?? true;
 
   const series = props.values.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
@@ -69,6 +68,7 @@ export default function PriceSparkline(props: {
   const firstVal = series[0];
   const lastVal = series[series.length - 1];
   const isUp = lastVal >= firstVal;
+  const strokeColor = isUp ? 'var(--accent)' : 'var(--danger)';
 
   return (
     <svg
@@ -97,7 +97,7 @@ export default function PriceSparkline(props: {
       )}
       <polyline
         fill="none"
-        stroke={stroke}
+        stroke={strokeColor}
         strokeWidth={2}
         strokeLinejoin="round"
         strokeLinecap="round"

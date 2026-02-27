@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { sendDiscordAlert } from '@/lib/server/discord';
 
 const ALLOWED_STATUSES = new Set(['approved', 'rejected']);
 
@@ -81,6 +82,11 @@ export async function POST(request: NextRequest) {
   if (!data) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
+
+  // Send Discord notification for the decision
+  const statusText = body.status === 'approved' ? '✅ Approved' : '❌ Rejected';
+  const taskId = body.id.slice(0, 8);
+  sendDiscordAlert(`${statusText} reconciliation task \`${taskId}\``).catch(() => {});
 
   return NextResponse.json({ ok: true, task: data });
 }
