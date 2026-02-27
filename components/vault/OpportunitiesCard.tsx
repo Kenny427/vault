@@ -23,6 +23,7 @@ type Opportunity = {
 };
 
 type SortOption = 'score' | 'margin' | 'profit' | 'volume';
+type ScoreFilter = 'all' | 'sizzler' | 'hot' | 'warm' | 'cool';
 
 interface OpportunitiesCardProps {
   opportunities: Opportunity[];
@@ -82,13 +83,27 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const [added, setAdded] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>('score');
+  const [scoreFilter, setScoreFilter] = useState<ScoreFilter>('all');
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<string | null>(null);
   const [refreshingPrices, setRefreshingPrices] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
 
   const sortedOpportunities = useMemo(() => {
-    const sorted = [...opportunities];
+    let filtered = [...opportunities];
+    
+    // Apply score filter
+    if (scoreFilter !== 'all') {
+      const minScore = {
+        sizzler: 80,
+        hot: 60,
+        warm: 40,
+        cool: 20,
+      }[scoreFilter];
+      filtered = filtered.filter(o => o.score >= minScore);
+    }
+    
+    const sorted = filtered;
     switch (sortBy) {
       case 'score':
         return sorted.sort((a, b) => b.score - a.score);
@@ -101,7 +116,7 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
       default:
         return sorted;
     }
-  }, [opportunities, sortBy]);
+  }, [opportunities, sortBy, scoreFilter]);
 
   const handleAddToWatchlist = async (itemId: number, itemName: string) => {
     if (adding.has(itemId) || added.has(itemId)) return;
@@ -205,6 +220,17 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
         <div className="row-between" style={{ marginBottom: '0.75rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Flipping Opportunities</h2>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+            <select
+              value={scoreFilter}
+              onChange={(e) => setScoreFilter(e.target.value as ScoreFilter)}
+              style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px' }}
+            >
+              <option value="all">All Scores</option>
+              <option value="sizzler">Sizzler (80+)</option>
+              <option value="hot">Hot (60+)</option>
+              <option value="warm">Warm (40+)</option>
+              <option value="cool">Cool (20+)</option>
+            </select>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
