@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use, useMemo } from 'react';
 import PriceVolumeChart from '@/components/market/PriceVolumeChart';
+import PriceSparkline from '@/components/market/PriceSparkline';
 import SignalsPanel from '@/components/market/SignalsPanel';
 import Link from 'next/link';
 
@@ -43,7 +44,19 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const [error, setError] = useState<string | null>(null);
   const [timestep, setTimestep] = useState<'5m' | '1h' | '6h' | '24h'>('1h');
 
-  // Calculate volatility and price change from timeseries
+  // Extract sparkline values from timeseries
+  const sparklineValues = useMemo(() => {
+    if (timeseries.length === 0) return [];
+    return timeseries.map(t => t.avgHighPrice).filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  }, [timeseries]);
+
+  // Determine sparkline color based on trend
+  const sparklineColor = useMemo(() => {
+    if (sparklineValues.length < 2) return undefined;
+    const first = sparklineValues[0];
+    const last = sparklineValues[sparklineValues.length - 1];
+    return last >= first ? '#22c55e' : '#ef4444';
+  }, [sparklineValues]);
   const { volatility, priceChange } = useMemo(() => {
     if (timeseries.length < 2) return { volatility: null, priceChange: null };
     
@@ -137,11 +150,11 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
 
       {/* Item Header */}
       <div className="card" style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-        <div className="row" style={{ gap: '1rem', alignItems: 'center' }}>
+        <div className="row" style={{ gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {item.icon_url && (
             <img src={item.icon_url} alt={item.name} style={{ width: 64, height: 64, imageRendering: 'pixelated' }} />
           )}
-          <div>
+          <div style={{ flex: 1, minWidth: 200 }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f5c518' }}>{item.name}</h1>
             <div className="row" style={{ gap: '0.75rem', marginTop: '0.25rem' }}>
               {item.members && (
@@ -157,6 +170,20 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               )}
             </div>
           </div>
+          {sparklineValues.length > 3 && (
+            <div style={{ opacity: 0.9 }}>
+              <PriceSparkline 
+                values={sparklineValues} 
+                width={140} 
+                height={50} 
+                stroke={sparklineColor}
+                showArea={true}
+                showLastDot={true}
+                showGrid={false}
+                timestep={timestep}
+              />
+            </div>
+          )}
         </div>
       </div>
 
