@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Topbar from '@/components/ui/Topbar';
+import AppShell from '@/components/ui/AppShell';
 import CommandPalette from '@/components/ui/CommandPalette';
 
 export const metadata: Metadata = {
@@ -12,8 +12,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <Topbar />
-        <main>{children}</main>
+        <AppShell>
+          {children}
+        </AppShell>
         <CommandPalette />
       </body>
     </html>

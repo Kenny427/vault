@@ -3,16 +3,18 @@
 import { HTMLAttributes, forwardRef } from 'react';
 
 /* ============================================
-   BADGE COMPONENT
+   BADGE COMPONENT - Futuristic Terminal Style
    ============================================ */
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   /** Badge variant */
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'accent';
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'accent' | 'secondary';
   /** Badge size */
   size?: 'sm' | 'md';
   /** Pulse animation for important badges */
   pulse?: boolean;
+  /** Glow effect */
+  glow?: boolean;
 }
 
 const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
@@ -21,6 +23,7 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     variant = 'default',
     size = 'md',
     pulse = false,
+    glow = false,
     className = '',
     ...props 
   }, ref) => {
@@ -34,27 +37,37 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     const variantStyles = {
       default: `
         bg-surface-2 text-text-muted
-        dark:bg-surface-3 dark:text-text-muted
+        dark:bg-surface-2/80 dark:text-text-muted
       `,
       success: `
-        bg-green-100 text-green-800
-        dark:bg-green-900/30 dark:text-green-400
+        bg-success/15 text-success
+        dark:bg-success/20 dark:text-success-muted
+        dark:border dark:border-success/30
       `,
       warning: `
-        bg-yellow-100 text-yellow-800
-        dark:bg-yellow-900/30 dark:text-yellow-400
+        bg-warning/15 text-warning
+        dark:bg-warning/20 dark:text-warning
+        dark:border dark:border-warning/30
       `,
       danger: `
-        bg-red-100 text-red-800
-        dark:bg-red-900/30 dark:text-red-400
+        bg-danger/15 text-danger
+        dark:bg-danger/20 dark:text-danger
+        dark:border dark:border-danger/30
       `,
       info: `
-        bg-blue-100 text-blue-800
-        dark:bg-blue-900/30 dark:text-blue-400
+        bg-info/15 text-info
+        dark:bg-info/20 dark:text-info
+        dark:border dark:border-info/30
       `,
       accent: `
         bg-accent/15 text-accent
-        dark:bg-accent/20 dark:text-accent
+        dark:bg-accent/20 dark:text-accent-2
+        dark:border dark:border-accent/30
+      `,
+      secondary: `
+        bg-secondary/15 text-secondary
+        dark:bg-secondary/20 dark:text-secondary
+        dark:border dark:border-secondary/30
       `,
     };
     
@@ -65,8 +78,11 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     
     const pulseStyles = pulse ? `
       animate-pulse
-      shadow-[0_0_8px_2px_var(--accent-glow)]
-      dark:shadow-[0_0_12px_rgba(39,194,103,0.4)]
+    ` : '';
+    
+    const glowStyles = glow ? `
+      shadow-[0_0_8px_var(--glow-accent)]
+      dark:shadow-[0_0_12px_rgba(212,167,83,0.4)]
     ` : '';
     
     return (
@@ -77,6 +93,7 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
           ${variantStyles[variant]} 
           ${sizeStyles[size]}
           ${pulseStyles}
+          ${glowStyles}
           ${className}
         `}
         {...props}

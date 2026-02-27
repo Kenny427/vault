@@ -7,7 +7,7 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      // Colors - Design tokens synced with CSS variables
+      // Colors - Futuristic Terminal Design Tokens
       colors: {
         // Base
         bg: 'var(--color-bg)',
@@ -15,6 +15,7 @@ const config: Config = {
           DEFAULT: 'var(--color-surface)',
           2: 'var(--color-surface-2)',
           3: 'var(--color-surface-3)',
+          4: 'var(--color-surface-4)',
         },
         
         // Text
@@ -24,11 +25,18 @@ const config: Config = {
           inverse: 'var(--color-text-inverse)',
         },
         
-        // Accent
+        // Accent - OSRS gold/amber
         accent: {
           DEFAULT: 'var(--color-accent)',
           2: 'var(--color-accent-2)',
           muted: 'var(--color-accent-muted)',
+        },
+        
+        // Secondary - Cyan/teal for tech feel
+        secondary: {
+          DEFAULT: 'var(--color-secondary)',
+          2: 'var(--color-secondary-2)',
+          muted: 'var(--color-secondary-muted)',
         },
         
         // Semantic
@@ -41,14 +49,15 @@ const config: Config = {
         border: {
           DEFAULT: 'var(--color-border)',
           subtle: 'var(--color-border-subtle)',
+          accent: 'var(--color-border-accent)',
         },
         
         // Legacy OSRS colors (keep for compatibility)
-        'osrs-bg': '#0f1929',
-        'osrs-accent': '#d4a574',
+        'osrs-bg': '#0a0c10',
+        'osrs-accent': '#d4a753',
       },
       
-      // Typography
+      // Typography - Terminal-style monospace
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'monospace'],
@@ -71,7 +80,6 @@ const config: Config = {
         semibold: 'var(--font-semibold)',
         bold: 'var(--font-bold)',
         extrabold: 'var(--font-extrabold)',
-        black: 'var(--font-black)',
       },
       
       letterSpacing: {
@@ -103,11 +111,17 @@ const config: Config = {
         full: 'var(--radius-full)',
       },
       
-      // Shadows
+      // Shadows + Glows
       boxShadow: {
         sm: 'var(--shadow-sm)',
         DEFAULT: 'var(--shadow-md)',
         lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+        'glow-accent': '0 0 10px var(--glow-accent), 0 0 20px var(--glow-accent)',
+        'glow-secondary': '0 0 10px var(--glow-secondary), 0 0 20px var(--glow-secondary)',
+        'glow-danger': '0 0 10px var(--glow-danger)',
+        'card': 'var(--card-glow)',
+        'card-hover': 'var(--card-glow-hover)',
       },
       
       // Transitions
@@ -121,7 +135,8 @@ const config: Config = {
       animation: {
         'fade-in': 'fadeIn 150ms ease',
         'slide-up': 'slideUp 200ms ease',
-        pulse: 'pulse 2.5s ease-in-out infinite',
+        'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+        'scanline': 'scanline 8s linear infinite',
       },
     },
   },
