@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
-import OpportunitiesCard from './OpportunitiesCard';
+import OpportunitiesTable from './OpportunitiesTable';
 import PortfolioView from './PortfolioView';
 import ProposalsInbox from './ProposalsInbox';
 import ApprovalsInbox from './ApprovalsInbox';
@@ -337,7 +337,7 @@ export default function VaultDashboard() {
 
           {/* Tab Content */}
           {activeTab === 'Opportunities' && (
-            <OpportunitiesCard
+            <OpportunitiesTable
               opportunities={opportunities}
               loading={loading}
               onRefresh={() => void loadData()}
