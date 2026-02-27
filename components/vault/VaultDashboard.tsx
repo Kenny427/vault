@@ -198,6 +198,16 @@ export default function VaultDashboard() {
   const [email, setEmail] = useState('');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
+  // Refresh prices handler
+  const handleRefreshPrices = async () => {
+    const res = await fetch('/api/market/refresh-watchlists', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      return { refreshed: data.refreshed ?? 0 };
+    }
+    return { error: 'Failed to refresh prices' };
+  };
+
   const handleSendMagicLink = async () => {
     if (!supabase || !email) return;
     setLoading(true);
@@ -291,6 +301,7 @@ export default function VaultDashboard() {
               opportunities={opportunities}
               loading={loading}
               onRefresh={() => void loadData()}
+              onRefreshPrices={handleRefreshPrices}
               onCreateProposal={(opp) => {
                 setPrefillProposal({
                   item_name: opp.item_name,

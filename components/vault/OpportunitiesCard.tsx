@@ -28,6 +28,7 @@ interface OpportunitiesCardProps {
   opportunities: Opportunity[];
   loading: boolean;
   onRefresh: () => void;
+  onRefreshPrices?: () => Promise<{ refreshed?: number; error?: string }>;
   onCreateProposal?: (opp: Opportunity) => void;
 }
 
@@ -75,13 +76,15 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-export default function OpportunitiesCard({ opportunities, loading, onRefresh, onCreateProposal }: OpportunitiesCardProps) {
+export default function OpportunitiesCard({ opportunities, loading, onRefresh, onRefreshPrices, onCreateProposal }: OpportunitiesCardProps) {
   const totalEstProfit = opportunities.reduce((sum, o) => sum + o.est_profit, 0);
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const [added, setAdded] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>('score');
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<string | null>(null);
+  const [refreshingPrices, setRefreshingPrices] = useState(false);
+  const [refreshResult, setRefreshResult] = useState<string | null>(null);
 
   const sortedOpportunities = useMemo(() => {
     const sorted = [...opportunities];
@@ -140,6 +143,25 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, o
     }
   };
 
+  const handleRefreshPrices = async () => {
+    if (!onRefreshPrices) return;
+    setRefreshingPrices(true);
+    setRefreshResult(null);
+    try {
+      const result = await onRefreshPrices();
+      if (result.error) {
+        setRefreshResult(result.error);
+      } else {
+        setRefreshResult(`✓ Updated ${result.refreshed} item prices!`);
+        onRefresh();
+      }
+    } catch {
+      setRefreshResult('Failed to refresh prices');
+    } finally {
+      setRefreshingPrices(false);
+    }
+  };
+
   return (
     <section className="grid" style={{ gap: '0.75rem' }}>
       {/* Summary Card */}
@@ -194,6 +216,19 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, o
             </p>
           </div>
         ) : (
+          <>
+            {refreshResult && (
+              <p style={{ color: refreshResult.startsWith('✓') ? '#22c55e' : '#ef4444', fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                {refreshResult}
+              </p>
+            )}
+            {typeof onRefreshPrices === 'function' && (
+              <div style={{ marginBottom: '0.75rem' }}>
+                <button className="btn btn-secondary" onClick={handleRefreshPrices} disabled={refreshingPrices}>
+                  {refreshingPrices ? 'Fetching Prices...' : 'Refresh Prices'}
+                </button>
+              </div>
+            )}
           <ul className="list">
             {sortedOpportunities.map((opp) => (
               <li
@@ -316,6 +351,7 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, o
               </li>
             ))}
           </ul>
+        </>
         )}
       </article>
     </section>
