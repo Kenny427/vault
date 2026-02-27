@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 
 type Opportunity = {
@@ -22,6 +23,15 @@ interface OpportunitiesCardProps {
   opportunities: Opportunity[];
   loading: boolean;
   onRefresh: () => void;
+}
+
+async function addToWatchlist(itemId: number, itemName: string): Promise<boolean> {
+  const res = await fetch('/api/theses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item_id: itemId, item_name: itemName }),
+  });
+  return res.ok;
 }
 
 function ScoreBadge({ score }: { score: number }) {
@@ -61,6 +71,22 @@ function ScoreBadge({ score }: { score: number }) {
 
 export default function OpportunitiesCard({ opportunities, loading, onRefresh }: OpportunitiesCardProps) {
   const totalEstProfit = opportunities.reduce((sum, o) => sum + o.est_profit, 0);
+  const [adding, setAdding] = useState<Set<number>>(new Set());
+  const [added, setAdded] = useState<Set<number>>(new Set());
+
+  const handleAddToWatchlist = async (itemId: number, itemName: string) => {
+    if (adding.has(itemId) || added.has(itemId)) return;
+    setAdding((prev) => new Set(prev).add(itemId));
+    const success = await addToWatchlist(itemId, itemName);
+    setAdding((prev) => {
+      const next = new Set(prev);
+      next.delete(itemId);
+      return next;
+    });
+    if (success) {
+      setAdded((prev) => new Set(prev).add(itemId));
+    }
+  };
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -128,6 +154,18 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
                   >
                     Copy
                   </button>
+                  {added.has(opp.item_id) ? (
+                    <span style={{ fontSize: '0.7rem', color: '#22c55e' }}>✓ Watching</span>
+                  ) : (
+                    <button
+                      className="btn-small"
+                      onClick={() => handleAddToWatchlist(opp.item_id, opp.item_name)}
+                      disabled={adding.has(opp.item_id)}
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                    >
+                      {adding.has(opp.item_id) ? '...' : '+ Watch'}
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', fontSize: '0.85rem' }}>
