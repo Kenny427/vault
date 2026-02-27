@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 
 type Opportunity = {
@@ -17,7 +17,10 @@ type Opportunity = {
   score: number;
   volume_5m: number | null;
   volume_1h: number | null;
+  icon_url: string | null;
 };
+
+type SortOption = 'score' | 'margin' | 'profit' | 'volume';
 
 interface OpportunitiesCardProps {
   opportunities: Opportunity[];
@@ -73,6 +76,23 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
   const totalEstProfit = opportunities.reduce((sum, o) => sum + o.est_profit, 0);
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const [added, setAdded] = useState<Set<number>>(new Set());
+  const [sortBy, setSortBy] = useState<SortOption>('score');
+
+  const sortedOpportunities = useMemo(() => {
+    const sorted = [...opportunities];
+    switch (sortBy) {
+      case 'score':
+        return sorted.sort((a, b) => b.score - a.score);
+      case 'margin':
+        return sorted.sort((a, b) => b.margin - a.margin);
+      case 'profit':
+        return sorted.sort((a, b) => b.est_profit - a.est_profit);
+      case 'volume':
+        return sorted.sort((a, b) => (b.volume_5m ?? b.volume_1h ?? 0) - (a.volume_5m ?? a.volume_1h ?? 0));
+      default:
+        return sorted;
+    }
+  }, [opportunities, sortBy]);
 
   const handleAddToWatchlist = async (itemId: number, itemName: string) => {
     if (adding.has(itemId) || added.has(itemId)) return;
@@ -118,16 +138,28 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
       <article className="card">
         <div className="row-between" style={{ marginBottom: '0.75rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Flipping Opportunities</h2>
-          <button className="btn btn-secondary" onClick={onRefresh} disabled={loading}>
-            Refresh
-          </button>
+          <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              style={{ padding: '0.3rem 0.5rem', fontSize: '0.8rem', borderRadius: '4px' }}
+            >
+              <option value="score">Sort: Score</option>
+              <option value="margin">Sort: Margin</option>
+              <option value="profit">Sort: Profit</option>
+              <option value="volume">Sort: Volume</option>
+            </select>
+            <button className="btn btn-secondary" onClick={onRefresh} disabled={loading}>
+              Refresh
+            </button>
+          </div>
         </div>
 
-        {opportunities.length === 0 ? (
+        {sortedOpportunities.length === 0 ? (
           <p className="muted">No opportunities found. Add theses and refresh watchlists.</p>
         ) : (
           <ul className="list">
-            {opportunities.map((opp) => (
+            {sortedOpportunities.map((opp) => (
               <li
                 key={opp.item_id}
                 className="card"
@@ -138,6 +170,13 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
               >
                 <div className="row-between" style={{ marginBottom: '0.35rem' }}>
                   <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+                    {opp.icon_url && (
+                      <img
+                        src={opp.icon_url}
+                        alt=""
+                        style={{ width: 24, height: 24, imageRendering: 'pixelated', borderRadius: 4 }}
+                      />
+                    )}
                     <Link href={`/item/${opp.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 700 }}>
                       {opp.item_name}
                     </Link>

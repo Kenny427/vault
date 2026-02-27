@@ -21,6 +21,7 @@ type Opportunity = {
   score: number;
   volume_5m: number | null;
   volume_1h: number | null;
+  icon_url: string | null;
 };
 
 type Proposal = {
@@ -66,6 +67,7 @@ type PortfolioPosition = {
   realized_profit: number | null;
   unrealized_profit: number | null;
   updated_at: string | null;
+  icon_url: string | null;
 };
 
 const tabs = ['Opportunities', 'Portfolio', 'Proposals', 'Approvals'] as const;

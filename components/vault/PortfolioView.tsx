@@ -12,6 +12,7 @@ type PortfolioPosition = {
   realized_profit: number | null;
   unrealized_profit: number | null;
   updated_at: string | null;
+  icon_url: string | null;
 };
 
 type PortfolioSummary = {
@@ -77,8 +78,29 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
         name: p.item_name,
         value: p.currentValue,
         pct: (p.currentValue / stats.totalValue) * 100,
+        icon_url: p.icon_url,
       }));
   }, [positions, stats]);
+
+  // Profit/loss breakdown
+  const profitStats = useMemo(() => {
+    if (positions.length === 0) return null;
+    let inProfit = 0;
+    let inLoss = 0;
+    let atBreakEven = 0;
+    
+    for (const p of positions) {
+      const invested = p.avg_buy_price * p.quantity;
+      if (invested <= 0) continue;
+      const currentValue = (p.last_price ?? p.avg_buy_price) * p.quantity;
+      const roi = ((currentValue - invested) / invested) * 100;
+      if (roi > 0) inProfit++;
+      else if (roi < 0) inLoss++;
+      else atBreakEven++;
+    }
+    
+    return { inProfit, inLoss, atBreakEven };
+  }, [positions]);
 
   // Best performer (highest ROI)
   const bestPerformer = useMemo(() => {
@@ -156,24 +178,25 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
   return (
     <section className="grid" style={{ gap: '0.75rem' }}>
       {/* Summary Cards */}
-      <div className="grid grid-2" style={{ gap: '0.5rem' }}>
+      <div className="grid grid-4" style={{ gap: '0.5rem' }}>
         <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-          <p className="muted" style={{ fontSize: '0.75rem' }}>Portfolio Value</p>
-          <p style={{ fontSize: '1.3rem', fontWeight: 900, color: '#f5c518' }}>
+          <p className="muted" style={{ fontSize: '0.7rem' }}>Portfolio Value</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: 900, color: '#f5c518' }}>
             {Math.round(stats?.totalValue ?? 0).toLocaleString()} gp
           </p>
+          <p className="muted" style={{ fontSize: '0.65rem' }}>{positions.length} items</p>
         </article>
         <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-          <p className="muted" style={{ fontSize: '0.75rem' }}>Total Invested</p>
-          <p style={{ fontSize: '1.3rem', fontWeight: 900 }}>
+          <p className="muted" style={{ fontSize: '0.7rem' }}>Invested</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: 900 }}>
             {Math.round(stats?.totalInvested ?? 0).toLocaleString()} gp
           </p>
         </article>
         <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-          <p className="muted" style={{ fontSize: '0.75rem' }}>Total Profit</p>
+          <p className="muted" style={{ fontSize: '0.7rem' }}>Total Profit</p>
           <p
             style={{
-              fontSize: '1.3rem',
+              fontSize: '1.25rem',
               fontWeight: 900,
               color: (stats?.profit ?? 0) >= 0 ? '#22c55e' : '#ef4444',
             }}
@@ -183,10 +206,10 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           </p>
         </article>
         <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-          <p className="muted" style={{ fontSize: '0.75rem' }}>ROI</p>
+          <p className="muted" style={{ fontSize: '0.7rem' }}>ROI</p>
           <p
             style={{
-              fontSize: '1.3rem',
+              fontSize: '1.25rem',
               fontWeight: 900,
               color: (stats?.roi ?? 0) >= 0 ? '#22c55e' : '#ef4444',
             }}
@@ -215,11 +238,20 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
         }}
         >
           <div className="row-between">
-            <div>
-              <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏆 Best Performer</p>
-              <Link href={`/item/${bestPerformer.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 800, fontSize: '1.2rem' }}>
-                {bestPerformer.item_name}
-              </Link>
+            <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
+              {bestPerformer.icon_url && (
+                <img 
+                  src={bestPerformer.icon_url} 
+                  alt="" 
+                  style={{ width: 36, height: 36, imageRendering: 'pixelated', borderRadius: 6 }}
+                />
+              )}
+              <div>
+                <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🏆 Best Performer</p>
+                <Link href={`/item/${bestPerformer.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 800, fontSize: '1.2rem' }}>
+                  {bestPerformer.item_name}
+                </Link>
+              </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <p style={{ fontSize: '1.4rem', fontWeight: 900, color: '#22c55e' }}>
@@ -251,11 +283,20 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
         }}
         >
           <div className="row-between">
-            <div>
-              <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📉 Worst Performer</p>
-              <Link href={`/item/${worstPerformer.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 800, fontSize: '1.2rem' }}>
-                {worstPerformer.item_name}
-              </Link>
+            <div className="row" style={{ gap: '0.6rem', alignItems: 'center' }}>
+              {worstPerformer.icon_url && (
+                <img 
+                  src={worstPerformer.icon_url} 
+                  alt="" 
+                  style={{ width: 36, height: 36, imageRendering: 'pixelated', borderRadius: 6 }}
+                />
+              )}
+              <div>
+                <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📉 Worst Performer</p>
+                <Link href={`/item/${worstPerformer.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 800, fontSize: '1.2rem' }}>
+                  {worstPerformer.item_name}
+                </Link>
+              </div>
             </div>
             <div style={{ textAlign: 'right' }}>
               <p style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ef4444' }}>
@@ -299,6 +340,49 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
         </article>
       </div>
 
+      {/* Positions at a glance */}
+      {profitStats && positions.length > 0 && (
+        <article className="card">
+          <h2 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '0.6rem' }}>Positions at a glance</h2>
+          <div style={{ display: 'flex', height: 12, borderRadius: 6, overflow: 'hidden', background: 'var(--surface-2)' }}>
+            {profitStats.inProfit > 0 && (
+              <div 
+                style={{ 
+                  width: `${(profitStats.inProfit / positions.length) * 100}%`, 
+                  background: '#22c55e',
+                  transition: 'width 0.3s ease',
+                }} 
+                title={`${profitStats.inProfit} in profit`}
+              />
+            )}
+            {profitStats.atBreakEven > 0 && (
+              <div 
+                style={{ 
+                  width: `${(profitStats.atBreakEven / positions.length) * 100}%`, 
+                  background: '#6b7280',
+                }}
+                title={`${profitStats.atBreakEven} at break-even`}
+              />
+            )}
+            {profitStats.inLoss > 0 && (
+              <div 
+                style={{ 
+                  width: `${(profitStats.inLoss / positions.length) * 100}%`, 
+                  background: '#ef4444',
+                  transition: 'width 0.3s ease',
+                }}
+                title={`${profitStats.inLoss} in loss`}
+              />
+            )}
+          </div>
+          <div className="row" style={{ gap: '1rem', marginTop: '0.5rem', fontSize: '0.75rem' }}>
+            <span style={{ color: '#22c55e' }}>● {profitStats.inProfit} profit</span>
+            {profitStats.atBreakEven > 0 && <span style={{ color: '#6b7280' }}>● {profitStats.atBreakEven} even</span>}
+            {profitStats.inLoss > 0 && <span style={{ color: '#ef4444' }}>● {profitStats.inLoss} loss</span>}
+          </div>
+        </article>
+      )}
+
       {/* Allocation Bar */}
       {topHoldings.length > 0 && (
         <article className="card">
@@ -306,9 +390,16 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {topHoldings.map((holding, idx) => (
               <div key={holding.name}>
-                <div className="row-between" style={{ marginBottom: '0.2rem' }}>
+                <div className="row" style={{ gap: '0.5rem', marginBottom: '0.2rem', alignItems: 'center' }}>
+                  {holding.icon_url && (
+                    <img 
+                      src={holding.icon_url} 
+                      alt="" 
+                      style={{ width: 20, height: 20, imageRendering: 'pixelated', borderRadius: 3 }}
+                    />
+                  )}
                   <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{holding.name}</span>
-                  <span className="muted" style={{ fontSize: '0.8rem' }}>{holding.pct.toFixed(1)}%</span>
+                  <span className="muted" style={{ fontSize: '0.8rem', marginLeft: 'auto' }}>{holding.pct.toFixed(1)}%</span>
                 </div>
                 <div style={{ 
                   height: 8, 
@@ -364,11 +455,18 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                <div className="row-between" style={{ marginBottom: '0.35rem' }}>
+                <div className="row" style={{ gap: '0.6rem', marginBottom: '0.35rem', alignItems: 'center' }}>
+                  {position.icon_url && (
+                    <img 
+                      src={position.icon_url} 
+                      alt="" 
+                      style={{ width: 28, height: 28, imageRendering: 'pixelated', borderRadius: 4 }}
+                    />
+                  )}
                   <Link href={`/item/${position.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 700 }}>
                     {position.item_name}
                   </Link>
-                  <span className="muted">{position.quantity.toLocaleString()} qty</span>
+                  <span className="muted" style={{ marginLeft: 'auto' }}>{position.quantity.toLocaleString()} qty</span>
                 </div>
 
                 <div className="grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', fontSize: '0.8rem' }}>

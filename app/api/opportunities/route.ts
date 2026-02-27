@@ -15,6 +15,7 @@ export type Opportunity = {
   score: number;
   volume_5m: number | null;
   volume_1h: number | null;
+  icon_url: string | null;
 };
 
 const PER_FLIP_CAP_GP = 50_000_000; // keep aligned with /api/nba
@@ -53,15 +54,17 @@ export async function GET() {
     return NextResponse.json({ opportunities: [] satisfies Opportunity[] });
   }
 
-  const itemsRes = await supabase.from('items').select('item_id,buy_limit').in('item_id', watchedIds);
+  const itemsRes = await supabase.from('items').select('item_id,buy_limit,icon_url').in('item_id', watchedIds);
   if (itemsRes.error) {
     return NextResponse.json({ error: itemsRes.error.message }, { status: 500 });
   }
 
   const buyLimitById = new Map<number, number>();
+  const iconUrlById = new Map<number, string | null>();
   for (const row of itemsRes.data ?? []) {
     const limit = Number(row.buy_limit ?? 0);
     if (limit > 0) buyLimitById.set(Number(row.item_id), limit);
+    iconUrlById.set(Number(row.item_id), row.icon_url ?? null);
   }
 
   const snapshotById = new Map<number, { last_price: number | null; margin: number | null; volume_5m: number | null; volume_1h: number | null }>();
@@ -124,6 +127,7 @@ export async function GET() {
       score,
       volume_5m: volume5m,
       volume_1h: volume1h,
+      icon_url: iconUrlById.get(itemId) ?? null,
     });
   }
 
