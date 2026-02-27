@@ -73,13 +73,17 @@ function ScoreBadge({ score }: { score: number }) {
 }
 
 export default function OpportunitiesCard({ opportunities, loading, onRefresh }: OpportunitiesCardProps) {
-  const totalEstProfit = opportunities.reduce((sum, o) => sum + o.est_profit, 0);
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const [added, setAdded] = useState<Set<number>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>('score');
+  const [showHotOnly, setShowHotOnly] = useState(false);
 
-  const sortedOpportunities = useMemo(() => {
-    const sorted = [...opportunities];
+  const filteredOpportunities = useMemo(() => {
+    let filtered = opportunities;
+    if (showHotOnly) {
+      filtered = opportunities.filter(o => o.score >= 40);
+    }
+    const sorted = [...filtered];
     switch (sortBy) {
       case 'score':
         return sorted.sort((a, b) => b.score - a.score);
@@ -92,7 +96,7 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
       default:
         return sorted;
     }
-  }, [opportunities, sortBy]);
+  }, [opportunities, sortBy, showHotOnly]);
 
   const handleAddToWatchlist = async (itemId: number, itemName: string) => {
     if (adding.has(itemId) || added.has(itemId)) return;
@@ -122,13 +126,17 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
       <article className="card" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
         <div className="row-between">
           <div>
-            <p className="muted" style={{ fontSize: '0.8rem' }}>Active Opportunities</p>
-            <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f5c518' }}>{opportunities.length}</p>
+            <p className="muted" style={{ fontSize: '0.8rem' }}>
+              {showHotOnly ? 'Hot Opportunities' : 'Active Opportunities'}
+            </p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f5c518' }}>
+              {showHotOnly ? filteredOpportunities.length : opportunities.length}
+            </p>
           </div>
           <div style={{ textAlign: 'right' }}>
             <p className="muted" style={{ fontSize: '0.8rem' }}>Est. Profit Potential</p>
             <p style={{ fontSize: '1.2rem', fontWeight: 700, color: '#22c55e' }}>
-              ~{totalEstProfit.toLocaleString()} gp
+              ~{filteredOpportunities.reduce((sum, o) => sum + o.est_profit, 0).toLocaleString()} gp
             </p>
           </div>
         </div>
@@ -139,6 +147,14 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
         <div className="row-between" style={{ marginBottom: '0.75rem' }}>
           <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Flipping Opportunities</h2>
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+            <button
+              className={`btn ${showHotOnly ? '' : 'btn-secondary'}`}
+              onClick={() => setShowHotOnly(!showHotOnly)}
+              style={{ padding: '0.3rem 0.5rem', fontSize: '0.75rem', background: showHotOnly ? '#22c55e' : undefined }}
+              title="Show only Warm+ opportunities"
+            >
+              🔥 Hot
+            </button>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
@@ -155,11 +171,11 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
           </div>
         </div>
 
-        {sortedOpportunities.length === 0 ? (
-          <p className="muted">No opportunities found. Add theses and refresh watchlists.</p>
+        {filteredOpportunities.length === 0 ? (
+          <p className="muted">{showHotOnly ? 'No hot opportunities found.' : 'No opportunities found. Add theses and refresh watchlists.'}</p>
         ) : (
           <ul className="list">
-            {sortedOpportunities.map((opp) => (
+            {filteredOpportunities.map((opp) => (
               <li
                 key={opp.item_id}
                 className="card"
