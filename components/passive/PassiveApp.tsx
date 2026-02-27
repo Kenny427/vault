@@ -475,7 +475,7 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                       <span className="muted">Score {opp.score}</span>
                     </div>
                     <p className="muted" style={{ marginTop: '0.25rem' }}>
-                      Buy ~{opp.buy_at.toLocaleString()} | Sell ~{opp.sell_at.toLocaleString()} | Spread ~{opp.spread_pct.toFixed(1)}% | Qty {opp.suggested_qty.toLocaleString()} | Est profit ~{opp.est_profit.toLocaleString()} gp
+                      Buy ~{opp.buy_at.toLocaleString()} | Sell ~{opp.sell_at.toLocaleString()} | Margin ~{opp.margin.toLocaleString()} gp ({opp.spread_pct.toFixed(1)}%) | Qty {opp.suggested_qty.toLocaleString()} | Est profit ~{opp.est_profit.toLocaleString()} gp
                     </p>
                   </li>
                 ))
