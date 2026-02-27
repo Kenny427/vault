@@ -145,6 +145,8 @@ export default function PassiveApp() {
     let totalInvested = 0;
     let currentValue = 0;
     let topPerformer: { name: string; roi: number } | null = null;
+    const positionAllocations: Array<{ name: string; value: number; pct: number }> = [];
+    
     for (const p of positions) {
       const invested = p.avg_buy_price * p.quantity;
       const value = (p.last_price ?? p.avg_buy_price) * p.quantity;
@@ -156,10 +158,21 @@ export default function PassiveApp() {
       if (!topPerformer || positionRoi > topPerformer.roi) {
         topPerformer = { name: p.item_name, roi: positionRoi };
       }
+      positionAllocations.push({ name: p.item_name, value, pct: 0 }); // pct will be calc'd after
     }
+    
+    // Calculate percentages
+    for (const alloc of positionAllocations) {
+      alloc.pct = totalInvested > 0 ? (alloc.value / currentValue) * 100 : 0;
+    }
+    
+    // Sort by value descending and take top 5
+    positionAllocations.sort((a, b) => b.value - a.value);
+    const topAllocations = positionAllocations.slice(0, 5);
+    
     const profit = currentValue - totalInvested;
     const roi = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
-    return { totalInvested, currentValue, profit, roi, topPerformer };
+    return { totalInvested, currentValue, profit, roi, topPerformer, topAllocations };
   }, [positions]);
 
   useEffect(() => {
@@ -514,6 +527,32 @@ Good buys now 2192 accumulate via 4h buy limits 2192 sell into rebound.</p>
                     {portfolioStats.topPerformer.roi >= 0 ? '+' : ''}
                     {portfolioStats.topPerformer.roi.toFixed(1)}% ROI
                   </p>
+                </article>
+              ) : null}
+              {portfolioStats.topAllocations && portfolioStats.topAllocations.length > 0 ? (
+                <article className="card" style={{ gridColumn: 'span 2' }}>
+                  <p className="muted" style={{ marginBottom: '0.5rem' }}>📊 Allocation (Top 5)</p>
+                  <div style={{ display: 'grid', gap: '0.4rem' }}>
+                    {portfolioStats.topAllocations.map((alloc, idx) => (
+                      <div key={alloc.name} style={{ display: 'grid', gap: '0.35rem' }}>
+                        <div className="row-between" style={{ fontSize: '0.8rem' }}>
+                          <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{alloc.name}</span>
+                          <span className="muted">{alloc.pct.toFixed(1)}%</span>
+                        </div>
+                        <div style={{ height: '6px', background: 'var(--surface-2)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              height: '100%',
+                              width: `${Math.min(alloc.pct, 100)}%`,
+                              background: idx === 0 ? 'var(--accent)' : idx === 1 ? 'var(--accent-2)' : 'var(--muted)',
+                              borderRadius: '3px',
+                              transition: 'width 300ms ease',
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </article>
               ) : null}
             </div>
