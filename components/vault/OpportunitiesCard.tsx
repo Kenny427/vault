@@ -92,13 +92,13 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
 
   const sortedOpportunities = useMemo(() => {
     let filtered = [...opportunities];
-    
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(o => o.item_name.toLowerCase().includes(query));
+      filtered = filtered.filter((o) => o.item_name.toLowerCase().includes(query));
     }
-    
+
     // Apply score filter
     if (scoreFilter !== 'all') {
       const minScore = {
