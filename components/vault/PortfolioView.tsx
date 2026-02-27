@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import Link from 'next/link';
 
 type PortfolioPosition = {
   item_id: number;
@@ -175,7 +176,9 @@ export default function PortfolioView({ positions, loading }: PortfolioViewProps
                 }}
               >
                 <div className="row-between" style={{ marginBottom: '0.35rem' }}>
-                  <strong>{position.item_name}</strong>
+                  <Link href={`/item/${position.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 700 }}>
+                    {position.item_name}
+                  </Link>
                   <span className="muted">{position.quantity.toLocaleString()} qty</span>
                 </div>
 

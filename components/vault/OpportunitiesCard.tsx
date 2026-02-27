@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 type Opportunity = {
   item_id: number;
   item_name: string;
@@ -110,7 +112,9 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh }:
               >
                 <div className="row-between" style={{ marginBottom: '0.35rem' }}>
                   <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-                    <strong>{opp.item_name}</strong>
+                    <Link href={`/item/${opp.item_id}`} style={{ color: '#f5c518', textDecoration: 'none', fontWeight: 700 }}>
+                      {opp.item_name}
+                    </Link>
                     <ScoreBadge score={opp.score} />
                   </div>
                   <button
