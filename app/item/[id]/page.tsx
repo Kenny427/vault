@@ -5,6 +5,7 @@ import PriceVolumeChart from '@/components/market/PriceVolumeChart';
 import PriceSparkline from '@/components/market/PriceSparkline';
 import SignalsPanel from '@/components/market/SignalsPanel';
 import Link from 'next/link';
+import Image from 'next/image';
 
 type ItemDetails = {
   item_id: number;
@@ -172,7 +173,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       <div className="card" style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
         <div className="row" style={{ gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           {item.icon_url && (
-            <img src={item.icon_url} alt={item.name} style={{ width: 64, height: 64, imageRendering: 'pixelated' }} />
+            <Image src={item.icon_url} alt={item.name} width={64} height={64} style={{ imageRendering: 'pixelated' }} unoptimized />
           )}
           <div style={{ flex: 1, minWidth: 200 }}>
             <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f5c518' }}>{item.name}</h1>
