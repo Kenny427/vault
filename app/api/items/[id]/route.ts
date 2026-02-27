@@ -1,10 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const itemId = Number(id);
 
@@ -13,6 +10,12 @@ export async function GET(
   }
 
   const supabase = createServerSupabaseClient();
+  const { data: auth } = await supabase.auth.getUser();
+  const userId = auth.user?.id;
+
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const { data, error } = await supabase
     .from('items')
@@ -24,9 +27,13 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (!data) {
-    return NextResponse.json({ error: 'Item not found' }, { status: 404 });
-  }
+  // Get icon URL from OSRS Wiki mapping
+  const iconUrl = data.icon_url || `https://oldschool.runescape.wiki/images/${data.name.replace(/ /g, '_')}.png`;
 
-  return NextResponse.json({ item: data });
+  return NextResponse.json({
+    item: {
+      ...data,
+      icon_url: iconUrl,
+    },
+  });
 }
