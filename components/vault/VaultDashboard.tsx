@@ -288,6 +288,11 @@ export default function VaultDashboard() {
                 onClick={() => setActiveTab(tab)}
               >
                 {tab}
+                {tab === 'Proposals' && proposals.filter(p => p.status === 'pending').length > 0 && (
+                  <span className="badge badge-high" style={{ marginLeft: '0.35rem' }}>
+                    {proposals.filter(p => p.status === 'pending').length}
+                  </span>
+                )}
                 {tab === 'Approvals' && reconciliationTasks.filter(t => t.status === 'pending').length > 0 && (
                   <span className="badge badge-high" style={{ marginLeft: '0.35rem' }}>
                     {reconciliationTasks.filter(t => t.status === 'pending').length}
