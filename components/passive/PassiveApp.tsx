@@ -39,6 +39,7 @@ type DashboardPayload = {
     queued_actions: number;
     high_priority_actions: number;
     estimated_unrealized_profit: number;
+    total_portfolio_value: number;
   };
 };
 
