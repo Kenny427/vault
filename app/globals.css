@@ -508,4 +508,13 @@ select {
   100% { transform: translateX(100%); }
 }
 
+/* Fade transition utilities */
+.fade-transition {
+  transition: opacity 150ms ease;
+}
+
+.fade-transition-hover:hover {
+  opacity: 0.85;
+}
+
 
