@@ -1,213 +1,190 @@
-// Sticky Topbar with Primary Navigation
 'use client';
 
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
 
-const navItems = [
-  { href: '/', label: 'Dashboard', icon: '⌂' },
-  { href: '/opportunities', label: 'Opportunities', icon: '◎' },
-  { href: '/portfolio', label: 'Portfolio', icon: '◈' },
-  { href: '/theses', label: 'Theses', icon: '✎' },
-];
+interface TopbarProps {
+  /** Optional title to display in the topbar */
+  title?: string;
+  /** Optional right-side content */
+  actions?: React.ReactNode;
+}
 
-export default function Topbar() {
-  const pathname = usePathname();
+export default function Topbar({ title, actions }: TopbarProps) {
+  const [currentTime, setCurrentTime] = useState<string>('');
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <header className="topbar">
       <div className="topbar-content">
-        <Link href="/" className="topbar-logo">
-          <span className="topbar-logo-icon">🛡️</span>
-          <span className="topbar-logo-text">Vault</span>
-        </Link>
+        {title && <h1 className="topbar-title">{title}</h1>}
+        
+        <div className="topbar-center">
+          <button 
+            className="topbar-search"
+            onClick={() => {
+              window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+            }}
+          >
+            <span className="topbar-search-icon">⌘</span>
+            <span className="topbar-search-text">Search items...</span>
+            <span className="topbar-search-shortcut">
+              <kbd>K</kbd>
+            </span>
+          </button>
+        </div>
 
-        <nav className="topbar-nav">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || 
-              (item.href !== '/' && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`topbar-nav-item ${isActive ? 'active' : ''}`}
-              >
-                <span className="topbar-nav-icon">{item.icon}</span>
-                <span className="topbar-nav-label">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <button 
-          className="topbar-search-trigger"
-          onClick={() => {
-            // Trigger command palette via custom event
-            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
-          }}
-        >
-          <span className="topbar-search-icon">⌘</span>
-          <span className="topbar-search-text">Search</span>
-          <span className="topbar-search-key">K</span>
-        </button>
-      </div>
-
-      {/* Desktop-only shortcuts hint */}
-      <div className="topbar-footer-hint">
-        Press <kbd>?</kbd> for shortcuts
+        <div className="topbar-right">
+          {actions}
+          <div className="topbar-time">
+            <span className="topbar-time-icon">◷</span>
+            <span className="topbar-time-value">{currentTime}</span>
+          </div>
+        </div>
       </div>
 
       <style jsx>{`
         .topbar {
           position: sticky;
           top: 0;
-          z-index: 100;
-          background: var(--tabbar-bg);
-          backdrop-filter: blur(12px);
-          border-bottom: 1px solid var(--border);
+          z-index: 50;
+          background: var(--color-surface);
+          border-bottom: 1px solid var(--color-border-subtle);
+          backdrop-filter: blur(8px);
         }
 
         .topbar-content {
-          max-width: 1320px;
-          margin: 0 auto;
           display: flex;
           align-items: center;
           gap: 1rem;
-          padding: 0.85rem 1.25rem;
+          padding: 0.75rem 1.25rem;
+          max-width: 100%;
         }
 
-        .topbar-logo {
+        .topbar-title {
+          font-size: var(--text-lg);
+          font-weight: var(--font-bold);
+          color: var(--color-text);
+          letter-spacing: -0.02em;
+          margin: 0;
+          white-space: nowrap;
+        }
+
+        .topbar-center {
+          flex: 1;
+          display: flex;
+          justify-content: center;
+          max-width: 400px;
+          margin: 0 auto;
+        }
+
+        .topbar-search {
           display: flex;
           align-items: center;
           gap: 0.5rem;
-          text-decoration: none;
-          font-weight: 800;
-          font-size: 1.1rem;
-          color: var(--text);
-        }
-
-        .topbar-logo-icon {
-          font-size: 1.25rem;
-        }
-
-        .topbar-logo-text {
-          letter-spacing: -0.02em;
-        }
-
-        .topbar-nav {
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-          flex: 1;
-          margin-left: 1.5rem;
-        }
-
-        .topbar-nav-item {
-          display: flex;
-          align-items: center;
-          gap: 0.45rem;
-          padding: 0.55rem 0.9rem;
-          border-radius: 10px;
-          text-decoration: none;
-          color: var(--muted);
-          font-size: 0.95rem;
-          font-weight: 700;
-          transition: all 120ms ease;
-        }
-
-        .topbar-nav-item:hover {
-          color: var(--text);
-          background: var(--surface-2);
-        }
-
-        .topbar-nav-item.active {
-          color: var(--accent);
-          background: rgba(39, 194, 103, 0.1);
-        }
-
-        .topbar-nav-icon {
-          font-size: 0.9rem;
-          opacity: 0.8;
-        }
-
-        .topbar-nav-label {
-          letter-spacing: -0.01em;
-        }
-
-        .topbar-search-trigger {
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          padding: 0.45rem 0.75rem;
-          border: 1px solid var(--border);
-          border-radius: 8px;
-          background: var(--surface);
-          color: var(--muted);
-          font-size: 0.8rem;
+          width: 100%;
+          max-width: 320px;
+          padding: 0.5rem 0.75rem;
+          border: 1px solid var(--color-border);
+          background: var(--color-surface-2);
+          border-radius: var(--radius-lg);
           cursor: pointer;
-          transition: all 120ms ease;
+          transition: all 150ms ease;
         }
 
-        .topbar-search-trigger:hover {
-          border-color: var(--accent);
-          color: var(--text);
+        .topbar-search:hover {
+          border-color: var(--color-accent);
+          background: var(--color-surface);
+          box-shadow: 0 0 0 3px var(--glow-accent);
         }
 
         .topbar-search-icon {
           font-size: 0.75rem;
+          color: var(--color-text-muted);
           opacity: 0.7;
         }
 
         .topbar-search-text {
-          color: var(--muted);
+          flex: 1;
+          text-align: left;
+          font-size: var(--text-sm);
+          color: var(--color-text-muted);
         }
 
-        .topbar-search-key {
-          font-size: 0.65rem;
-          background: var(--surface-2);
-          padding: 0.15rem 0.35rem;
-          border-radius: 4px;
-          font-weight: 700;
+        .topbar-search-shortcut {
+          flex-shrink: 0;
         }
 
-        .topbar-footer-hint {
-          display: none;
-          justify-content: center;
-          padding: 0.45rem;
-          font-size: 0.75rem;
-          color: var(--muted);
-          background: var(--surface-2);
-          border-top: 1px solid var(--border);
-        }
-
-        .topbar-footer-hint kbd {
+        .topbar-search-shortcut kbd {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          min-width: 1.2rem;
-          height: 1.2rem;
-          padding: 0 0.3rem;
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: 6px;
+          min-width: 1.125rem;
+          height: 1.125rem;
+          padding: 0 0.25rem;
+          background: var(--color-surface);
+          border: 1px solid var(--color-border-subtle);
+          border-radius: var(--radius-sm);
           font-family: inherit;
-          font-size: 0.65rem;
-          font-weight: 800;
-          margin: 0 0.25rem;
+          font-size: 0.5625rem;
+          font-weight: var(--font-semibold);
+          color: var(--color-text-muted);
         }
+
+        .topbar-right {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .topbar-time {
+          display: flex;
+          align-items: center;
+          gap: 0.375rem;
+          padding: 0.375rem 0.625rem;
+          background: var(--color-surface-2);
+          border-radius: var(--radius-md);
+          font-size: var(--text-xs);
+          font-weight: var(--font-medium);
+          color: var(--color-text-muted);
+          font-family: var(--font-mono);
+          letter-spacing: 0.02em;
+        }
+
+        .topbar-time-icon {
+          font-size: 0.75rem;
+          animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 1; }
+        }
+
         @media (max-width: 640px) {
-          .topbar-nav-label {
+          .topbar-title {
             display: none;
           }
           
           .topbar-search-text {
             display: none;
           }
-        }
-
-        @media (min-width: 641px) {
-          .topbar-footer-hint {
-            display: flex;
+          
+          .topbar-search {
+            width: auto;
+            padding: 0.5rem;
           }
         }
       `}</style>

@@ -522,4 +522,38 @@ select {
   opacity: 0.85;
 }
 
+/* App Layout with Side Navigation */
+.app-layout {
+  margin-left: 240px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 200ms ease;
+}
+
+.app-main {
+  flex: 1;
+  padding: 1.25rem;
+  padding-bottom: 5rem;
+}
+
+/* Responsive: Mobile */
+@media (max-width: 768px) {
+  .app-layout {
+    margin-left: 0;
+    padding-top: 60px;
+  }
+  
+  .app-main {
+    padding: 1rem;
+  }
+}
+
+/* Tablet - collapsed sidenav */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .app-layout {
+    margin-left: 72px;
+  }
+}
+
 
