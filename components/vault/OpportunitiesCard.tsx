@@ -323,6 +323,15 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                 style={{
                   padding: '0.75rem',
                   borderLeft: `3px solid ${opp.score >= 60 ? '#22c55e' : opp.score >= 40 ? '#3b82f6' : '#6b7280'}`,
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateX(2px)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateX(0)';
+                  e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <div className="row-between" style={{ marginBottom: '0.35rem' }}>
