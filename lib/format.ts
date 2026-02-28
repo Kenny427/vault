@@ -27,3 +27,11 @@ export function formatGp(value: number): string {
   }
   return value.toLocaleString() + ' gp';
 }
+
+/**
+ * Format a decimal as percentage (e.g., 0.15 -> "15.0%")
+ */
+export function formatPercentage(value: number, decimals = 1): string {
+  if (!Number.isFinite(value)) return '0%';
+  return (value * 100).toFixed(decimals) + '%';
+}
