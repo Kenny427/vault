@@ -571,7 +571,10 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                 </thead>
                 <tbody>
                   {timeseries.slice(-20).reverse().map((point, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <tr key={idx} style={{ 
+                      borderBottom: '1px solid var(--border)',
+                      background: idx % 2 === 0 ? 'transparent' : 'rgba(255, 255, 255, 0.02)'
+                    }}>
                       <td style={{ padding: '0.4rem 0.5rem' }}>{new Date(point.timestamp).toLocaleString()}</td>
                       <td style={{ textAlign: 'right', padding: '0.4rem 0.5rem', color: '#22c55e' }}>{point.avgHighPrice?.toLocaleString() ?? '—'}</td>
                       <td style={{ textAlign: 'right', padding: '0.4rem 0.5rem', color: '#ef4444' }}>{point.avgLowPrice?.toLocaleString() ?? '—'}</td>
