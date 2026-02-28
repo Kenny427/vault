@@ -431,26 +431,34 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
 
           {/* Score Filter Chips */}
           <div className="row" style={{ gap: '0.35rem', flexWrap: 'wrap' }}>
-            {scoreFilters.map((filter) => (
-              <button
-                key={filter.value}
-                onClick={() => setScoreFilter(filter.value)}
-                style={{
-                  padding: '0.3rem 0.6rem',
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                  borderRadius: '20px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: scoreFilter === filter.value ? filter.color : 'rgba(255,255,255,0.05)',
-                  color: scoreFilter === filter.value ? '#000' : 'var(--text-muted)',
-                  transition: 'all 0.15s ease',
-                  boxShadow: scoreFilter === filter.value ? `0 0 12px ${filter.color}50` : 'none',
-                }}
-              >
-                {filter.label}
-              </button>
-            ))}
+            {scoreFilters.map((filter) => {
+              const count = filter.value === 'all' 
+                ? opportunities.length 
+                : opportunities.filter(o => {
+                    const minScore: Record<'sizzler'|'hot'|'warm'|'cool', number> = { sizzler: 80, hot: 60, warm: 40, cool: 20 };
+                    return o.score >= minScore[filter.value as 'sizzler'|'hot'|'warm'|'cool'];
+                  }).length;
+              return (
+                <button
+                  key={filter.value}
+                  onClick={() => setScoreFilter(filter.value)}
+                  style={{
+                    padding: '0.3rem 0.6rem',
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    borderRadius: '20px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: scoreFilter === filter.value ? filter.color : 'rgba(255,255,255,0.05)',
+                    color: scoreFilter === filter.value ? '#000' : 'var(--text-muted)',
+                    transition: 'all 0.15s ease',
+                    boxShadow: scoreFilter === filter.value ? `0 0 12px ${filter.color}50` : 'none',
+                  }}
+                >
+                  {filter.label} <span style={{ opacity: 0.7, fontSize: '0.65rem' }}>({count})</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Sort & Actions */}
