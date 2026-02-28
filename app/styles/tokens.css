@@ -1,92 +1,120 @@
 /**
- * Design Tokens - Modern flat-premium feel (07.gg inspired)
+ * Design Tokens - Modern Futuristic AI Terminal Style (OSRS-themed)
+ * 
+ * Theme Direction:
+ * - Futuristic data terminal / command center aesthetic
+ * - OSRS-inspired but clean and modern (NOT 07.gg)
+ * - Dark mode primary with amber/gold and cyan accents
+ * - Subtle glows and layered surfaces
  * 
  * Token Structure:
- * - color: semantic color tokens (bg, surface, border, text, accent)
+ * - color: semantic color tokens
  * - typography: font sizes, weights, line heights
  * - spacing: consistent spacing scale
  * - radius: border radius scale
- * - shadow: elevation/shadow tokens
+ * - shadow: elevation/shadow tokens + glow effects
  */
 
 /* ============================================
-   COLOR TOKENS
+   COLOR TOKENS - Futuristic Terminal Palette
    ============================================ */
 
 :root {
-  /* Base colors - Light mode */
-  --color-bg: #f3f7f2;
+  /* Base - Light mode (rarely used, but defined) */
+  --color-bg: #f8f9fa;
   --color-surface: #ffffff;
-  --color-surface-2: #e6efe3;
-  --color-surface-3: #d8e4d6;
+  --color-surface-2: #eef1f4;
+  --color-surface-3: #e2e5e9;
   
-  /* Text colors */
-  --color-text: #102015;
-  --color-text-muted: #4b6652;
+  /* Text - Light mode */
+  --color-text: #1a1d24;
+  --color-text-muted: #5a6270;
   --color-text-inverse: #ffffff;
   
-  /* Accent colors */
-  --color-accent: #1f8a42;
-  --color-accent-2: #0f6c2f;
-  --color-accent-muted: #d4a574;
+  /* Accent - OSRS gold/amber tones */
+  --color-accent: #d4a753;
+  --color-accent-2: #b8923f;
+  --color-accent-muted: #e8c97a;
+  
+  /* Secondary accent - Cyan/teal for tech feel */
+  --color-secondary: #00b894;
+  --color-secondary-2: #00a383;
+  --color-secondary-muted: #55ecc2;
   
   /* Semantic colors */
-  --color-success: #1f8a42;
-  --color-warning: #b45309;
-  --color-danger: #b91c1c;
-  --color-info: #2563eb;
+  --color-success: #00b894;
+  --color-warning: #fdcb6e;
+  --color-danger: #e74c3c;
+  --color-info: #74b9ff;
   
   /* Border */
-  --color-border: #c8d8c5;
-  --color-border-subtle: #e2e8e3;
+  --color-border: #d1d5db;
+  --color-border-subtle: #e5e7eb;
   
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(16, 32, 21, 0.04);
-  --shadow-md: 0 4px 8px rgba(16, 32, 21, 0.06);
-  --shadow-lg: 0 8px 18px rgba(16, 32, 21, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
   
-  /* Premium effects */
+  /* Glow effects */
+  --glow-accent: rgba(212, 167, 83, 0.15);
+  --glow-secondary: rgba(0, 184, 148, 0.15);
   --card-glow: transparent;
-  --accent-glow: rgba(31, 138, 66, 0.15);
 }
 
-/* Dark mode - 07.gg inspired premium dark */
+/* Dark mode - Futuristic terminal aesthetic */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Base colors - Dark mode */
-    --color-bg: #070b0a;
-    --color-surface: #0d1513;
-    --color-surface-2: #101d19;
-    --color-surface-3: #162923;
+    /* Base - Deep obsidian/charcoal */
+    --color-bg: #0a0c10;
+    --color-surface: #12151c;
+    --color-surface-2: #1a1d24;
+    --color-surface-3: #22262e;
+    --color-surface-4: #2a2f38;
     
-    /* Text colors */
-    --color-text: #e7f3ee;
-    --color-text-muted: #9ab4aa;
-    --color-text-inverse: #0d1513;
+    /* Text */
+    --color-text: #e8eaed;
+    --color-text-muted: #8b9298;
+    --color-text-inverse: #0a0c10;
     
-    /* Accent colors - richer, more vibrant */
-    --color-accent: #27c267;
-    --color-accent-2: #9ff0c4;
-    --color-accent-muted: #d4a574;
+    /* Accent - OSRS gold/amber */
+    --color-accent: #d4a753;
+    --color-accent-2: #f0c75e;
+    --color-accent-muted: #e8c97a;
     
-    /* Semantic colors - adjusted for dark */
-    --color-success: #27c267;
-    --color-warning: #f59e0b;
-    --color-danger: #fb7185;
-    --color-info: #60a5fa;
+    /* Secondary - Cyan/teal for tech feel */
+    --color-secondary: #00d4aa;
+    --color-secondary-2: #00f0c0;
+    --color-secondary-muted: #55ecc2;
     
-    /* Border */
-    --color-border: rgba(231, 243, 238, 0.12);
-    --color-border-subtle: rgba(231, 243, 238, 0.06);
+    /* Semantic */
+    --color-success: #00d4aa;
+    --color-warning: #f0c75e;
+    --color-danger: #ff6b6b;
+    --color-info: #74b9ff;
     
-    /* Shadows - deeper for dark mode */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.25);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
+    /* Border - Subtle, semi-transparent */
+    --color-border: rgba(232, 234, 237, 0.1);
+    --color-border-subtle: rgba(232, 234, 237, 0.05);
+    --color-border-accent: rgba(212, 167, 83, 0.25);
     
-    /* Premium effects - subtle glow */
-    --card-glow: rgba(39, 194, 103, 0.08);
-    --accent-glow: rgba(39, 194, 103, 0.25);
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.5);
+    
+    /* Glow effects - Key to the futuristic look */
+    --glow-accent: rgba(212, 167, 83, 0.2);
+    --glow-accent-strong: rgba(212, 167, 83, 0.35);
+    --glow-secondary: rgba(0, 212, 170, 0.2);
+    --glow-secondary-strong: rgba(0, 212, 170, 0.35);
+    --glow-danger: rgba(255, 107, 107, 0.2);
+    --glow-warning: rgba(240, 199, 94, 0.2);
+    
+    /* Card glow */
+    --card-glow: 0 0 20px rgba(212, 167, 83, 0.08);
+    --card-glow-hover: 0 0 30px rgba(212, 167, 83, 0.15);
   }
 }
 
@@ -95,11 +123,11 @@
    ============================================ */
 
 :root {
-  /* Font families */
-  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", "SF Mono", monospace;
+  /* Font families - Technical/terminal feel */
+  --font-sans: "JetBrains Mono", "IBM Plex Mono", "SF Mono", monospace;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", "SF Mono", monospace;
   
-  /* Font sizes - Mobile-first scale */
+  /* Font sizes - Slightly larger for readability */
   --text-xs: 0.6875rem;    /* 11px */
   --text-sm: 0.75rem;      /* 12px */
   --text-base: 0.875rem;   /* 14px */
@@ -115,7 +143,6 @@
   --font-semibold: 600;
   --font-bold: 700;
   --font-extrabold: 800;
-  --font-black: 900;
   
   /* Line heights */
   --leading-tight: 1.2;
@@ -123,12 +150,12 @@
   --leading-normal: 1.5;
   --leading-relaxed: 1.625;
   
-  /* Letter spacing */
+  /* Letter spacing - Slightly wider for terminal feel */
   --tracking-tight: -0.01em;
   --tracking-normal: 0;
-  --tracking-wide: 0.02em;
-  --tracking-wider: 0.04em;
-  --tracking-widest: 0.06em;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.08em;
 }
 
 /* ============================================
@@ -136,7 +163,7 @@
    ============================================ */
 
 :root {
-  /* Spacing scale - based on 4px grid */
+  /* Base spacing - 4px grid */
   --space-1: 0.25rem;   /* 4px */
   --space-2: 0.5rem;    /* 8px */
   --space-3: 0.75rem;   /* 12px */
@@ -144,9 +171,9 @@
   --space-5: 1.25rem;   /* 20px */
   --space-6: 1.5rem;    /* 24px */
   --space-8: 2rem;      /* 32px */
-  --space-10: 2.5rem;   /* 40px */
-  --space-12: 3rem;     /* 48px */
-  --space-16: 4rem;     /* 64px */
+  --space-10: 2.5rem;  /* 40px */
+  --space-12: 3rem;    /* 48px */
+  --space-16: 4rem;    /* 64px */
   
   /* Semantic spacing */
   --space-xs: var(--space-1);
@@ -165,10 +192,10 @@
   /* Border radius */
   --radius-none: 0;
   --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 20px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
   --radius-full: 9999px;
   
   /* Semantic radius */
@@ -179,19 +206,20 @@
 }
 
 /* ============================================
-   TRANSITION TOKENS
+   TRANSITION & ANIMATION TOKENS
    ============================================ */
 
 :root {
   /* Transitions */
-  --transition-fast: 90ms ease;
-  --transition-base: 140ms ease;
+  --transition-fast: 100ms ease;
+  --transition-base: 150ms ease;
   --transition-slow: 250ms ease;
   
-  /* Animation */
+  /* Animation keyframes */
   --animate-fade-in: fadeIn 150ms ease;
   --animate-slide-up: slideUp 200ms ease;
-  --animate-pulse: pulse 2.5s ease-in-out infinite;
+  --animate-pulse-glow: pulseGlow 2s ease-in-out infinite;
+  --animate-scanline: scanline 8s linear infinite;
 }
 
 /* Keyframes */
@@ -201,11 +229,21 @@
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(12px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+@keyframes pulseGlow {
+  0%, 100% { 
+    box-shadow: 0 0 5px var(--glow-accent), 0 0 10px var(--glow-accent);
+  }
+  50% { 
+    box-shadow: 0 0 10px var(--glow-accent-strong), 0 0 20px var(--glow-accent);
+  }
+}
+
+/* Scanline effect for terminal feel */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
 }
