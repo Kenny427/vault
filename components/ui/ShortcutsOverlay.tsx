@@ -18,6 +18,9 @@ const shortcuts: Shortcut[] = [
   { keys: ['⌘', 'D'], description: 'Go to Dashboard', category: 'Navigation' },
   { keys: ['⌘', 'O'], description: 'Go to Opportunities', category: 'Navigation' },
   { keys: ['⌘', 'P'], description: 'Go to Portfolio', category: 'Navigation' },
+  { keys: ['j'], description: 'Next opportunity (feed)', category: 'Opportunities' },
+  { keys: ['k'], description: 'Previous opportunity (feed)', category: 'Opportunities' },
+  { keys: ['Enter'], description: 'Expand/collapse opportunity', category: 'Opportunities' },
 ];
 
 export default function ShortcutsOverlay() {
