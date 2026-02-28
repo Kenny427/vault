@@ -632,8 +632,30 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
                   {/* Right: Sparkline + Actions */}
                   <div className="row" style={{ gap: '0.75rem', alignItems: 'center' }}>
                     {isSparklineLoading ? (
-                      <div style={{ width: 60, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>...</span>
+                      <div 
+                        style={{ 
+                          width: 60, 
+                          height: 24, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          gap: 3 
+                        }}
+                      >
+                        {[0, 1, 2].map(i => (
+                          <div 
+                            key={i}
+                            style={{
+                              width: 4,
+                              height: 16,
+                              borderRadius: 2,
+                              background: 'var(--accent)',
+                              opacity: 0.3,
+                              animation: `pulse 1s ease-in-out infinite`,
+                              animationDelay: `${i * 0.15}s`,
+                            }}
+                          />
+                        ))}
                       </div>
                     ) : sparkline ? (
                       <MiniSparkline data={sparkline} />
