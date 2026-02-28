@@ -351,10 +351,15 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
   const freshness = formatFreshness(lastUpdated);
 
   const totalPotential = opportunities.reduce((sum, o) => sum + o.est_profit, 0);
+  const bestMargin = opportunities.length > 0 ? Math.max(...opportunities.map(o => o.spread_pct)) : 0;
+  const highestVol = opportunities.length > 0 ? Math.max(...opportunities.map(o => o.volume_1h ?? o.volume_5m ?? 0)) : 0;
+  const avgScore = opportunities.length > 0 
+    ? Math.round(opportunities.reduce((sum, o) => sum + o.score, 0) / opportunities.length) 
+    : 0;
 
   return (
     <section>
-      {/* Summary Header */}
+      {/* Summary Header - 07.gg inspired quick stats */}
       <div className="row-between" style={{ marginBottom: '1rem' }}>
         <div className="row" style={{ gap: '1.5rem', alignItems: 'center' }}>
           <div>
@@ -365,6 +370,24 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Potential</p>
             <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }}>
               ~{formatGp(totalPotential)}
+            </p>
+          </div>
+          <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1.5rem' }}>
+            <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Best Margin</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#3b82f6', lineHeight: 1.2 }}>
+              {bestMargin.toFixed(1)}%
+            </p>
+          </div>
+          <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1.5rem' }}>
+            <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Top Vol</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#8b5cf6', lineHeight: 1.2 }}>
+              {formatVolume(highestVol)}
+            </p>
+          </div>
+          <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1.5rem' }}>
+            <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Avg Score</p>
+            <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#06b6d4', lineHeight: 1.2 }}>
+              {avgScore}
             </p>
           </div>
         </div>
