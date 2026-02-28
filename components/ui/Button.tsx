@@ -39,21 +39,25 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         hover:brightness-110 active:translate-y-px
         dark:bg-gradient-to-br dark:from-accent dark:to-accent-2
         dark:shadow-lg dark:shadow-accent/30
+        focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface
       `,
       secondary: `
         bg-surface-2 text-text border border-border
         hover:bg-surface hover:border-accent
         dark:bg-surface-2 dark:border-border/40
         dark:hover:bg-surface-3 dark:hover:border-accent
+        focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 dark:focus-visible:ring-offset-surface
       `,
       ghost: `
         bg-transparent text-text-muted
         hover:bg-surface-2 hover:text-text
         dark:hover:bg-surface-2 dark:hover:text-text
+        focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-surface
       `,
       danger: `
         bg-danger text-white
         hover:brightness-110 active:translate-y-px
+        focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface
       `,
     };
     
