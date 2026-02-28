@@ -454,16 +454,52 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
 
                 {(opp.volume_5m || opp.volume_1h) && (
                   <div className="row-between" style={{ marginTop: '0.5rem', fontSize: '0.75rem' }}>
-                    <span className="muted">
-                      Vol:{' '}
-                      {opp.volume_5m
-                        ? `${(opp.volume_5m / 1000).toFixed(1)}k (5m)`
-                        : opp.volume_1h
-                        ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)`
-                        : ''}
-                      {opp.volume_5m && opp.volume_1h ? ' · ' : ''}
-                      {opp.volume_5m && opp.volume_1h ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)` : ''}
-                    </span>
+                    <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+                      <span className="muted">
+                        Vol:{' '}
+                        {opp.volume_5m
+                          ? `${(opp.volume_5m / 1000).toFixed(1)}k (5m)`
+                          : opp.volume_1h
+                          ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)`
+                          : ''}
+                        {opp.volume_5m && opp.volume_1h ? ' · ' : ''}
+                        {opp.volume_5m && opp.volume_1h ? `${(opp.volume_1h / 1000).toFixed(1)}k (1h)` : ''}
+                      </span>
+                      {/* Volume heat bar */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '2px',
+                          alignItems: 'flex-end',
+                          height: '14px',
+                        }}
+                      >
+                        {[...Array(5)].map((_, i) => {
+                          const vol = opp.volume_5m ?? opp.volume_1h ?? 0;
+                          const threshold = (i + 1) * 20000; // 20k, 40k, 60k, 80k, 100k
+                          const active = vol >= threshold;
+                          return (
+                            <div
+                              key={i}
+                              style={{
+                                width: '3px',
+                                height: active ? `${3 + i * 2.5}px` : '3px',
+                                borderRadius: '1px',
+                                background: active
+                                  ? vol > 100000
+                                    ? '#ef4444'
+                                    : vol > 50000
+                                    ? '#f59e0b'
+                                    : '#22c55e'
+                                  : 'var(--border)',
+                                transition: 'all 0.2s ease',
+                              }}
+                              title={active ? `Volume: ${vol.toLocaleString()}` : ''}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
                     <span
                       style={{
                         fontWeight: 600,

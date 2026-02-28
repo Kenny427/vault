@@ -430,13 +430,38 @@ export default function OpportunitiesTable({ opportunities, loading, onRefresh, 
                 </div>
 
                 {/* Volume Column */}
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
                   <span style={{ 
                     fontWeight: 600,
                     color: (opp.volume_1h ?? 0) > 100000 ? '#f5c518' : (opp.volume_1h ?? 0) > 50000 ? '#22c55e' : 'inherit'
                   }}>
                     {formatVolume(opp.volume_1h)}
                   </span>
+                  {/* Mini volume heat bar */}
+                  <div style={{ display: 'flex', gap: '1px', alignItems: 'flex-end', height: '8px' }}>
+                    {[...Array(4)].map((_, i) => {
+                      const vol = opp.volume_1h ?? 0;
+                      const threshold = (i + 1) * 25000;
+                      const active = vol >= threshold;
+                      return (
+                        <div
+                          key={i}
+                          style={{
+                            width: '2px',
+                            height: active ? `${2 + i * 2}px` : '2px',
+                            borderRadius: '1px',
+                            background: active
+                              ? vol > 100000
+                                ? '#ef4444'
+                                : vol > 50000
+                                ? '#f59e0b'
+                                : '#22c55e'
+                              : 'var(--border)',
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Freshness Column */}
