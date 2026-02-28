@@ -193,6 +193,7 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [keyboardNavActive, setKeyboardNavActive] = useState(false);
+  const [showKeyboardHint, setShowKeyboardHint] = useState(false);
   const sparklineLoadedRef = useRef<Set<number>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -263,10 +264,12 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
       if (e.key === 'j') {
         e.preventDefault();
         setKeyboardNavActive(true);
+        if (!keyboardNavActive) setShowKeyboardHint(true);
         setSelectedIndex(i => Math.min(i + 1, sortedOpportunities.length - 1));
       } else if (e.key === 'k') {
         e.preventDefault();
         setKeyboardNavActive(true);
+        if (!keyboardNavActive) setShowKeyboardHint(true);
         setSelectedIndex(i => Math.max(i - 1, 0));
       } else if (e.key === 'Enter' && selectedIndex >= 0) {
         e.preventDefault();
@@ -289,7 +292,17 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortedOpportunities, selectedIndex, onCreateProposal]);
+
+  // Auto-hide keyboard hint after 4 seconds
+  useEffect(() => {
+    if (showKeyboardHint) {
+      const timer = setTimeout(() => setShowKeyboardHint(false), 4000);
+      return () => clearTimeout(timer);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showKeyboardHint]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -529,6 +542,52 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
           </div>
         </div>
       </div>
+
+      {/* Keyboard Hints Toast */}
+      {showKeyboardHint && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '5rem',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 100,
+            background: 'rgba(13, 21, 19, 0.95)',
+            border: '1px solid rgba(39, 194, 103, 0.4)',
+            borderRadius: '10px',
+            padding: '0.75rem 1.25rem',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(39, 194, 103, 0.15)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            gap: '1rem',
+            alignItems: 'center',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          {[
+            { k: 'j', a: '↓' },
+            { k: 'k', a: '↑' },
+            { k: 'Enter', a: 'expand' },
+            { k: 'b', a: 'buy' },
+            { k: 'Esc', a: 'close' },
+          ].map(({ k, a }) => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <kbd style={{
+                fontSize: '0.65rem',
+                padding: '0.2rem 0.45rem',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '5px',
+                color: '#e7f3ee',
+                fontWeight: 600,
+                minWidth: '1.5rem',
+                textAlign: 'center',
+              }}>{k}</kbd>
+              <span style={{ fontSize: '0.6rem', color: 'rgba(255, 255, 255, 0.5)' }}>{a}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Feed Container */}
       {sortedOpportunities.length === 0 ? (
