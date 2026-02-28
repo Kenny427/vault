@@ -240,6 +240,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
           <div style={{ flex: 1, minWidth: 200 }}>
             <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
               <h1 style={{ fontSize: '1.5rem', fontWeight: 900, color: '#f5c518' }}>{item.name}</h1>
+              <span className="muted" style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>#{item.item_id}</span>
               <button
                 onClick={() => {
                   const info = price ? `${item.name}: ${price.last_price.toLocaleString()}gp (${price.spread_pct.toFixed(1)}% spread)` : item.name;
@@ -254,7 +255,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             </div>
             <div className="row" style={{ gap: '0.75rem', marginTop: '0.25rem' }}>
               {item.members && (
-                <span style={{ background: '#22c55e', color: '#000', padding: '0.1rem 0.4rem', borderRadius: 4, fontSize: '0.7rem', fontWeight: 700 }}>
+                <span style={{ background: '#22c55e', color: '#000', padding: '0.15rem 0.5rem', borderRadius: 6, fontSize: '0.7rem', fontWeight: 700, boxShadow: '0 0 8px rgba(34,197,94,0.4)' }}>
                   MEMBERS
                 </span>
               )}
