@@ -80,10 +80,42 @@ a {
 }
 
 main {
-  max-width: 840px;
+  max-width: 1280px;
   margin: 0 auto;
   min-height: 100dvh;
   padding: 1rem 1rem 5.25rem;
+}
+
+
+.vault-hero {
+  margin-bottom: 1rem;
+  padding: 1.1rem;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(130deg, rgba(39,194,103,0.18), rgba(13,21,19,0.3));
+  box-shadow: 0 14px 34px var(--shadow);
+}
+
+.vault-kicker {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent-2);
+  margin-bottom: 0.35rem;
+  font-weight: 700;
+}
+
+.vault-title {
+  font-size: clamp(1.4rem, 2.3vw, 2.1rem);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.35rem;
+}
+
+.vault-subtitle {
+  max-width: 720px;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .card {
@@ -504,3 +536,396 @@ select {
 }
 
 
+
+/* ===== Futuristic redesign layer ===== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(29, 242, 161, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(29, 242, 161, 0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at center, black 10%, transparent 85%);
+  z-index: -1;
+}
+
+.neo-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  border-bottom: 1px solid rgba(29, 242, 161, 0.2);
+  backdrop-filter: blur(10px);
+  background: rgba(4, 10, 12, 0.82);
+}
+
+.neo-topbar-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.neo-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.neo-logo-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1df2a1;
+  box-shadow: 0 0 12px #1df2a1;
+}
+
+.neo-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+}
+
+.neo-nav-link {
+  text-decoration: none;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.neo-nav-link:hover,
+.neo-nav-link.active {
+  color: #d3fff0;
+  border-color: rgba(29, 242, 161, 0.35);
+  background: rgba(29, 242, 161, 0.1);
+}
+
+.neo-search {
+  border: 1px solid rgba(29, 242, 161, 0.35);
+  background: rgba(7, 17, 20, 0.95);
+  color: #d3fff0;
+  border-radius: 10px;
+  padding: 0.35rem 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.neo-search kbd {
+  border: 1px solid rgba(29, 242, 161, 0.3);
+  border-radius: 6px;
+  padding: 0.1rem 0.35rem;
+}
+
+.command-hero {
+  border: 1px solid rgba(29, 242, 161, 0.25);
+  border-radius: 20px;
+  padding: 1.15rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+  background: radial-gradient(circle at 10% 10%, rgba(29, 242, 161, 0.2), rgba(0, 0, 0, 0.3)), linear-gradient(135deg, #081015, #0b1b1b 65%, #111927);
+}
+
+.command-hero h1 {
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.4rem;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.hud-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.66rem;
+  color: #87fcd2;
+  font-weight: 700;
+}
+
+.auth-panel h2 {
+  margin-bottom: 0.3rem;
+}
+
+.auth-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.dashboard-status-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.status-tile {
+  border: 1px solid rgba(29, 242, 161, 0.2);
+  border-radius: 14px;
+  padding: 0.7rem;
+  background: rgba(8, 14, 15, 0.72);
+}
+
+.status-tile strong {
+  font-size: 1.35rem;
+}
+
+.dashboard-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  border: 1px solid rgba(231, 243, 238, 0.18);
+  background: rgba(13, 21, 19, 0.5);
+  color: var(--muted);
+  border-radius: 10px;
+  padding: 0.45rem 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+
+.tab-btn.active {
+  color: #d3fff0;
+  border-color: rgba(29, 242, 161, 0.45);
+  box-shadow: 0 0 18px rgba(29, 242, 161, 0.18);
+}
+
+.count-pill {
+  background: #1df2a1;
+  color: #081015;
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+  font-size: 0.72rem;
+}
+
+.opportunities-shell {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.opps-header-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+  border: 1px solid rgba(29, 242, 161, 0.2);
+  border-radius: 14px;
+  padding: 0.9rem;
+  background: rgba(9, 17, 19, 0.75);
+}
+
+.opps-header-panel h2 {
+  font-size: 1.4rem;
+  margin-bottom: 0.2rem;
+}
+
+.opps-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.freshness-pill {
+  border: 1px solid rgba(29, 242, 161, 0.25);
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  color: #87fcd2;
+}
+
+.opps-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto 1fr;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.filter-chip-wrap {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  border: 1px solid rgba(29, 242, 161, 0.2);
+  background: rgba(10, 18, 20, 0.6);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 0.22rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.filter-chip.active {
+  color: #081015;
+  background: #1df2a1;
+}
+
+.ai-brief h3 {
+  margin-top: 0.2rem;
+  font-size: 1rem;
+}
+
+.brief-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.brief-grid ul {
+  margin: 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.opps-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.opportunity-card {
+  border: 1px solid rgba(231, 243, 238, 0.12);
+  background: linear-gradient(135deg, rgba(10, 18, 20, 0.95), rgba(13, 23, 28, 0.92));
+  border-radius: 14px;
+  padding: 0.8rem;
+  cursor: pointer;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.opportunity-card:hover,
+.opportunity-card.expanded {
+  border-color: rgba(29, 242, 161, 0.35);
+  transform: translateY(-1px);
+}
+
+.opportunity-card header,
+.opportunity-card footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.item-link {
+  color: #e2fff5;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.icon-placeholder {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px dashed rgba(29, 242, 161, 0.25);
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.metrics-row {
+  margin-top: 0.65rem;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.metric-profit {
+  color: #1df2a1;
+  font-weight: 700;
+}
+
+.expand-row {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(231, 243, 238, 0.1);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.tracked-pill {
+  border: 1px solid rgba(29, 242, 161, 0.4);
+  color: #1df2a1;
+  border-radius: 999px;
+  padding: 0.22rem 0.55rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.score-pill {
+  border-radius: 999px;
+  padding: 0.17rem 0.45rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.score-sizzler { background: #f9dd62; color: #2d2500; }
+.score-hot { background: #1df2a1; color: #042a19; }
+.score-warm { background: #64c1ff; color: #02233d; }
+.score-cool { background: #b296ff; color: #24114f; }
+.score-cold { background: #93a4b0; color: #0e1622; }
+
+@media (max-width: 900px) {
+  .opps-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-status-row,
+  .metrics-row,
+  .expand-row,
+  .brief-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .neo-search {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .command-hero,
+  .opps-header-panel {
+    flex-direction: column;
+  }
+
+  .dashboard-status-row,
+  .metrics-row,
+  .expand-row,
+  .brief-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-row {
+    grid-template-columns: 1fr;
+  }
+
+  .neo-nav {
+    overflow-x: auto;
+  }
+}
