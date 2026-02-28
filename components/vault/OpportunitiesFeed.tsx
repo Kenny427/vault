@@ -278,12 +278,18 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
         setSelectedIndex(-1);
         setExpandedRow(null);
         setKeyboardNavActive(false);
+      } else if (e.key === 'b' && selectedIndex >= 0 && typeof onCreateProposal === 'function') {
+        e.preventDefault();
+        const item = sortedOpportunities[selectedIndex];
+        if (item) {
+          onCreateProposal(item);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sortedOpportunities, selectedIndex]);
+  }, [sortedOpportunities, selectedIndex, onCreateProposal]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -425,6 +431,22 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
                 <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>j</kbd>
                 <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>k</kbd>
                 <span style={{ opacity: 0.7 }}>nav</span>
+              </span>
+            )}
+            {typeof onCreateProposal === 'function' && (
+              <span style={{
+                fontSize: '0.65rem',
+                padding: '0.2rem 0.4rem',
+                background: 'rgba(34, 197, 94, 0.15)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '4px',
+                color: '#4ade80',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}>
+                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>b</kbd>
+                <span style={{ opacity: 0.7 }}>buy</span>
               </span>
             )}
           </div>
