@@ -90,6 +90,8 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
   const [refreshingPrices, setRefreshingPrices] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
 
+  const hasActiveFilters = searchQuery.trim() || scoreFilter !== 'all';
+
   const sortedOpportunities = useMemo(() => {
     let filtered = [...opportunities];
 
@@ -263,6 +265,22 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
               <option value="profit">Sort: Profit</option>
               <option value="volume">Sort: Volume</option>
             </select>
+            {hasActiveFilters && (
+              <button
+                onClick={() => { setSearchQuery(''); setScoreFilter('all'); }}
+                style={{
+                  padding: '0.2rem 0.4rem',
+                  fontSize: '0.65rem',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--accent)',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                Clear
+              </button>
+            )}
             <button className="btn btn-secondary" onClick={onRefresh} disabled={loading}>
               Refresh
             </button>
