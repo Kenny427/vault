@@ -25,7 +25,6 @@
   --color-surface: #ffffff;
   --color-surface-2: #eef1f4;
   --color-surface-3: #e2e5e9;
-  --color-surface-4: #d5d8dc;
   
   /* Text - Light mode */
   --color-text: #1a1d24;
@@ -60,9 +59,6 @@
   /* Glow effects */
   --glow-accent: rgba(212, 167, 83, 0.15);
   --glow-secondary: rgba(0, 184, 148, 0.15);
-  --glow-danger: rgba(231, 76, 60, 0.15);
-  --glow-warning: rgba(253, 203, 110, 0.15);
-  --glow-info: rgba(116, 185, 255, 0.15);
   --card-glow: transparent;
 }
 
@@ -70,61 +66,55 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* Base - Deep obsidian/charcoal */
-    --color-bg: #08090c;
-    --color-surface: #0e1117;
-    --color-surface-2: #161a22;
-    --color-surface-3: #1d222c;
-    --color-surface-4: #262c38;
+    --color-bg: #0a0c10;
+    --color-surface: #12151c;
+    --color-surface-2: #1a1d24;
+    --color-surface-3: #22262e;
+    --color-surface-4: #2a2f38;
     
     /* Text */
-    --color-text: #e6e9ed;
-    --color-text-muted: #7a828e;
-    --color-text-inverse: #08090c;
+    --color-text: #e8eaed;
+    --color-text-muted: #8b9298;
+    --color-text-inverse: #0a0c10;
     
-    /* Accent - OSRS gold/amber - refined */
-    --color-accent: #e5b95c;
-    --color-accent-2: #f0cd70;
-    --color-accent-muted: rgba(229, 185, 92, 0.6);
+    /* Accent - OSRS gold/amber */
+    --color-accent: #d4a753;
+    --color-accent-2: #f0c75e;
+    --color-accent-muted: #e8c97a;
     
-    /* Secondary - Cyan/teal for tech feel - refined */
-    --color-secondary: #00e6b8;
-    --color-secondary-2: #2effc8;
-    --color-secondary-muted: rgba(0, 230, 184, 0.6);
+    /* Secondary - Cyan/teal for tech feel */
+    --color-secondary: #00d4aa;
+    --color-secondary-2: #00f0c0;
+    --color-secondary-muted: #55ecc2;
     
-    /* Semantic - refined for dark mode */
-    --color-success: #00e6b8;
-    --color-warning: #f0cd70;
+    /* Semantic */
+    --color-success: #00d4aa;
+    --color-warning: #f0c75e;
     --color-danger: #ff6b6b;
-    --color-info: #5eb3ff;
+    --color-info: #74b9ff;
     
     /* Border - Subtle, semi-transparent */
-    --color-border: rgba(230, 233, 237, 0.08);
-    --color-border-subtle: rgba(230, 233, 237, 0.04);
-    --color-border-accent: rgba(229, 185, 92, 0.25);
+    --color-border: rgba(232, 234, 237, 0.1);
+    --color-border-subtle: rgba(232, 234, 237, 0.05);
+    --color-border-accent: rgba(212, 167, 83, 0.25);
     
-    /* Shadows - Dark mode */
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-    --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.6);
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.5);
     
     /* Glow effects - Key to the futuristic look */
-    --glow-accent: rgba(229, 185, 92, 0.15);
-    --glow-accent-strong: rgba(229, 185, 92, 0.3);
-    --glow-secondary: rgba(0, 230, 184, 0.15);
-    --glow-secondary-strong: rgba(0, 230, 184, 0.3);
+    --glow-accent: rgba(212, 167, 83, 0.2);
+    --glow-accent-strong: rgba(212, 167, 83, 0.35);
+    --glow-secondary: rgba(0, 212, 170, 0.2);
+    --glow-secondary-strong: rgba(0, 212, 170, 0.35);
     --glow-danger: rgba(255, 107, 107, 0.2);
-    --glow-warning: rgba(240, 205, 112, 0.2);
-    --glow-info: rgba(94, 179, 255, 0.2);
-    
-    /* Surface glow - subtle ambient */
-    --surface-glow: radial-gradient(ellipse at 50% 0%, rgba(229, 185, 92, 0.06) 0%, transparent 60%);
-    --surface-glow-secondary: radial-gradient(ellipse at 80% 20%, rgba(0, 230, 184, 0.04) 0%, transparent 40%);
+    --glow-warning: rgba(240, 199, 94, 0.2);
     
     /* Card glow */
-    --card-glow: 0 0 24px rgba(229, 185, 92, 0.06);
-    --card-glow-hover: 0 0 36px rgba(229, 185, 92, 0.12);
-    --card-glow-secondary: 0 0 24px rgba(0, 230, 184, 0.06);
+    --card-glow: 0 0 20px rgba(212, 167, 83, 0.08);
+    --card-glow-hover: 0 0 30px rgba(212, 167, 83, 0.15);
   }
 }
 
@@ -134,10 +124,10 @@
 
 :root {
   /* Font families - Technical/terminal feel */
-  --font-sans: "JetBrains Mono", "IBM Plex Mono", "SF Mono", "Fira Code", monospace;
-  --font-mono: "JetBrains Mono", "IBM Plex Mono", "SF Mono", "Fira Code", monospace;
+  --font-sans: "JetBrains Mono", "IBM Plex Mono", "SF Mono", monospace;
+  --font-mono: "JetBrains Mono", "IBM Plex Mono", "SF Mono", monospace;
   
-  /* Font sizes - Optimized for terminal readability */
+  /* Font sizes - Slightly larger for readability */
   --text-xs: 0.6875rem;    /* 11px */
   --text-sm: 0.75rem;      /* 12px */
   --text-base: 0.875rem;   /* 14px */
@@ -224,14 +214,12 @@
   --transition-fast: 100ms ease;
   --transition-base: 150ms ease;
   --transition-slow: 250ms ease;
-  --transition-slower: 350ms ease;
   
   /* Animation keyframes */
   --animate-fade-in: fadeIn 150ms ease;
   --animate-slide-up: slideUp 200ms ease;
   --animate-pulse-glow: pulseGlow 2s ease-in-out infinite;
   --animate-scanline: scanline 8s linear infinite;
-  --animate-data-flow: dataFlow 3s ease-in-out infinite;
 }
 
 /* Keyframes */
@@ -245,11 +233,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 @keyframes pulseGlow {
   0%, 100% { 
     box-shadow: 0 0 5px var(--glow-accent), 0 0 10px var(--glow-accent);
@@ -259,124 +242,8 @@
   }
 }
 
-@keyframes pulseGlowSecondary {
-  0%, 100% { 
-    box-shadow: 0 0 5px var(--glow-secondary), 0 0 10px var(--glow-secondary);
-  }
-  50% { 
-    box-shadow: 0 0 10px var(--glow-secondary-strong), 0 0 20px var(--glow-secondary);
-  }
-}
-
 /* Scanline effect for terminal feel */
 @keyframes scanline {
   0% { transform: translateY(-100%); }
   100% { transform: translateY(100%); }
-}
-
-/* Data flow animation for indicators */
-@keyframes dataFlow {
-  0%, 100% { 
-    opacity: 0.4;
-    transform: scaleX(0.8);
-  }
-  50% { 
-    opacity: 1;
-    transform: scaleX(1);
-  }
-}
-
-/* ============================================
-   UTILITY CLASSES - Glow Effects
-   ============================================ */
-
-.glow-accent {
-  box-shadow: 0 0 12px var(--glow-accent);
-}
-
-.glow-accent-strong {
-  box-shadow: 0 0 20px var(--glow-accent-strong);
-}
-
-.glow-secondary {
-  box-shadow: 0 0 12px var(--glow-secondary);
-}
-
-.glow-secondary-strong {
-  box-shadow: 0 0 20px var(--glow-secondary-strong);
-}
-
-.glow-danger {
-  box-shadow: 0 0 12px var(--glow-danger);
-}
-
-.glow-warning {
-  box-shadow: 0 0 12px var(--glow-warning);
-}
-
-/* Text glow */
-.text-glow-accent {
-  text-shadow: 0 0 8px var(--glow-accent);
-}
-
-.text-glow-secondary {
-  text-shadow: 0 0 8px var(--glow-secondary);
-}
-
-/* ============================================
-   UTILITY CLASSES - Surface Effects
-   ============================================ */
-
-.surface-ambient {
-  position: relative;
-}
-
-.surface-ambient::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--surface-glow);
-  pointer-events: none;
-  z-index: -1;
-}
-
-.surface-ambient-secondary::before {
-  background: var(--surface-glow-secondary);
-}
-
-/* Border glow on focus */
-.border-glow-accent {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--glow-accent);
-}
-
-.border-glow-secondary {
-  border-color: var(--color-secondary);
-  box-shadow: 0 0 0 2px var(--glow-secondary);
-}
-
-/* ============================================
-   BACKDROP BLUR SUPPORT
-   ============================================ */
-
-@supports (backdrop-filter: blur(12px)) {
-  .glass-effect {
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
-  
-  .glass-effect-sm {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-}
-
-@supports not (backdrop-filter: blur(12px)) {
-  .glass-effect {
-    background: rgba(14, 17, 23, 0.95);
-  }
-  
-  .glass-effect-sm {
-    background: rgba(14, 17, 23, 0.9);
-  }
 }

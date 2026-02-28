@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import OpportunitiesFeed from './OpportunitiesFeed';
-import OpportunitiesCard from './OpportunitiesCard';
 import PortfolioView from './PortfolioView';
 import ProposalsInbox from './ProposalsInbox';
 import ApprovalsInbox from './ApprovalsInbox';
@@ -76,7 +75,6 @@ type Tab = (typeof tabs)[number];
 
 export default function VaultDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('Opportunities');
-  const [oppViewMode, setOppViewMode] = useState<'feed' | 'card'>('feed');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -286,16 +284,6 @@ export default function VaultDashboard() {
           <button className="btn" onClick={() => void loadData()} disabled={loading}>
             {loading ? 'Loading...' : 'Sync'}
           </button>
-          {activeTab === 'Opportunities' && (
-            <button
-              className="btn btn-secondary"
-              onClick={() => setOppViewMode(v => v === 'feed' ? 'card' : 'feed')}
-              title={oppViewMode === 'feed' ? 'Switch to card view' : 'Switch to feed view'}
-              style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
-            >
-              {oppViewMode === 'feed' ? '▦' : '☰'}
-            </button>
-          )}
         </div>
       </div>
 
@@ -354,27 +342,8 @@ export default function VaultDashboard() {
           </div>
 
           {/* Tab Content */}
-          {activeTab === 'Opportunities' && oppViewMode === 'feed' && (
+          {activeTab === 'Opportunities' && (
             <OpportunitiesFeed
-              opportunities={opportunities}
-              loading={loading}
-              onRefresh={() => void loadData()}
-              lastUpdated={opportunitiesLastUpdated}
-              onRefreshPrices={handleRefreshPrices}
-              onCreateProposal={(opp) => {
-                setPrefillProposal({
-                  item_name: opp.item_name,
-                  side: 'buy',
-                  quantity: opp.suggested_qty,
-                  price: opp.buy_at,
-                });
-                setActiveTab('Proposals');
-              }}
-            />
-          )}
-
-          {activeTab === 'Opportunities' && oppViewMode === 'card' && (
-            <OpportunitiesCard
               opportunities={opportunities}
               loading={loading}
               onRefresh={() => void loadData()}

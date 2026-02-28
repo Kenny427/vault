@@ -191,10 +191,7 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
   const [loadingSparklines, setLoadingSparklines] = useState<Set<number>>(new Set());
   const [refreshingPrices, setRefreshingPrices] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [keyboardNavActive, setKeyboardNavActive] = useState(false);
   const sparklineLoadedRef = useRef<Set<number>>(new Set());
-  const listRef = useRef<HTMLDivElement>(null);
 
   const sortedOpportunities = useMemo(() => {
     let filtered = [...opportunities];
@@ -251,51 +248,6 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
     fetchData();
   }, [expandedRow]);
 
-  // Keyboard navigation (j/k to move, Enter to expand)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-      
-      if (isInput) return;
-      if (sortedOpportunities.length === 0) return;
-
-      if (e.key === 'j') {
-        e.preventDefault();
-        setKeyboardNavActive(true);
-        setSelectedIndex(i => Math.min(i + 1, sortedOpportunities.length - 1));
-      } else if (e.key === 'k') {
-        e.preventDefault();
-        setKeyboardNavActive(true);
-        setSelectedIndex(i => Math.max(i - 1, 0));
-      } else if (e.key === 'Enter' && selectedIndex >= 0) {
-        e.preventDefault();
-        const item = sortedOpportunities[selectedIndex];
-        if (item) {
-          setExpandedRow(curr => curr === item.item_id ? null : item.item_id);
-        }
-      } else if (e.key === 'Escape') {
-        setSelectedIndex(-1);
-        setExpandedRow(null);
-        setKeyboardNavActive(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sortedOpportunities, selectedIndex]);
-
-  // Scroll selected item into view
-  useEffect(() => {
-    if (selectedIndex >= 0 && listRef.current) {
-      const rows = listRef.current.querySelectorAll('[data-opp-row]');
-      const selected = rows[selectedIndex] as HTMLElement;
-      if (selected) {
-        selected.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      }
-    }
-  }, [selectedIndex]);
-
   const handleAddToWatchlist = async (itemId: number, itemName: string) => {
     if (adding.has(itemId) || added.has(itemId)) return;
     setAdding((prev) => new Set(prev).add(itemId));
@@ -326,21 +278,6 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
       setRefreshResult('Failed to refresh');
     } finally {
       setRefreshingPrices(false);
-    }
-  };
-
-  const handleSeed = async () => {
-    try {
-      const seedRes = await fetch('/api/theses/seed', { method: 'POST' });
-      const seedData = await seedRes.json().catch(() => ({}));
-      if (!seedRes.ok) {
-        setRefreshResult(seedData?.error ?? 'Failed to initialize scanner');
-        return;
-      }
-      setRefreshResult(`✓ Initialized ${seedData?.inserted ?? 0} items`);
-      await handleRefreshPrices();
-    } catch {
-      setRefreshResult('Failed to initialize scanner');
     }
   };
 
@@ -404,7 +341,6 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
               placeholder="Search items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setSelectedIndex(-1)}
               style={{ 
                 padding: '0.4rem 0.75rem', 
                 fontSize: '0.8rem', 
@@ -415,57 +351,25 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
                 color: 'var(--text)',
               }}
             />
-            {!searchQuery && (
-              <kbd style={{ 
-                fontSize: '0.6rem', 
-                padding: '0.15rem 0.35rem', 
-                background: 'var(--surface-2)', 
-                border: '1px solid var(--border)', 
-                borderRadius: '4px',
-                color: 'var(--text-muted)',
-              }}>/</kbd>
-            )}
-            {keyboardNavActive && (
-              <span style={{
-                fontSize: '0.65rem',
-                padding: '0.2rem 0.4rem',
-                background: 'rgba(59, 130, 246, 0.15)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '4px',
-                color: '#60a5fa',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-              }}>
-                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>j</kbd>
-                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>k</kbd>
-                <span style={{ opacity: 0.7 }}>nav</span>
-              </span>
-            )}
           </div>
 
-          {/* Modern Chip Filters */}
-          <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
+          {/* Score Filter Chips */}
+          <div className="row" style={{ gap: '0.35rem', flexWrap: 'wrap' }}>
             {scoreFilters.map((filter) => (
               <button
                 key={filter.value}
                 onClick={() => setScoreFilter(filter.value)}
                 style={{
-                  padding: '0.35rem 0.75rem',
+                  padding: '0.3rem 0.6rem',
                   fontSize: '0.7rem',
-                  fontWeight: 700,
+                  fontWeight: 600,
                   borderRadius: '20px',
                   border: 'none',
                   cursor: 'pointer',
-                  background: scoreFilter === filter.value 
-                    ? `linear-gradient(135deg, ${filter.color} 0%, ${filter.color}cc 100%)`
-                    : 'rgba(255,255,255,0.05)',
+                  background: scoreFilter === filter.value ? filter.color : 'rgba(255,255,255,0.05)',
                   color: scoreFilter === filter.value ? '#000' : 'var(--text-muted)',
-                  transition: 'all 0.2s ease',
-                  boxShadow: scoreFilter === filter.value 
-                    ? `0 0 16px ${filter.color}60, inset 0 1px 0 rgba(255,255,255,0.2)` 
-                    : 'none',
-                  letterSpacing: '0.03em',
+                  transition: 'all 0.15s ease',
+                  boxShadow: scoreFilter === filter.value ? `0 0 12px ${filter.color}50` : 'none',
                 }}
               >
                 {filter.label}
@@ -473,19 +377,18 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             ))}
           </div>
 
-          {/* Futuristic Sort & Actions */}
+          {/* Sort & Actions */}
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               style={{ 
-                padding: '0.4rem 0.6rem', 
+                padding: '0.35rem 0.5rem', 
                 fontSize: '0.75rem', 
-                borderRadius: '8px',
-                background: 'rgba(0,0,0,0.25)',
-                border: '1px solid rgba(39, 194, 103, 0.2)',
+                borderRadius: '6px',
+                background: 'var(--input-bg)',
+                border: '1px solid var(--border)',
                 color: 'var(--text)',
-                fontWeight: 600,
               }}
             >
               <option value="score">Score</option>
@@ -495,51 +398,23 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             </select>
             
             {refreshResult && (
-              <span style={{ 
-                fontSize: '0.75rem', 
-                color: refreshResult.startsWith('✓') ? '#22c55e' : '#ef4444',
-                fontWeight: 600,
-                textShadow: refreshResult.startsWith('✓') ? '0 0 8px rgba(34, 197, 94, 0.3)' : 'none',
-              }}>
+              <span style={{ fontSize: '0.75rem', color: refreshResult.startsWith('✓') ? '#22c55e' : '#ef4444' }}>
                 {refreshResult}
               </span>
             )}
             {typeof onRefreshPrices === 'function' && (
               <button 
+                className="btn btn-secondary" 
                 onClick={handleRefreshPrices} 
                 disabled={refreshingPrices}
-                style={{
-                  padding: '0.4rem 0.8rem',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  borderRadius: '8px',
-                  border: '1px solid rgba(39, 194, 103, 0.3)',
-                  background: refreshingPrices ? 'rgba(39, 194, 103, 0.1)' : 'rgba(39, 194, 103, 0.15)',
-                  color: '#27c267',
-                  cursor: refreshingPrices ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
+                style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
               >
-                {refreshingPrices ? '⟳' : '⟳ Sync'}
+                {refreshingPrices ? '...' : '↻ Prices'}
               </button>
             )}
-            <button onClick={onRefresh} disabled={loading} style={{
-                padding: '0.4rem 0.8rem',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                borderRadius: '8px',
-                border: '1px solid var(--border)',
-                background: 'var(--surface)',
-                color: 'var(--text)',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.6 : 1,
-              }}>
-              {loading ? '...' : '↻'}
+            <button className="btn" onClick={onRefresh} disabled={loading} style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}>
+              {loading ? '...' : '↻ Sync'}
             </button>
-            <div className="row" style={{ gap: '0.2rem', opacity: 0.5, paddingLeft: '0.25rem' }}>
-              <kbd style={{ fontSize: '0.5rem', padding: '0.15rem 0.35rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', fontWeight: 600 }}>J</kbd>
-              <kbd style={{ fontSize: '0.5rem', padding: '0.15rem 0.35rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', fontWeight: 600 }}>K</kbd>
-            </div>
           </div>
         </div>
       </div>
@@ -556,16 +431,7 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
           }}
         >
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎯</div>
-          <h3 style={{ 
-              margin: '0 0 0.75rem', 
-              fontSize: '1.5rem', 
-              fontWeight: 800,
-              background: 'linear-gradient(135deg, #27c267 0%, #9ff0c4 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              No Opportunities Detected
-            </h3>
+          <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', fontWeight: 700 }}>No opportunities found</h3>
           <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1.25rem', maxWidth: '300px', margin: '0 auto 1.25rem' }}>
             First time here? Seed a starter watchlist, then refresh prices to see potential flips.
           </p>
@@ -597,29 +463,24 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }} ref={listRef}>
-          {sortedOpportunities.map((opp, idx) => {
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {sortedOpportunities.map((opp) => {
             const isExpanded = expandedRow === opp.item_id;
-            const isSelected = selectedIndex === idx;
             const sparkline = sparklineData[opp.item_id];
             const isSparklineLoading = loadingSparklines.has(opp.item_id);
             
             return (
               <div
                 key={opp.item_id}
-                data-opp-row
-                onClick={() => {
-                  setSelectedIndex(idx);
-                  setExpandedRow(isExpanded ? null : opp.item_id);
-                }}
+                onClick={() => setExpandedRow(isExpanded ? null : opp.item_id)}
                 style={{
-                  background: isSelected ? 'rgba(212, 167, 83, 0.08)' : 'var(--surface)',
-                  border: `1px solid ${isExpanded ? 'var(--accent)' : isSelected ? 'rgba(212, 167, 83, 0.4)' : 'var(--border)'}`,
+                  background: 'var(--surface)',
+                  border: `1px solid ${isExpanded ? 'var(--accent)' : 'var(--border)'}`,
                   borderRadius: '10px',
                   padding: '0.85rem 1rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  boxShadow: isExpanded ? 'var(--accent-glow)' : isSelected ? '0 0 12px rgba(212, 167, 83, 0.15)' : 'none',
+                  boxShadow: isExpanded ? 'var(--accent-glow)' : 'none',
                 }}
               >
                 {/* Main Row */}
@@ -685,30 +546,8 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
                   {/* Right: Sparkline + Actions */}
                   <div className="row" style={{ gap: '0.75rem', alignItems: 'center' }}>
                     {isSparklineLoading ? (
-                      <div 
-                        style={{ 
-                          width: 60, 
-                          height: 24, 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          gap: 3 
-                        }}
-                      >
-                        {[0, 1, 2].map(i => (
-                          <div 
-                            key={i}
-                            style={{
-                              width: 4,
-                              height: 16,
-                              borderRadius: 2,
-                              background: 'var(--accent)',
-                              opacity: 0.3,
-                              animation: `pulse 1s ease-in-out infinite`,
-                              animationDelay: `${i * 0.15}s`,
-                            }}
-                          />
-                        ))}
+                      <div style={{ width: 60, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>...</span>
                       </div>
                     ) : sparkline ? (
                       <MiniSparkline data={sparkline} />
