@@ -89,6 +89,19 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
   const [seedResult, setSeedResult] = useState<string | null>(null);
   const [refreshingPrices, setRefreshingPrices] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
+  
+  // Quantity state per item
+  const [quantities, setQuantities] = useState<Map<number, number>>(new Map());
+
+  // Get quantity for an item (fallback to suggested_qty)
+  const getQty = (itemId: number, suggestedQty: number) => quantities.get(itemId) ?? suggestedQty;
+
+  // Update quantity with bounds
+  const setQty = (itemId: number, qty: number, buyLimit: number | null) => {
+    const maxQty = buyLimit ?? 10000;
+    const clampedQty = Math.max(1, Math.min(qty, maxQty));
+    setQuantities(prev => new Map(prev).set(itemId, clampedQty));
+  };
 
   const hasActiveFilters = searchQuery.trim() || scoreFilter !== 'all';
 
@@ -354,11 +367,13 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                   </div>
                   <button
                     className="btn-small"
-                    onClick={() =>
+                    onClick={() => {
+                      const qty = getQty(opp.item_id, opp.suggested_qty);
+                      const profit = (opp.sell_at - opp.buy_at) * qty;
                       copyToClipboard(
-                        `Buy ${opp.item_name} @ ${opp.buy_at.toLocaleString()} | Sell @ ${opp.sell_at.toLocaleString()} | Qty ${opp.suggested_qty.toLocaleString()} | Est ${opp.est_profit.toLocaleString()}gp`
-                      )
-                    }
+                        `Buy ${opp.item_name} @ ${opp.buy_at.toLocaleString()} | Sell @ ${opp.sell_at.toLocaleString()} | Qty ${qty.toLocaleString()} | Est ${profit.toLocaleString()}gp`
+                      );
+                    }}
                     style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', transition: 'all 0.15s ease' }}
                     onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
                     onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
@@ -390,7 +405,7 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                   {typeof onCreateProposal === 'function' && (
                     <button
                       className="btn-small"
-                      onClick={() => onCreateProposal(opp)}
+                      onClick={() => onCreateProposal({ ...opp, suggested_qty: getQty(opp.item_id, opp.suggested_qty) })}
                       style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', background: '#22c55e', transition: 'all 0.15s ease' }}
                       onMouseOver={(e) => {
                         e.currentTarget.style.transform = 'scale(1.02)';
@@ -425,11 +440,31 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                   </div>
                   <div>
                     <p className="muted" style={{ fontSize: '0.7rem' }}>Qty</p>
-                    <p style={{ fontWeight: 600 }}>{opp.suggested_qty.toLocaleString()}</p>
+                    <div className="row" style={{ gap: '0.25rem', alignItems: 'center' }}>
+                      <button
+                        className="btn-small"
+                        onClick={() => setQty(opp.item_id, getQty(opp.item_id, opp.suggested_qty) - 10, opp.buy_limit)}
+                        style={{ padding: '0.1rem 0.3rem', fontSize: '0.65rem', minWidth: '1.5rem' }}
+                      >
+                        -
+                      </button>
+                      <span style={{ fontWeight: 600, minWidth: '2.5rem', textAlign: 'center' }}>
+                        {getQty(opp.item_id, opp.suggested_qty).toLocaleString()}
+                      </span>
+                      <button
+                        className="btn-small"
+                        onClick={() => setQty(opp.item_id, getQty(opp.item_id, opp.suggested_qty) + 10, opp.buy_limit)}
+                        style={{ padding: '0.1rem 0.3rem', fontSize: '0.65rem', minWidth: '1.5rem' }}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
                   <div>
                     <p className="muted" style={{ fontSize: '0.7rem' }}>Est Profit</p>
-                    <p style={{ fontWeight: 600, color: '#22c55e' }}>{formatGp(opp.est_profit)}</p>
+                    <p style={{ fontWeight: 600, color: '#22c55e' }}>
+                      {formatGp((opp.sell_at - opp.buy_at) * getQty(opp.item_id, opp.suggested_qty))}
+                    </p>
                   </div>
                 </div>
 
