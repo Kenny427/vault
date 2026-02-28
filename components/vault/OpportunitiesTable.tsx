@@ -110,6 +110,8 @@ export default function OpportunitiesTable({ opportunities, loading, onRefresh, 
   const [refreshingPrices, setRefreshingPrices] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
 
+  const hasActiveFilters = searchQuery.trim() || scoreFilter !== 'all';
+
   const sortedOpportunities = useMemo(() => {
     let filtered = [...opportunities];
 
@@ -265,6 +267,22 @@ export default function OpportunitiesTable({ opportunities, loading, onRefresh, 
             <option value="profit">Profit</option>
             <option value="volume">Volume</option>
           </select>
+          {hasActiveFilters && (
+            <button
+              onClick={() => { setSearchQuery(''); setScoreFilter('all'); }}
+              style={{
+                padding: '0.2rem 0.4rem',
+                fontSize: '0.65rem',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--accent)',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Clear
+            </button>
+          )}
         </div>
         <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
           {refreshResult && (
