@@ -8,11 +8,13 @@ import { HTMLAttributes, forwardRef } from 'react';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   /** Badge variant */
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'accent';
+  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'accent' | 'secondary';
   /** Badge size */
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   /** Pulse animation for important badges */
   pulse?: boolean;
+  /** Glow effect */
+  glow?: boolean;
 }
 
 const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
@@ -21,6 +23,7 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     variant = 'default',
     size = 'md',
     pulse = false,
+    glow = false,
     className = '',
     ...props 
   }, ref) => {
@@ -29,7 +32,7 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       inline-flex items-center justify-center font-bold
       rounded-full tracking-wide
       transition-all duration-150
-      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/65 focus-visible:ring-offset-2
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
     `;
     
     const variantStyles = {
@@ -38,36 +41,44 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
         dark:bg-surface-3 dark:text-text-muted
       `,
       success: `
-        bg-green-100 text-green-800
-        dark:bg-green-900/30 dark:text-green-400
+        bg-success/15 text-success
+        dark:bg-success/20 dark:text-success-muted
+        ${glow ? 'shadow-glow-secondary' : ''}
       `,
       warning: `
-        bg-yellow-100 text-yellow-800
-        dark:bg-yellow-900/30 dark:text-yellow-400
+        bg-warning/15 text-warning
+        dark:bg-warning/20 dark:text-warning
+        ${glow ? 'shadow-glow-warning' : ''}
       `,
       danger: `
-        bg-red-100 text-red-800
-        dark:bg-red-900/30 dark:text-red-400
+        bg-danger/15 text-danger
+        dark:bg-danger/20 dark:text-danger
+        ${glow ? 'shadow-glow-danger' : ''}
       `,
       info: `
-        bg-blue-100 text-blue-800
-        dark:bg-blue-900/30 dark:text-blue-400
+        bg-info/15 text-info
+        dark:bg-info/20 dark:text-info
       `,
       accent: `
         bg-accent/15 text-accent
-        dark:bg-accent/20 dark:text-accent
+        dark:bg-accent/20 dark:text-accent-muted
+        ${glow ? 'shadow-glow-accent' : ''}
+      `,
+      secondary: `
+        bg-secondary/15 text-secondary
+        dark:bg-secondary/20 dark:text-secondary-muted
+        ${glow ? 'shadow-glow-secondary' : ''}
       `,
     };
     
     const sizeStyles = {
       sm: 'text-[10px] px-1.5 py-0.5',
       md: 'text-xs px-2 py-0.5',
+      lg: 'text-sm px-2.5 py-1',
     };
     
     const pulseStyles = pulse ? `
-      animate-pulse
-      shadow-[0_0_8px_2px_var(--accent-glow)]
-      dark:shadow-[0_0_12px_rgba(39,194,103,0.4)]
+      animate-pulse-glow
     ` : '';
     
     return (

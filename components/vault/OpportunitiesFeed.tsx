@@ -429,23 +429,28 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             )}
           </div>
 
-          {/* Score Filter Chips */}
-          <div className="row" style={{ gap: '0.35rem', flexWrap: 'wrap' }}>
+          {/* Modern Chip Filters */}
+          <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
             {scoreFilters.map((filter) => (
               <button
                 key={filter.value}
                 onClick={() => setScoreFilter(filter.value)}
                 style={{
-                  padding: '0.3rem 0.6rem',
+                  padding: '0.35rem 0.75rem',
                   fontSize: '0.7rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   borderRadius: '20px',
                   border: 'none',
                   cursor: 'pointer',
-                  background: scoreFilter === filter.value ? filter.color : 'rgba(255,255,255,0.05)',
+                  background: scoreFilter === filter.value 
+                    ? `linear-gradient(135deg, ${filter.color} 0%, ${filter.color}cc 100%)`
+                    : 'rgba(255,255,255,0.05)',
                   color: scoreFilter === filter.value ? '#000' : 'var(--text-muted)',
-                  transition: 'all 0.15s ease',
-                  boxShadow: scoreFilter === filter.value ? `0 0 12px ${filter.color}50` : 'none',
+                  transition: 'all 0.2s ease',
+                  boxShadow: scoreFilter === filter.value 
+                    ? `0 0 16px ${filter.color}60, inset 0 1px 0 rgba(255,255,255,0.2)` 
+                    : 'none',
+                  letterSpacing: '0.03em',
                 }}
               >
                 {filter.label}
@@ -453,18 +458,19 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             ))}
           </div>
 
-          {/* Sort & Actions */}
+          {/* Futuristic Sort & Actions */}
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               style={{ 
-                padding: '0.35rem 0.5rem', 
+                padding: '0.4rem 0.6rem', 
                 fontSize: '0.75rem', 
-                borderRadius: '6px',
-                background: 'var(--input-bg)',
-                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                background: 'rgba(0,0,0,0.25)',
+                border: '1px solid rgba(39, 194, 103, 0.2)',
                 color: 'var(--text)',
+                fontWeight: 600,
               }}
             >
               <option value="score">Score</option>
@@ -474,27 +480,50 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             </select>
             
             {refreshResult && (
-              <span style={{ fontSize: '0.75rem', color: refreshResult.startsWith('✓') ? '#22c55e' : '#ef4444' }}>
+              <span style={{ 
+                fontSize: '0.75rem', 
+                color: refreshResult.startsWith('✓') ? '#22c55e' : '#ef4444',
+                fontWeight: 600,
+                textShadow: refreshResult.startsWith('✓') ? '0 0 8px rgba(34, 197, 94, 0.3)' : 'none',
+              }}>
                 {refreshResult}
               </span>
             )}
             {typeof onRefreshPrices === 'function' && (
               <button 
-                className="btn btn-secondary" 
                 onClick={handleRefreshPrices} 
                 disabled={refreshingPrices}
-                style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
+                style={{
+                  padding: '0.4rem 0.8rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  border: '1px solid rgba(39, 194, 103, 0.3)',
+                  background: refreshingPrices ? 'rgba(39, 194, 103, 0.1)' : 'rgba(39, 194, 103, 0.15)',
+                  color: '#27c267',
+                  cursor: refreshingPrices ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
               >
-                {refreshingPrices ? '...' : '↻ Prices'}
+                {refreshingPrices ? '⟳' : '⟳ Sync'}
               </button>
             )}
-            <button className="btn" onClick={onRefresh} disabled={loading} style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}>
-              {loading ? '...' : '↻ Sync'}
+            <button onClick={onRefresh} disabled={loading} style={{
+                padding: '0.4rem 0.8rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                color: 'var(--text)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1,
+              }}>
+              {loading ? '...' : '↻'}
             </button>
-            <div className="row" style={{ gap: '0.25rem', opacity: 0.6 }}>
-              <kbd style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '3px' }}>j</kbd>
-              <kbd style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '3px' }}>k</kbd>
-              <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>nav</span>
+            <div className="row" style={{ gap: '0.2rem', opacity: 0.5, paddingLeft: '0.25rem' }}>
+              <kbd style={{ fontSize: '0.5rem', padding: '0.15rem 0.35rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', fontWeight: 600 }}>J</kbd>
+              <kbd style={{ fontSize: '0.5rem', padding: '0.15rem 0.35rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', fontWeight: 600 }}>K</kbd>
             </div>
           </div>
         </div>

@@ -8,11 +8,13 @@ import { ButtonHTMLAttributes, forwardRef } from 'react';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Button variant */
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'accent';
   /** Button size */
   size?: 'sm' | 'md' | 'lg';
   /** Loading state */
   loading?: boolean;
+  /** Glow effect on hover */
+  glow?: boolean;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -21,6 +23,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     variant = 'primary', 
     size = 'md', 
     loading = false,
+    glow = false,
     disabled,
     className = '',
     ...props 
@@ -29,7 +32,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = `
       inline-flex items-center justify-center font-semibold
       transition-all duration-150 ease-out
-      focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
       disabled:opacity-65 disabled:cursor-not-allowed
     `;
     
@@ -37,34 +40,43 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       primary: `
         bg-accent text-text-inverse
         hover:brightness-110 active:translate-y-px
-        dark:bg-gradient-to-br dark:from-accent dark:to-accent-2
-        dark:shadow-lg dark:shadow-accent/30
-        focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface
+        focus-visible:ring-accent focus-visible:ring-offset-surface
+        dark:shadow-glow-accent
+        ${glow ? 'hover:shadow-glow-accent-strong' : ''}
       `,
       secondary: `
         bg-surface-2 text-text border border-border
-        hover:bg-surface hover:border-accent
-        dark:bg-surface-2 dark:border-border/40
-        dark:hover:bg-surface-3 dark:hover:border-accent
-        focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 dark:focus-visible:ring-offset-surface
+        hover:bg-surface-3 hover:border-accent/50
+        dark:bg-surface-2 dark:border-border/30
+        dark:hover:bg-surface-3 dark:hover:border-accent/40
+        focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface
       `,
       ghost: `
         bg-transparent text-text-muted
         hover:bg-surface-2 hover:text-text
         dark:hover:bg-surface-2 dark:hover:text-text
-        focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-surface
+        focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface
       `,
       danger: `
-        bg-danger text-white
+        bg-danger text-white font-semibold
         hover:brightness-110 active:translate-y-px
-        focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface
+        focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-surface
+        dark:shadow-glow-danger
+        ${glow ? 'hover:shadow-glow-danger' : ''}
+      `,
+      accent: `
+        bg-secondary text-text-inverse
+        hover:brightness-110 active:translate-y-px
+        focus-visible:ring-secondary focus-visible:ring-offset-surface
+        dark:shadow-glow-secondary
+        ${glow ? 'hover:shadow-glow-secondary-strong' : ''}
       `,
     };
     
     const sizeStyles = {
-      sm: 'text-xs px-2.5 py-1.5 rounded-lg',
-      md: 'text-sm px-3.5 py-2 rounded-lg',
-      lg: 'text-base px-5 py-2.5 rounded-xl',
+      sm: 'text-xs px-2.5 py-1.5 rounded-lg gap-1.5',
+      md: 'text-sm px-3.5 py-2 rounded-lg gap-2',
+      lg: 'text-base px-5 py-2.5 rounded-xl gap-2',
     };
     
     return (
@@ -76,7 +88,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       >
         {loading && (
           <svg 
-            className="animate-spin -ml-1 mr-2 h-4 w-4" 
+            className="animate-spin h-4 w-4" 
             fill="none" 
             viewBox="0 0 24 24"
           >

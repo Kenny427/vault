@@ -15,6 +15,7 @@ const config: Config = {
           DEFAULT: 'var(--color-surface)',
           2: 'var(--color-surface-2)',
           3: 'var(--color-surface-3)',
+          4: 'var(--color-surface-4)',
         },
         
         // Text
@@ -24,11 +25,18 @@ const config: Config = {
           inverse: 'var(--color-text-inverse)',
         },
         
-        // Accent
+        // Accent - OSRS gold/amber
         accent: {
           DEFAULT: 'var(--color-accent)',
           2: 'var(--color-accent-2)',
           muted: 'var(--color-accent-muted)',
+        },
+        
+        // Secondary - Cyan/teal
+        secondary: {
+          DEFAULT: 'var(--color-secondary)',
+          2: 'var(--color-secondary-2)',
+          muted: 'var(--color-secondary-muted)',
         },
         
         // Semantic
@@ -41,6 +49,7 @@ const config: Config = {
         border: {
           DEFAULT: 'var(--color-border)',
           subtle: 'var(--color-border-subtle)',
+          accent: 'var(--color-border-accent)',
         },
         
         // Legacy OSRS colors (keep for compatibility)
@@ -103,11 +112,22 @@ const config: Config = {
         full: 'var(--radius-full)',
       },
       
-      // Shadows
+      // Shadows - Enhanced with glow effects
       boxShadow: {
         sm: 'var(--shadow-sm)',
         DEFAULT: 'var(--shadow-md)',
         lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+        // Glow variants
+        'glow-accent': '0 0 12px var(--glow-accent)',
+        'glow-accent-strong': '0 0 20px var(--glow-accent-strong)',
+        'glow-secondary': '0 0 12px var(--glow-secondary)',
+        'glow-secondary-strong': '0 0 20px var(--glow-secondary-strong)',
+        'glow-danger': '0 0 12px var(--glow-danger)',
+        'glow-warning': '0 0 12px var(--glow-warning)',
+        // Card glow
+        'card': 'var(--card-glow)',
+        'card-hover': 'var(--card-glow-hover)',
       },
       
       // Transitions
@@ -115,13 +135,52 @@ const config: Config = {
         fast: 'var(--transition-fast)',
         DEFAULT: 'var(--transition-base)',
         slow: 'var(--transition-slow)',
+        slower: 'var(--transition-slower)',
       },
       
       // Animation
       animation: {
         'fade-in': 'fadeIn 150ms ease',
         'slide-up': 'slideUp 200ms ease',
-        pulse: 'pulse 2.5s ease-in-out infinite',
+        'slide-down': 'slideDown 200ms ease',
+        'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
+        'pulse-glow-secondary': 'pulseGlowSecondary 2s ease-in-out infinite',
+        'data-flow': 'dataFlow 3s ease-in-out infinite',
+      },
+      
+      // Keyframe animations (extend)
+      keyframes: {
+        fadeIn: {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        slideUp: {
+          from: { opacity: '0', transform: 'translateY(8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        slideDown: {
+          from: { opacity: '0', transform: 'translateY(-8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        pulseGlow: {
+          '0%, 100%': { boxShadow: '0 0 5px var(--glow-accent), 0 0 10px var(--glow-accent)' },
+          '50%': { boxShadow: '0 0 10px var(--glow-accent-strong), 0 0 20px var(--glow-accent)' },
+        },
+        pulseGlowSecondary: {
+          '0%, 100%': { boxShadow: '0 0 5px var(--glow-secondary), 0 0 10px var(--glow-secondary)' },
+          '50%': { boxShadow: '0 0 10px var(--glow-secondary-strong), 0 0 20px var(--glow-secondary)' },
+        },
+        dataFlow: {
+          '0%, 100%': { opacity: '0.4', transform: 'scaleX(0.8)' },
+          '50%': { opacity: '1', transform: 'scaleX(1)' },
+        },
+      },
+      
+      // Background image (for gradients)
+      backgroundImage: {
+        'surface-gradient': 'linear-gradient(145deg, var(--color-surface-2) 0%, var(--color-surface) 100%)',
+        'glow-radial-accent': 'radial-gradient(ellipse at 50% 0%, var(--glow-accent) 0%, transparent 60%)',
+        'glow-radial-secondary': 'radial-gradient(ellipse at 80% 20%, var(--glow-secondary) 0%, transparent 40%)',
       },
     },
   },
