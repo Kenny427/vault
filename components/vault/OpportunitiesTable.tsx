@@ -405,6 +405,8 @@ export default function OpportunitiesTable({ opportunities, loading, onRefresh, 
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
+                      transition: 'text-shadow 0.15s ease',
+                      textShadow: isHovered ? '0 0 8px rgba(245,197,24,0.5)' : 'none',
                     }}
                   >
                     {opp.item_name}
