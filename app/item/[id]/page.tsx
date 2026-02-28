@@ -13,6 +13,11 @@ function getWikiUrl(itemName: string): string {
   return `https://oldschool.runescape.wiki/w/${encoded}`;
 }
 
+// Helper to get OSRS Grand Exchange URL for an item
+function getGEUrl(itemId: number): string {
+  return `https://oldschool.runescape.wiki/w/Exchange:${itemId}`;
+}
+
 type ItemDetails = {
   item_id: number;
   name: string;
@@ -303,6 +308,27 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                 title="Open OSRS Wiki"
               >
                 📖 Wiki
+              </a>
+            )}
+            {item && (
+              <a
+                href={getGEUrl(item.item_id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary"
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '0.35rem 0.65rem',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  background: '#f5c518',
+                  color: '#000',
+                }}
+                title="Open OSRS Grand Exchange"
+              >
+                🛒 GE
               </a>
             )}
             <button

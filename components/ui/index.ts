@@ -12,3 +12,6 @@ export type { BadgeProps } from './Badge';
 
 export { Input } from './Input';
 export type { InputProps } from './Input';
+
+export { Tooltip, TooltipGroup } from './Tooltip';
+export type { TooltipProps, TooltipGroupProps } from './Tooltip';

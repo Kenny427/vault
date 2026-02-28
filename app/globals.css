@@ -197,6 +197,11 @@ p {
   50% { box-shadow: 0 0 8px 2px var(--pulse-color, rgba(39, 194, 103, 0.35)); }
 }
 
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
 .badge-medium {
   background: #fef9c3;
   color: #713f12;

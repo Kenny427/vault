@@ -191,7 +191,10 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
   const [loadingSparklines, setLoadingSparklines] = useState<Set<number>>(new Set());
   const [refreshingPrices, setRefreshingPrices] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [keyboardNavActive, setKeyboardNavActive] = useState(false);
   const sparklineLoadedRef = useRef<Set<number>>(new Set());
+  const listRef = useRef<HTMLDivElement>(null);
 
   const sortedOpportunities = useMemo(() => {
     let filtered = [...opportunities];
@@ -247,6 +250,51 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
     
     fetchData();
   }, [expandedRow]);
+
+  // Keyboard navigation (j/k to move, Enter to expand)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      
+      if (isInput) return;
+      if (sortedOpportunities.length === 0) return;
+
+      if (e.key === 'j') {
+        e.preventDefault();
+        setKeyboardNavActive(true);
+        setSelectedIndex(i => Math.min(i + 1, sortedOpportunities.length - 1));
+      } else if (e.key === 'k') {
+        e.preventDefault();
+        setKeyboardNavActive(true);
+        setSelectedIndex(i => Math.max(i - 1, 0));
+      } else if (e.key === 'Enter' && selectedIndex >= 0) {
+        e.preventDefault();
+        const item = sortedOpportunities[selectedIndex];
+        if (item) {
+          setExpandedRow(curr => curr === item.item_id ? null : item.item_id);
+        }
+      } else if (e.key === 'Escape') {
+        setSelectedIndex(-1);
+        setExpandedRow(null);
+        setKeyboardNavActive(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [sortedOpportunities, selectedIndex]);
+
+  // Scroll selected item into view
+  useEffect(() => {
+    if (selectedIndex >= 0 && listRef.current) {
+      const rows = listRef.current.querySelectorAll('[data-opp-row]');
+      const selected = rows[selectedIndex] as HTMLElement;
+      if (selected) {
+        selected.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }
+  }, [selectedIndex]);
 
   const handleAddToWatchlist = async (itemId: number, itemName: string) => {
     if (adding.has(itemId) || added.has(itemId)) return;
@@ -341,6 +389,7 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
               placeholder="Search items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setSelectedIndex(-1)}
               style={{ 
                 padding: '0.4rem 0.75rem', 
                 fontSize: '0.8rem', 
@@ -351,6 +400,33 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
                 color: 'var(--text)',
               }}
             />
+            {!searchQuery && (
+              <kbd style={{ 
+                fontSize: '0.6rem', 
+                padding: '0.15rem 0.35rem', 
+                background: 'var(--surface-2)', 
+                border: '1px solid var(--border)', 
+                borderRadius: '4px',
+                color: 'var(--text-muted)',
+              }}>/</kbd>
+            )}
+            {keyboardNavActive && (
+              <span style={{
+                fontSize: '0.65rem',
+                padding: '0.2rem 0.4rem',
+                background: 'rgba(59, 130, 246, 0.15)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '4px',
+                color: '#60a5fa',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}>
+                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>j</kbd>
+                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>k</kbd>
+                <span style={{ opacity: 0.7 }}>nav</span>
+              </span>
+            )}
           </div>
 
           {/* Score Filter Chips */}
@@ -415,6 +491,11 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             <button className="btn" onClick={onRefresh} disabled={loading} style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}>
               {loading ? '...' : '↻ Sync'}
             </button>
+            <div className="row" style={{ gap: '0.25rem', opacity: 0.6 }}>
+              <kbd style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '3px' }}>j</kbd>
+              <kbd style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: '3px' }}>k</kbd>
+              <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>nav</span>
+            </div>
           </div>
         </div>
       </div>
@@ -463,24 +544,29 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {sortedOpportunities.map((opp) => {
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }} ref={listRef}>
+          {sortedOpportunities.map((opp, idx) => {
             const isExpanded = expandedRow === opp.item_id;
+            const isSelected = selectedIndex === idx;
             const sparkline = sparklineData[opp.item_id];
             const isSparklineLoading = loadingSparklines.has(opp.item_id);
             
             return (
               <div
                 key={opp.item_id}
-                onClick={() => setExpandedRow(isExpanded ? null : opp.item_id)}
+                data-opp-row
+                onClick={() => {
+                  setSelectedIndex(idx);
+                  setExpandedRow(isExpanded ? null : opp.item_id);
+                }}
                 style={{
-                  background: 'var(--surface)',
-                  border: `1px solid ${isExpanded ? 'var(--accent)' : 'var(--border)'}`,
+                  background: isSelected ? 'rgba(212, 167, 83, 0.08)' : 'var(--surface)',
+                  border: `1px solid ${isExpanded ? 'var(--accent)' : isSelected ? 'rgba(212, 167, 83, 0.4)' : 'var(--border)'}`,
                   borderRadius: '10px',
                   padding: '0.85rem 1rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  boxShadow: isExpanded ? 'var(--accent-glow)' : 'none',
+                  boxShadow: isExpanded ? 'var(--accent-glow)' : isSelected ? '0 0 12px rgba(212, 167, 83, 0.15)' : 'none',
                 }}
               >
                 {/* Main Row */}
@@ -546,8 +632,30 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
                   {/* Right: Sparkline + Actions */}
                   <div className="row" style={{ gap: '0.75rem', alignItems: 'center' }}>
                     {isSparklineLoading ? (
-                      <div style={{ width: 60, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>...</span>
+                      <div 
+                        style={{ 
+                          width: 60, 
+                          height: 24, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          gap: 3 
+                        }}
+                      >
+                        {[0, 1, 2].map(i => (
+                          <div 
+                            key={i}
+                            style={{
+                              width: 4,
+                              height: 16,
+                              borderRadius: 2,
+                              background: 'var(--accent)',
+                              opacity: 0.3,
+                              animation: `pulse 1s ease-in-out infinite`,
+                              animationDelay: `${i * 0.15}s`,
+                            }}
+                          />
+                        ))}
                       </div>
                     ) : sparkline ? (
                       <MiniSparkline data={sparkline} />
