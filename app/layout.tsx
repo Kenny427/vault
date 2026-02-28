@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import AppShell from '@/components/ui/AppShell';
+import SideNav from '@/components/ui/SideNav';
+import Topbar from '@/components/ui/Topbar';
 import CommandPalette from '@/components/ui/CommandPalette';
+import ShortcutsOverlay from '@/components/ui/ShortcutsOverlay';
 
 export const metadata: Metadata = {
   title: 'Vault',
@@ -12,10 +14,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <AppShell>
-          {children}
-        </AppShell>
+        <SideNav />
+        <div className="app-layout">
+          <Topbar />
+          <main className="app-main">
+            {children}
+          </main>
+        </div>
         <CommandPalette />
+        <ShortcutsOverlay />
       </body>
     </html>
   );
