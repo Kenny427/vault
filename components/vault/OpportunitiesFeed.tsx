@@ -620,6 +620,31 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
                       <p style={{ fontWeight: 600, fontSize: '0.85rem', color: (opp.volume_1h ?? 0) > 50000 ? '#22c55e' : 'inherit' }}>
                         {formatVolume(opp.volume_1h)}
                       </p>
+                      {/* Mini volume heat bar */}
+                      <div style={{ display: 'flex', gap: '1px', justifyContent: 'center', marginTop: '2px' }}>
+                        {[...Array(4)].map((_, i) => {
+                          const vol = opp.volume_1h ?? 0;
+                          const threshold = (i + 1) * 25000;
+                          const active = vol >= threshold;
+                          return (
+                            <div
+                              key={i}
+                              style={{
+                                width: '3px',
+                                height: active ? `${3 + i * 2}px` : '2px',
+                                borderRadius: '1px',
+                                background: active
+                                  ? vol > 100000
+                                    ? '#ef4444'
+                                    : vol > 50000
+                                    ? '#f59e0b'
+                                    : '#22c55e'
+                                  : 'var(--border)',
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
                       <p className="muted" style={{ fontSize: '0.6rem', textTransform: 'uppercase', marginBottom: '0.1rem' }}>Est. Profit</p>
