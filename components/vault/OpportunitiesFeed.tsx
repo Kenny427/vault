@@ -319,7 +319,7 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
       if (result.error) {
         setRefreshResult(result.error);
       } else {
-        setRefreshResult(`✓ Updated ${result.refreshed} prices`);
+        setRefreshResult(`✓ Synced ${result.refreshed} prices`);
         onRefresh();
       }
     } catch {
@@ -335,21 +335,47 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
 
   return (
     <section>
-      {/* Summary Header */}
-      <div className="row-between" style={{ marginBottom: '1rem' }}>
-        <div className="row" style={{ gap: '1.5rem', alignItems: 'center' }}>
+      {/* Futuristic Summary Header */}
+      <div 
+        className="row-between" 
+        style={{ 
+          marginBottom: '1rem',
+          background: 'linear-gradient(135deg, rgba(39, 194, 103, 0.08) 0%, rgba(39, 194, 103, 0.02) 100%)',
+          padding: '1rem 1.25rem',
+          borderRadius: '12px',
+          border: '1px solid rgba(39, 194, 103, 0.15)',
+        }}
+      >
+        <div className="row" style={{ gap: '2rem', alignItems: 'center' }}>
           <div>
-            <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Opportunities</p>
-            <p style={{ fontSize: '1.75rem', fontWeight: 900, color: '#f5c518', lineHeight: 1 }}>{opportunities.length}</p>
+            <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+              <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Opportunities</p>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#27c267', boxShadow: '0 0 8px #27c267' }} />
+            </div>
+            <p style={{ 
+              fontSize: '2rem', 
+              fontWeight: 900, 
+              color: '#f5c518', 
+              lineHeight: 1,
+              textShadow: '0 0 20px rgba(245, 197, 24, 0.3)',
+            }}>
+              {opportunities.length}
+            </p>
           </div>
-          <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1.5rem' }}>
-            <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Potential</p>
-            <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }}>
+          <div style={{ borderLeft: '1px solid rgba(39, 194, 103, 0.2)', paddingLeft: '2rem' }}>
+            <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Potential</p>
+            <p style={{ 
+              fontSize: '1.35rem', 
+              fontWeight: 700, 
+              color: '#22c55e', 
+              lineHeight: 1.2,
+              textShadow: '0 0 15px rgba(34, 197, 94, 0.3)',
+            }}>
               ~{formatGp(totalPotential)}
             </p>
           </div>
         </div>
-        <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+        <div className="row" style={{ gap: '0.75rem', alignItems: 'center' }}>
           <div 
             style={{ 
               display: 'flex', 
@@ -367,85 +393,92 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
         </div>
       </div>
 
-      {/* Sticky Filter Bar */}
+      {/* Futuristic Sticky Filter Bar */}
       <div 
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 10,
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '8px',
-          padding: '0.75rem',
-          marginBottom: '0.75rem',
-          backdropFilter: 'blur(8px)',
+          background: 'linear-gradient(180deg, var(--surface) 0%, rgba(13, 21, 19, 0.95) 100%)',
+          border: '1px solid rgba(39, 194, 103, 0.15)',
+          borderRadius: '12px',
+          padding: '0.85rem 1rem',
+          marginBottom: '0.85rem',
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
         }}
       >
-        <div className="row-between" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
-          {/* Search */}
+        <div className="row-between" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
+          {/* Futuristic Search */}
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
-            <input
-              type="text"
-              placeholder="Search items..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => setSelectedIndex(-1)}
-              style={{ 
-                padding: '0.4rem 0.75rem', 
-                fontSize: '0.8rem', 
-                borderRadius: '6px',
-                width: '150px',
-                background: 'var(--input-bg)',
-                border: '1px solid var(--border)',
-                color: 'var(--text)',
-              }}
-            />
-            {!searchQuery && (
-              <kbd style={{ 
-                fontSize: '0.6rem', 
-                padding: '0.15rem 0.35rem', 
-                background: 'var(--surface-2)', 
-                border: '1px solid var(--border)', 
-                borderRadius: '4px',
-                color: 'var(--text-muted)',
-              }}>/</kbd>
-            )}
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setSelectedIndex(-1)}
+                style={{ 
+                  padding: '0.45rem 0.85rem 0.45rem 2rem', 
+                  fontSize: '0.8rem', 
+                  borderRadius: '8px',
+                  width: '160px',
+                  background: 'rgba(0,0,0,0.25)',
+                  border: '1px solid rgba(39, 194, 103, 0.2)',
+                  color: 'var(--text)',
+                  boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)',
+                }}
+              />
+              <span style={{
+                position: 'absolute',
+                left: '0.6rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                fontSize: '0.8rem',
+                color: 'var(--muted)',
+              }}>⌘</span>
+            </div>
             {keyboardNavActive && (
               <span style={{
                 fontSize: '0.65rem',
-                padding: '0.2rem 0.4rem',
+                padding: '0.2rem 0.5rem',
                 background: 'rgba(59, 130, 246, 0.15)',
                 border: '1px solid rgba(59, 130, 246, 0.3)',
                 borderRadius: '4px',
                 color: '#60a5fa',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.25rem',
+                gap: '0.2rem',
+                fontWeight: 600,
               }}>
-                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>j</kbd>
-                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>k</kbd>
-                <span style={{ opacity: 0.7 }}>nav</span>
+                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>J</kbd>
+                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>K</kbd>
               </span>
             )}
           </div>
 
-          {/* Score Filter Chips */}
-          <div className="row" style={{ gap: '0.35rem', flexWrap: 'wrap' }}>
+          {/* Modern Chip Filters */}
+          <div className="row" style={{ gap: '0.4rem', flexWrap: 'wrap' }}>
             {scoreFilters.map((filter) => (
               <button
                 key={filter.value}
                 onClick={() => setScoreFilter(filter.value)}
                 style={{
-                  padding: '0.3rem 0.6rem',
+                  padding: '0.35rem 0.75rem',
                   fontSize: '0.7rem',
-                  fontWeight: 600,
+                  fontWeight: 700,
                   borderRadius: '20px',
                   border: 'none',
                   cursor: 'pointer',
-                  background: scoreFilter === filter.value ? filter.color : 'rgba(255,255,255,0.05)',
+                  background: scoreFilter === filter.value 
+                    ? `linear-gradient(135deg, ${filter.color} 0%, ${filter.color}cc 100%)`
+                    : 'rgba(255,255,255,0.05)',
                   color: scoreFilter === filter.value ? '#000' : 'var(--text-muted)',
-                  transition: 'all 0.15s ease',
-                  boxShadow: scoreFilter === filter.value ? `0 0 12px ${filter.color}50` : 'none',
+                  transition: 'all 0.2s ease',
+                  boxShadow: scoreFilter === filter.value 
+                    ? `0 0 16px ${filter.color}60, inset 0 1px 0 rgba(255,255,255,0.2)` 
+                    : 'none',
+                  letterSpacing: '0.03em',
                 }}
               >
                 {filter.label}
@@ -453,18 +486,19 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             ))}
           </div>
 
-          {/* Sort & Actions */}
+          {/* Futuristic Sort & Actions */}
           <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
               style={{ 
-                padding: '0.35rem 0.5rem', 
+                padding: '0.4rem 0.6rem', 
                 fontSize: '0.75rem', 
-                borderRadius: '6px',
-                background: 'var(--input-bg)',
-                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                background: 'rgba(0,0,0,0.25)',
+                border: '1px solid rgba(39, 194, 103, 0.2)',
                 color: 'var(--text)',
+                fontWeight: 600,
               }}
             >
               <option value="score">Score</option>
@@ -474,21 +508,45 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             </select>
             
             {refreshResult && (
-              <span style={{ fontSize: '0.75rem', color: refreshResult.startsWith('✓') ? '#22c55e' : '#ef4444' }}>
+              <span style={{ 
+                fontSize: '0.75rem', 
+                color: refreshResult.startsWith('✓') ? '#22c55e' : '#ef4444',
+                fontWeight: 600,
+                textShadow: refreshResult.startsWith('✓') ? '0 0 8px rgba(34, 197, 94, 0.3)' : 'none',
+              }}>
                 {refreshResult}
               </span>
             )}
             {typeof onRefreshPrices === 'function' && (
               <button 
-                className="btn btn-secondary" 
                 onClick={handleRefreshPrices} 
                 disabled={refreshingPrices}
-                style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}
+                style={{
+                  padding: '0.4rem 0.8rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  border: '1px solid rgba(39, 194, 103, 0.3)',
+                  background: refreshingPrices ? 'rgba(39, 194, 103, 0.1)' : 'rgba(39, 194, 103, 0.15)',
+                  color: '#27c267',
+                  cursor: refreshingPrices ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
               >
-                {refreshingPrices ? '...' : '↻ Prices'}
+                {refreshingPrices ? '⟳' : '⟳ Sync'}
               </button>
             )}
-            <button className="btn" onClick={onRefresh} disabled={loading} style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }}>
+            <button onClick={onRefresh} disabled={loading} style={{
+                padding: '0.4rem 0.8rem',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                borderRadius: '8px',
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                color: 'var(--text)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1,
+              }}>
               {loading ? '...' : '↻ Sync'}
             </button>
             <div className="row" style={{ gap: '0.25rem', opacity: 0.6 }}>
@@ -500,47 +558,117 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
         </div>
       </div>
 
-      {/* Feed Container */}
+      {/* Futuristic Empty State */}
       {sortedOpportunities.length === 0 ? (
         <div 
           style={{ 
+            position: 'relative',
             textAlign: 'center', 
-            padding: '3rem 2rem',
-            background: 'var(--surface)',
-            border: '1px dashed var(--border)',
-            borderRadius: '12px',
+            padding: '4rem 2rem',
+            background: 'linear-gradient(180deg, rgba(39, 194, 103, 0.03) 0%, transparent 100%)',
+            border: '1px solid rgba(39, 194, 103, 0.15)',
+            borderRadius: '16px',
+            overflow: 'hidden',
           }}
         >
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎯</div>
-          <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', fontWeight: 700 }}>No opportunities found</h3>
-          <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1.25rem', maxWidth: '300px', margin: '0 auto 1.25rem' }}>
-            First time here? Seed a starter watchlist, then refresh prices to see potential flips.
-          </p>
-          <div className="row" style={{ gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              className="btn btn-secondary"
-              onClick={async () => {
-                try {
-                  const seedRes = await fetch('/api/theses/seed', { method: 'POST' });
-                  const seedData = await seedRes.json().catch(() => ({}));
-                  if (!seedRes.ok) {
-                    setRefreshResult(seedData?.error ?? 'Failed to seed demo watchlist');
-                    return;
+          {/* Animated grid background */}
+          <div 
+            style={{
+              position: 'absolute',
+              inset: 0,
+              backgroundImage: `
+                linear-gradient(rgba(39, 194, 103, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(39, 194, 103, 0.03) 1px, transparent 1px)
+              `,
+              backgroundSize: '40px 40px',
+            }}
+          />
+          {/* Scanning line effect */}
+          <div 
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              height: '2px',
+              background: 'linear-gradient(90deg, transparent, #27c267, transparent)',
+            }}
+          />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ fontSize: '4rem', marginBottom: '1.5rem', filter: 'drop-shadow(0 0 20px rgba(39, 194, 103, 0.5))' }}>🎯</div>
+            <h3 style={{ 
+              margin: '0 0 0.75rem', 
+              fontSize: '1.5rem', 
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #27c267 0%, #9ff0c4 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              No Opportunities Detected
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: '2rem', maxWidth: '380px', margin: '0 auto 2rem', lineHeight: 1.6 }}>
+              Initialize your scanner with a starter watchlist, then sync price feeds to discover profitable flips.
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+              <button
+                onClick={async () => {
+                  try {
+                    const seedRes = await fetch('/api/theses/seed', { method: 'POST' });
+                    const seedData = await seedRes.json().catch(() => ({}));
+                    if (!seedRes.ok) {
+                      setRefreshResult(seedData?.error ?? 'Failed to initialize scanner');
+                      return;
+                    }
+                    setRefreshResult(`✓ Initialized ${seedData?.inserted ?? 0} items`);
+                    await handleRefreshPrices();
+                  } catch {
+                    setRefreshResult('Failed to initialize scanner');
                   }
-                  setRefreshResult(`✓ Seeded ${seedData?.inserted ?? 0} items`);
-                  await handleRefreshPrices();
-                } catch {
-                  setRefreshResult('Failed to seed demo watchlist');
-                }
-              }}
-            >
-              Seed starter list
-            </button>
-            {typeof onRefreshPrices === 'function' && (
-              <button className="btn" onClick={handleRefreshPrices} disabled={refreshingPrices}>
-                {refreshingPrices ? 'Refreshing...' : 'Refresh prices'}
+                }}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  border: '1px solid rgba(39, 194, 103, 0.4)',
+                  background: 'rgba(39, 194, 103, 0.1)',
+                  color: '#27c267',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                Initialize Scanner
               </button>
-            )}
+              {typeof onRefreshPrices === 'function' && (
+                <button 
+                  onClick={handleRefreshPrices} 
+                  disabled={refreshingPrices}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    borderRadius: '8px',
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                    color: 'var(--text)',
+                    cursor: refreshingPrices ? 'not-allowed' : 'pointer',
+                    opacity: refreshingPrices ? 0.6 : 1,
+                  }}
+                >
+                  {refreshingPrices ? 'Scanning...' : 'Scan Now'}
+                </button>
+              )}
+            </div>
+            {/* Status indicators */}
+            <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', fontSize: '0.7rem', color: 'var(--muted)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#27c267', boxShadow: '0 0 8px #27c267' }} />
+                <span>API Connected</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 8px #3b82f6' }} />
+                <span>Ready to Scan</span>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
@@ -550,6 +678,7 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             const isSelected = selectedIndex === idx;
             const sparkline = sparklineData[opp.item_id];
             const isSparklineLoading = loadingSparklines.has(opp.item_id);
+            const isHighPriority = opp.score >= 60;
             
             return (
               <div
@@ -560,13 +689,29 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
                   setExpandedRow(isExpanded ? null : opp.item_id);
                 }}
                 style={{
-                  background: isSelected ? 'rgba(212, 167, 83, 0.08)' : 'var(--surface)',
-                  border: `1px solid ${isExpanded ? 'var(--accent)' : isSelected ? 'rgba(212, 167, 83, 0.4)' : 'var(--border)'}`,
-                  borderRadius: '10px',
-                  padding: '0.85rem 1rem',
+                  background: isSelected 
+                    ? 'linear-gradient(135deg, rgba(245, 197, 24, 0.08) 0%, rgba(39, 194, 103, 0.04) 100%)'
+                    : isHighPriority
+                      ? 'linear-gradient(135deg, rgba(39, 194, 103, 0.06) 0%, transparent 100%)'
+                      : 'var(--surface)',
+                  border: `1px solid ${isExpanded 
+                    ? 'rgba(39, 194, 103, 0.5)' 
+                    : isSelected 
+                      ? 'rgba(245, 197, 24, 0.4)' 
+                      : isHighPriority
+                        ? 'rgba(39, 194, 103, 0.15)'
+                        : 'var(--border)'}`,
+                  borderRadius: '12px',
+                  padding: '0.9rem 1.1rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  boxShadow: isExpanded ? 'var(--accent-glow)' : isSelected ? '0 0 12px rgba(212, 167, 83, 0.15)' : 'none',
+                  boxShadow: isExpanded 
+                    ? '0 0 20px rgba(39, 194, 103, 0.2)' 
+                    : isSelected 
+                      ? '0 0 15px rgba(245, 197, 24, 0.15)'
+                      : isHighPriority
+                        ? '0 0 10px rgba(39, 194, 103, 0.1)'
+                        : 'none',
                 }}
               >
                 {/* Main Row */}

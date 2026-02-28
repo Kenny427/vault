@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, use, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import PriceVolumeChart from '@/components/market/PriceVolumeChart';
 import PriceSparkline from '@/components/market/PriceSparkline';
 import SignalsPanel from '@/components/market/SignalsPanel';
@@ -46,8 +47,107 @@ type TimeSeriesPoint = {
   lowPriceVolume?: number | null;
 };
 
-export default function ItemPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+// Interactive StatChip component with tooltips - Terminal AI Research Style
+function StatChip({ 
+  label, 
+  value, 
+  subValue, 
+  color = '#e2e8f0', 
+  bgColor = 'rgba(255,255,255,0.05)',
+  tooltip,
+  trend
+}: { 
+  label: string; 
+  value: string | number; 
+  subValue?: string;
+  color?: string;
+  bgColor?: string;
+  tooltip?: string;
+  trend?: 'up' | 'down' | 'neutral';
+}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  
+  const trendColor = trend === 'up' ? '#22c55e' : trend === 'down' ? '#ef4444' : color;
+  const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '';
+  
+  return (
+    <div 
+      style={{ position: 'relative', display: 'inline-block' }}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      <div style={{ 
+        background: bgColor,
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 8,
+        padding: '0.5rem 0.75rem',
+        minWidth: 80,
+        textAlign: 'center',
+        cursor: 'help',
+        transition: 'all 0.2s ease',
+      }}>
+        <p style={{ 
+          color: '#64748b', 
+          fontSize: '0.6rem', 
+          textTransform: 'uppercase', 
+          letterSpacing: '0.05em',
+          marginBottom: '0.25rem'
+        }}>
+          {label}
+        </p>
+        <p style={{ 
+          color: trend ? trendColor : color, 
+          fontSize: '1rem', 
+          fontWeight: 800,
+          fontFamily: 'monospace',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.25rem'
+        }}>
+          {trendIcon}{typeof value === 'number' ? value.toLocaleString() : value}
+        </p>
+        {subValue && (
+          <p style={{ color: '#475569', fontSize: '0.65rem', marginTop: '0.15rem' }}>
+            {subValue}
+          </p>
+        )}
+      </div>
+      {tooltip && showTooltip && (
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.95)',
+          border: '1px solid #334155',
+          borderRadius: 6,
+          padding: '0.5rem 0.75rem',
+          fontSize: '0.7rem',
+          color: '#e2e8f0',
+          whiteSpace: 'nowrap',
+          zIndex: 100,
+          marginBottom: '0.5rem',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+        }}>
+          {tooltip}
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            border: '6px solid transparent',
+            borderTopColor: '#334155',
+          }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function ItemPage() {
+  const params = useParams();
+  const id = params.id as string;
   const itemId = Number(id);
 
   const [item, setItem] = useState<ItemDetails | null>(null);
@@ -406,167 +506,232 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       {/* Tab Content */}
       {activeTab === 'overview' && price && (
       <div>
-        {/* Price Info Grid */}
-      {price && (
-        <div className="grid grid-2" style={{ gap: '0.5rem', marginBottom: '1rem' }}>
-          <article className="card">
-            <p className="muted" style={{ fontSize: '0.75rem' }}>Current Price</p>
-            <p style={{ fontSize: '1.3rem', fontWeight: 900 }}>{price.last_price.toLocaleString()} gp</p>
-            {priceChange !== null && (
-              <p style={{ 
+        {/* Interactive Stats Chips Row - Terminal AI Research Style */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+          gap: '0.5rem',
+          marginBottom: '1rem',
+        }}>
+          <StatChip 
+            label="Price" 
+            value={`${price.last_price.toLocaleString()} gp`}
+            trend={priceChange !== null ? (priceChange >= 0 ? 'up' : 'down') : undefined}
+            tooltip="Current Grand Exchange price"
+            color="#f5c518"
+            bgColor="rgba(212,167,83,0.1)"
+          />
+          <StatChip 
+            label="Margin" 
+            value={`${price.margin.toLocaleString()} gp`}
+            subValue={`${price.spread_pct.toFixed(1)}% spread`}
+            tooltip="Potential profit per unit (sell_at - buy_at)"
+            color={price.spread_pct <= 1 ? '#22c55e' : price.spread_pct <= 3 ? '#f5c518' : '#ef4444'}
+            bgColor={price.spread_pct <= 1 ? 'rgba(34,197,94,0.1)' : price.spread_pct <= 3 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)'}
+          />
+          <StatChip 
+            label="Vol 5m" 
+            value={price.volume_5m?.toLocaleString() || '—'}
+            subValue="trades"
+            tooltip="Trading volume in the last 5 minutes"
+            color={price.volume_5m && price.volume_5m > 0 ? '#3b82f6' : '#64748b'}
+            bgColor="rgba(59,130,246,0.1)"
+          />
+          <StatChip 
+            label="Vol 1h" 
+            value={price.volume_1h?.toLocaleString() || '—'}
+            subValue="trades"
+            tooltip="Trading volume in the last hour"
+            color={price.volume_1h && price.volume_1h > 0 ? '#8b5cf6' : '#64748b'}
+            bgColor="rgba(139,92,246,0.1)"
+          />
+          <StatChip 
+            label="Volatility" 
+            value={volatility !== null ? `${volatility.toFixed(1)}%` : '—'}
+            tooltip="Price volatility (coefficient of variation)"
+            color={volatility !== null ? (volatility > 10 ? '#f59e0b' : '#06b6d4') : '#64748b'}
+            bgColor="rgba(6,182,212,0.1)"
+          />
+          <StatChip 
+            label="Freshness" 
+            value={freshnessDisplay}
+            tooltip="Time since last price update"
+            color={freshnessMinutes !== null && freshnessMinutes < 30 ? '#22c55e' : freshnessMinutes !== null && freshnessMinutes < 60 ? '#f59e0b' : '#ef4444'}
+            bgColor={freshnessMinutes !== null && freshnessMinutes < 30 ? 'rgba(34,197,94,0.1)' : freshnessMinutes !== null && freshnessMinutes < 60 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)'}
+          />
+        </div>
+
+        {/* Price Statistics - Terminal AI Research Style */}
+        {avgPrice !== null && high24h !== null && low24h !== null && priceRangePct !== null && (
+          <div style={{ 
+            marginBottom: '1rem', 
+            background: 'linear-gradient(135deg, rgba(15,23,42,0.8) 0%, rgba(30,41,59,0.6) 100%)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: 12,
+            padding: '1rem',
+          }}>
+            <h2 style={{ 
+              fontSize: '0.8rem', 
+              fontWeight: 800, 
+              color: '#64748b',
+              textTransform: 'uppercase', 
+              letterSpacing: '0.1em',
+              marginBottom: '0.75rem',
+              fontFamily: 'monospace',
+            }}>
+              📊 {timestep.toUpperCase()} Statistics
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '0.75rem', 
+                background: 'rgba(255,255,255,0.03)', 
+                borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.05)',
+              }}>
+                <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Average</p>
+                <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f5c518', fontFamily: 'monospace' }}>{Math.round(avgPrice).toLocaleString()}</p>
+                <p style={{ color: '#64748b', fontSize: '0.6rem' }}>gp</p>
+              </div>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '0.75rem', 
+                background: 'rgba(255,255,255,0.03)', 
+                borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.05)',
+              }}>
+                <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>High</p>
+                <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#22c55e', fontFamily: 'monospace' }}>{high24h.toLocaleString()}</p>
+                <p style={{ color: '#64748b', fontSize: '0.6rem' }}>gp</p>
+              </div>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '0.75rem', 
+                background: 'rgba(255,255,255,0.03)', 
+                borderRadius: 8,
+                border: '1px solid rgba(255,255,255,0.05)',
+              }}>
+                <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Low</p>
+                <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ef4444', fontFamily: 'monospace' }}>{low24h.toLocaleString()}</p>
+                <p style={{ color: '#64748b', fontSize: '0.6rem' }}>gp</p>
+              </div>
+            </div>
+            <div style={{ 
+              marginTop: '0.75rem', 
+              paddingTop: '0.75rem', 
+              borderTop: '1px solid rgba(255,255,255,0.05)', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center' 
+            }}>
+              <span style={{ color: '#64748b', fontSize: '0.75rem' }}>Range Width</span>
+              <span style={{ 
                 fontSize: '0.85rem', 
                 fontWeight: 700, 
-                color: priceChange >= 0 ? '#22c55e' : '#ef4444'
+                color: priceRangePct > 10 ? '#f59e0b' : '#9ab4aa',
+                fontFamily: 'monospace',
               }}>
-                {priceChange >= 0 ? '↑' : '↓'} {Math.abs(priceChange).toFixed(1)}% ({timestep})
-              </p>
-            )}
-          </article>
-          <article className="card">
-            <p className="muted" style={{ fontSize: '0.75rem' }}>5m Volume</p>
-            <p style={{ fontSize: '1.1rem', fontWeight: 700, color: price.volume_5m && price.volume_5m > 0 ? '#3b82f6' : 'var(--muted)' }}>
-              {price.volume_5m ? price.volume_5m.toLocaleString() : '—'} trades
-            </p>
-            <p className="muted" style={{ fontSize: '0.65rem' }}>Last 5 minutes</p>
-          </article>
-          <article className="card">
-            <p className="muted" style={{ fontSize: '0.75rem' }}>1h Volume</p>
-            <p style={{ fontSize: '1.1rem', fontWeight: 700, color: price.volume_1h && price.volume_1h > 0 ? '#8b5cf6' : 'var(--muted)' }}>
-              {price.volume_1h ? price.volume_1h.toLocaleString() : '—'} trades
-            </p>
-            <p className="muted" style={{ fontSize: '0.65rem' }}>Last hour</p>
-          </article>
-          {high24h !== null && low24h !== null && (
-            <article className="card">
-              <p className="muted" style={{ fontSize: '0.75rem' }}>24h Range</p>
-              <div style={{ fontSize: '0.9rem', fontWeight: 700 }}>
-                <span style={{ color: '#22c55e' }}>{high24h.toLocaleString()}</span>
-                <span className="muted" style={{ margin: '0 0.4rem' }}>→</span>
-                <span style={{ color: '#ef4444' }}>{low24h.toLocaleString()}</span>
-              </div>
-              <p className="muted" style={{ fontSize: '0.7rem' }}>
-                {((high24h - low24h) / low24h * 100).toFixed(1)}% range
-              </p>
-            </article>
-          )}
-          <article className="card">
-            <p className="muted" style={{ fontSize: '0.75rem' }}>Margin</p>
-            <p style={{ fontSize: '1.3rem', fontWeight: 900, color: '#22c55e' }}>{price.margin.toLocaleString()} gp</p>
-          </article>
-          <article className="card">
-            <p className="muted" style={{ fontSize: '0.75rem' }}>Buy At</p>
-            <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>{price.buy_at.toLocaleString()} gp</p>
-          </article>
-          <article className="card">
-            <p className="muted" style={{ fontSize: '0.75rem' }}>Sell At</p>
-            <p style={{ fontSize: '1.1rem', fontWeight: 700 }}>{price.sell_at.toLocaleString()} gp</p>
-          </article>
-          <article className="card">
-            <p className="muted" style={{ fontSize: '0.75rem' }}>Spread</p>
-            <p style={{ fontSize: '1.3rem', fontWeight: 900, color: price.spread_pct <= 1 ? '#22c55e' : price.spread_pct <= 3 ? '#f5c518' : '#ef4444' }}>
-              {price.spread_pct.toFixed(1)}%
-            </p>
-            <p className="muted" style={{ fontSize: '0.65rem' }}>{price.spread_pct <= 1 ? 'Great' : price.spread_pct <= 3 ? 'OK' : 'High'} spread</p>
-          </article>
-        </div>
-      )}
-
-      {/* Price Statistics */}
-      {avgPrice !== null && high24h !== null && low24h !== null && priceRangePct !== null && (
-        <article className="card" style={{ marginBottom: '1rem', background: 'linear-gradient(135deg, #1f2937 0%, #111827 100%)' }}>
-          <h2 style={{ fontSize: '0.9rem', fontWeight: 800, marginBottom: '0.6rem' }}>
-            📊 {timestep} Price Statistics
-          </h2>
-          <div className="grid grid-3" style={{ gap: '0.75rem' }}>
-            <div style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
-              <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Average</p>
-              <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f5c518' }}>{Math.round(avgPrice).toLocaleString()} gp</p>
+                {priceRangePct.toFixed(1)}%
+              </span>
             </div>
-            <div style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
-              <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Highest</p>
-              <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#22c55e' }}>{high24h.toLocaleString()} gp</p>
-            </div>
-            <div style={{ textAlign: 'center', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
-              <p className="muted" style={{ fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lowest</p>
-              <p style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ef4444' }}>{low24h.toLocaleString()} gp</p>
-            </div>
-          </div>
-          <div style={{ marginTop: '0.6rem', paddingTop: '0.6rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="muted" style={{ fontSize: '0.75rem' }}>Range Width</span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: priceRangePct > 10 ? '#f59e0b' : '#9ab4aa' }}>
-              {priceRangePct.toFixed(1)}%
-            </span>
-          </div>
-        </article>
-      )}
-
-      {/* Signals Panel */}
-      {price && (
-        <article className="card" style={{ marginBottom: '1rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.75rem' }}>Market Signals</h2>
-          <SignalsPanel
-            spreadPct={price.spread_pct}
-            spreadGp={price.margin}
-            volume5m={price.volume_5m}
-            volume1h={price.volume_1h}
-            volatility={volatility}
-            price={price.last_price}
-          />
-        </article>
-      )}
-
-      {/* Price + Volume Chart */}
-      <article className="card" style={{ marginBottom: '1rem' }}>
-        <div className="row-between" style={{ marginBottom: '0.75rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 800 }}>Price & Volume</h2>
-          <div className="row" style={{ gap: '0.25rem' }}>
-            {(['5m', '1h', '6h', '24h'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTimestep(t)}
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  fontSize: '0.75rem',
-                  background: timestep === t ? '#f5c518' : 'transparent',
-                  color: timestep === t ? '#000' : 'var(--muted)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  fontWeight: timestep === t ? 700 : 400,
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  if (timestep !== t) {
-                    e.currentTarget.style.background = 'var(--surface-2)';
-                    e.currentTarget.style.borderColor = '#f5c518';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (timestep !== t) {
-                    e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderColor = 'var(--border)';
-                  }
-                }}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {timeseries.length > 0 ? (
-          <PriceVolumeChart 
-            data={timeseries} 
-            width={700} 
-            height={320} 
-            timestep={timestep} 
-          />
-        ) : (
-          <div style={{ height: 320, display: 'grid', placeItems: 'center', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--surface-2)' }}>
-            <p className="muted">No chart data available</p>
           </div>
         )}
-      </article>
+
+        {/* Signals Panel - Terminal AI Research Style */}
+        {price && (
+          <div style={{ 
+            marginBottom: '1rem', 
+            background: 'linear-gradient(135deg, rgba(15,23,42,0.8) 0%, rgba(30,41,59,0.6) 100%)',
+            border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: 12,
+            padding: '1rem',
+          }}>
+            <h2 style={{ 
+              fontSize: '0.8rem', 
+              fontWeight: 800, 
+              color: '#64748b',
+              textTransform: 'uppercase', 
+              letterSpacing: '0.1em',
+              marginBottom: '0.75rem',
+              fontFamily: 'monospace',
+            }}>
+              Market Signals
+            </h2>
+            <SignalsPanel
+              spreadPct={price.spread_pct}
+              spreadGp={price.margin}
+              volume5m={price.volume_5m}
+              volume1h={price.volume_1h}
+              volatility={volatility}
+              price={price.last_price}
+            />
+          </div>
+        )}
+
+        {/* Price + Volume Chart - Terminal AI Research Style */}
+        <div style={{ 
+          marginBottom: '1rem', 
+          background: 'linear-gradient(135deg, rgba(15,23,42,0.8) 0%, rgba(30,41,59,0.6) 100%)',
+          border: '1px solid rgba(255,255,255,0.05)',
+          borderRadius: 12,
+          padding: '1rem',
+        }}>
+          <div className="row-between" style={{ marginBottom: '0.75rem' }}>
+            <h2 style={{ 
+              fontSize: '0.8rem', 
+              fontWeight: 800, 
+              color: '#64748b',
+              textTransform: 'uppercase', 
+              letterSpacing: '0.1em',
+              fontFamily: 'monospace',
+            }}>
+              Price & Volume
+            </h2>
+            <div className="row" style={{ gap: '0.25rem' }}>
+              {(['5m', '1h', '6h', '24h'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTimestep(t)}
+                  style={{
+                    padding: '0.3rem 0.6rem',
+                    fontSize: '0.7rem',
+                    fontFamily: 'monospace',
+                    background: timestep === t ? 'linear-gradient(135deg, #f5c518 0%, #d4a753 100%)' : 'transparent',
+                    color: timestep === t ? '#000' : '#64748b',
+                    border: '1px solid',
+                    borderColor: timestep === t ? '#f5c518' : 'rgba(255,255,255,0.1)',
+                    borderRadius: 4,
+                    cursor: 'pointer',
+                    fontWeight: timestep === t ? 700 : 400,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {timeseries.length > 0 ? (
+            <PriceVolumeChart 
+              data={timeseries} 
+              width={700} 
+              height={320} 
+              timestep={timestep} 
+            />
+          ) : (
+            <div style={{ 
+              height: 320, 
+              display: 'grid', 
+              placeItems: 'center', 
+              border: '1px solid rgba(255,255,255,0.05)', 
+              borderRadius: 8, 
+              background: 'rgba(0,0,0,0.2)' 
+            }}>
+              <p style={{ color: '#64748b', fontFamily: 'monospace' }}>No chart data available</p>
+            </div>
+          )}
+        </div>
       </div>
       )}
 
@@ -645,28 +810,51 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       )}
         </div>
 
-        {/* Right Column - Intelligence Panel */}
+        {/* Right Column - Intelligence Panel - Terminal AI Research Style */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {/* AI Insight Card */}
-          <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', border: '1px solid #334155', borderRadius: 12, padding: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-              <span style={{ color: '#06b6d4', fontFamily: 'monospace', fontSize: '0.7rem' }}>{'◆'}</span>
-              <h3 style={{ fontSize: '0.75rem', fontWeight: 800, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Market Analysis</h3>
+          {/* AI Insight Card - Futuristic Terminal Style */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, rgba(6,182,212,0.08) 0%, rgba(15,23,42,0.9) 100%)', 
+            border: '1px solid rgba(6,182,212,0.2)',
+            borderRadius: 12, 
+            padding: '1rem',
+            position: 'relative',
+            overflow: 'hidden',
+          }}>
+            {/* Subtle scan line effect */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(6,182,212,0.03) 2px, rgba(6,182,212,0.03) 4px)',
+              pointerEvents: 'none',
+            }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', position: 'relative' }}>
+              <span style={{ color: '#06b6d4', fontFamily: 'monospace', fontSize: '0.7rem', textShadow: '0 0 8px rgba(6,182,212,0.5)' }}>{'◆'}</span>
+              <h3 style={{ fontSize: '0.75rem', fontWeight: 800, color: '#06b6d4', textTransform: 'uppercase', letterSpacing: '0.1em' }}>AI Market Analysis</h3>
             </div>
-            <p style={{ color: '#94a3b8', fontSize: '0.75rem', lineHeight: 1.5, marginBottom: '0.5rem' }}>
+            <p style={{ color: '#94a3b8', fontSize: '0.75rem', lineHeight: 1.6, marginBottom: '0.75rem', position: 'relative' }}>
               Low spread detected with healthy trading volume. Potential opportunity for quick flips. Monitor for trend continuation.
             </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', position: 'relative' }}>
               <span style={{ color: '#64748b', fontSize: '0.65rem', textTransform: 'uppercase' }}>Confidence</span>
-              <span style={{ color: '#22c55e', fontSize: '0.8rem', fontWeight: 700, fontFamily: 'monospace' }}>78%</span>
+              <span style={{ color: '#22c55e', fontSize: '0.85rem', fontWeight: 700, fontFamily: 'monospace', textShadow: '0 0 8px rgba(34,197,94,0.3)' }}>78%</span>
+              <span style={{ marginLeft: 'auto', color: '#06b6d4', fontSize: '0.6rem', fontFamily: 'monospace' }}>LIVE</span>
             </div>
           </div>
 
-          {/* Quick Stats Panel */}
-          <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', border: '1px solid #334155', borderRadius: 12, padding: '1rem' }}>
+          {/* Quick Stats Panel - Terminal Intelligence Style */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.8) 100%)', 
+            border: '1px solid rgba(212,167,83,0.15)',
+            borderRadius: 12, 
+            padding: '1rem',
+          }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-              <span style={{ color: '#06b6d4', fontFamily: 'monospace', fontSize: '0.7rem' }}>{'>'}</span>
-              <h3 style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Intelligence Panel</h3>
+              <span style={{ color: '#f5c518', fontFamily: 'monospace', fontSize: '0.7rem' }}>{'>'}</span>
+              <h3 style={{ fontSize: '0.8rem', fontWeight: 800, color: '#f5c518', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Intelligence Panel</h3>
             </div>
             
             {/* Spread */}
@@ -674,14 +862,14 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Spread</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#e2e8f0', fontFamily: 'monospace' }}>{price?.spread_pct.toFixed(1) ?? '—'}%</span>
-                <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: price && price.spread_pct <= 1 ? 'rgba(34,197,94,0.2)' : price && price.spread_pct <= 3 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)', color: price && price.spread_pct <= 1 ? '#22c55e' : price && price.spread_pct <= 3 ? '#f59e0b' : '#ef4444' }}>
+                <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 4, fontWeight: 600, background: price && price.spread_pct <= 1 ? 'rgba(34,197,94,0.2)' : price && price.spread_pct <= 3 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)', color: price && price.spread_pct <= 1 ? '#22c55e' : price && price.spread_pct <= 3 ? '#f59e0b' : '#ef4444' }}>
                   {price && price.spread_pct <= 1 ? 'OPTIMAL' : price && price.spread_pct <= 3 ? 'ACCEPTABLE' : 'HIGH'}
                 </span>
               </div>
             </div>
 
             {/* 5m Volume */}
-            <div style={{ marginBottom: '0.6rem', paddingBottom: '0.6rem', borderBottom: '1px solid #334155' }}>
+            <div style={{ marginBottom: '0.6rem', paddingBottom: '0.6rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vol 5m</p>
               <span style={{ fontSize: '1.1rem', fontWeight: 800, color: price?.volume_5m && price.volume_5m > 0 ? '#3b82f6' : '#64748b', fontFamily: 'monospace' }}>
                 {price?.volume_5m?.toLocaleString() ?? '—'}
@@ -689,7 +877,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             </div>
 
             {/* 1h Volume */}
-            <div style={{ marginBottom: '0.6rem', paddingBottom: '0.6rem', borderBottom: '1px solid #334155' }}>
+            <div style={{ marginBottom: '0.6rem', paddingBottom: '0.6rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vol 1h</p>
               <span style={{ fontSize: '1.1rem', fontWeight: 800, color: price?.volume_1h && price.volume_1h > 0 ? '#8b5cf6' : '#64748b', fontFamily: 'monospace' }}>
                 {price?.volume_1h?.toLocaleString() ?? '—'}
@@ -697,7 +885,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             </div>
 
             {/* Volatility */}
-            <div style={{ marginBottom: '0.6rem', paddingBottom: '0.6rem', borderBottom: '1px solid #334155' }}>
+            <div style={{ marginBottom: '0.6rem', paddingBottom: '0.6rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Volatility</p>
               <span style={{ fontSize: '1.1rem', fontWeight: 800, color: volatility !== null ? (volatility > 10 ? '#f59e0b' : '#06b6d4') : '#64748b', fontFamily: 'monospace' }}>
                 {volatility !== null ? `${volatility.toFixed(1)}%` : '—'}
@@ -706,7 +894,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
 
             {/* Buy Limit */}
             {item.buy_limit && (
-              <div style={{ marginBottom: '0.6rem', paddingBottom: '0.6rem', borderBottom: '1px solid #334155' }}>
+              <div style={{ marginBottom: '0.6rem', paddingBottom: '0.6rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Buy Limit</p>
                 <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#f5c518', fontFamily: 'monospace' }}>
                   {item.buy_limit.toLocaleString()}
@@ -719,16 +907,21 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
               <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Freshness</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#e2e8f0', fontFamily: 'monospace' }}>{freshnessDisplay}</span>
-                <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', borderRadius: 4, background: freshnessMinutes !== null && freshnessMinutes < 30 ? 'rgba(34,197,94,0.2)' : freshnessMinutes !== null && freshnessMinutes < 60 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)', color: freshnessMinutes !== null && freshnessMinutes < 30 ? '#22c55e' : freshnessMinutes !== null && freshnessMinutes < 60 ? '#f59e0b' : '#ef4444' }}>
+                <span style={{ fontSize: '0.65rem', padding: '0.2rem 0.5rem', borderRadius: 4, fontWeight: 600, background: freshnessMinutes !== null && freshnessMinutes < 30 ? 'rgba(34,197,94,0.2)' : freshnessMinutes !== null && freshnessMinutes < 60 ? 'rgba(245,158,11,0.2)' : 'rgba(239,68,68,0.2)', color: freshnessMinutes !== null && freshnessMinutes < 30 ? '#22c55e' : freshnessMinutes !== null && freshnessMinutes < 60 ? '#f59e0b' : '#ef4444' }}>
                   {freshnessMinutes !== null && freshnessMinutes < 30 ? 'LIVE' : freshnessMinutes !== null && freshnessMinutes < 60 ? 'DELAYED' : 'STALE'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* 24h Range mini card */}
+          {/* 24h Range mini card - Terminal Style */}
           {high24h !== null && low24h !== null && (
-            <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', border: '1px solid #334155', borderRadius: 10, padding: '0.875rem' }}>
+            <div style={{ 
+              background: 'linear-gradient(135deg, rgba(15,23,42,0.9) 0%, rgba(30,41,59,0.7) 100%)', 
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 10, 
+              padding: '0.875rem',
+            }}>
               <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>24h Range</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#22c55e', fontFamily: 'monospace' }}>{high24h.toLocaleString()}</span>
