@@ -110,7 +110,7 @@ export default function PriceSparkline(props: {
         <text x={4} y={height / 2 + 3} opacity={0.5}>
           {range >= 1000 ? `${((maxV + minV) / 2 / 1000).toFixed(1)}k` : Math.round((maxV + minV) / 2)}
         </text>
-        <text x={4} y={height - 4} opacity={0.7}>
+        <text x={4} y={height - 14} opacity={0.7}>
           {minV >= 1000 ? `${(minV / 1000).toFixed(1)}k` : Math.round(minV)}
         </text>
       </g>
