@@ -62,6 +62,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
 
   const [addingWatch, setAddingWatch] = useState(false);
   const [addedToWatch, setAddedToWatch] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Calculate freshness (minutes since last update)
   const freshnessMinutes = useMemo(() => {
@@ -245,12 +246,14 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
                 onClick={() => {
                   const info = price ? `${item.name}: ${price.last_price.toLocaleString()}gp (${price.spread_pct.toFixed(1)}% spread)` : item.name;
                   navigator.clipboard.writeText(info);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
                 }}
                 className="btn btn-secondary"
-                style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}
+                style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', minWidth: '2.5rem' }}
                 title="Copy item info"
               >
-                📋
+                {copied ? '✓' : '📋'}
               </button>
             </div>
             <div className="row" style={{ gap: '0.75rem', marginTop: '0.25rem' }}>
