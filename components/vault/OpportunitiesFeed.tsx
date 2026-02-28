@@ -356,6 +356,9 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
   const avgScore = opportunities.length > 0 
     ? Math.round(opportunities.reduce((sum, o) => sum + o.score, 0) / opportunities.length) 
     : 0;
+  const topProfitOpp = opportunities.length > 0 
+    ? opportunities.reduce((best, o) => o.est_profit > best.est_profit ? o : best, opportunities[0])
+    : null;
 
   return (
     <section>
@@ -377,6 +380,16 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
             <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#3b82f6', lineHeight: 1.2 }}>
               {bestMargin.toFixed(1)}%
             </p>
+          </div>
+          <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1.5rem' }}>
+            <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Top Profit</p>
+            {topProfitOpp ? (
+              <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }} title={topProfitOpp.item_name}>
+                {formatGp(topProfitOpp.est_profit)}
+              </p>
+            ) : (
+              <p style={{ fontSize: '1.1rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }}>-</p>
+            )}
           </div>
           <div style={{ borderLeft: '1px solid var(--border)', paddingLeft: '1.5rem' }}>
             <p className="muted" style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Top Vol</p>
