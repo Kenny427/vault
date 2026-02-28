@@ -192,6 +192,7 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
   const [refreshingPrices, setRefreshingPrices] = useState(false);
   const [refreshResult, setRefreshResult] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [keyboardNavActive, setKeyboardNavActive] = useState(false);
   const sparklineLoadedRef = useRef<Set<number>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -261,9 +262,11 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
 
       if (e.key === 'j') {
         e.preventDefault();
+        setKeyboardNavActive(true);
         setSelectedIndex(i => Math.min(i + 1, sortedOpportunities.length - 1));
       } else if (e.key === 'k') {
         e.preventDefault();
+        setKeyboardNavActive(true);
         setSelectedIndex(i => Math.max(i - 1, 0));
       } else if (e.key === 'Enter' && selectedIndex >= 0) {
         e.preventDefault();
@@ -274,6 +277,7 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
       } else if (e.key === 'Escape') {
         setSelectedIndex(-1);
         setExpandedRow(null);
+        setKeyboardNavActive(false);
       }
     };
 
@@ -405,6 +409,23 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
                 borderRadius: '4px',
                 color: 'var(--text-muted)',
               }}>/</kbd>
+            )}
+            {keyboardNavActive && (
+              <span style={{
+                fontSize: '0.65rem',
+                padding: '0.2rem 0.4rem',
+                background: 'rgba(59, 130, 246, 0.15)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '4px',
+                color: '#60a5fa',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}>
+                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>j</kbd>
+                <kbd style={{ fontSize: '0.55rem', background: 'transparent', border: 'none', padding: 0 }}>k</kbd>
+                <span style={{ opacity: 0.7 }}>nav</span>
+              </span>
             )}
           </div>
 
