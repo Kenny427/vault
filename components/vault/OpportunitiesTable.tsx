@@ -100,6 +100,14 @@ function formatFreshness(iso: string | null | undefined): { text: string; color:
   return { text: `${diffHours}h`, color: '#ef4444' };
 }
 
+const scoreFilters: { value: ScoreFilter; label: string; color: string }[] = [
+  { value: 'all', label: 'All', color: '#6b7280' },
+  { value: 'sizzler', label: 'Sizzler', color: '#f5c518' },
+  { value: 'hot', label: 'Hot', color: '#22c55e' },
+  { value: 'warm', label: 'Warm', color: '#3b82f6' },
+  { value: 'cool', label: 'Cool', color: '#8b5cf6' },
+];
+
 export default function OpportunitiesTable({ opportunities, loading, onRefresh, lastUpdated, onRefreshPrices, onCreateProposal }: OpportunitiesTableProps) {
   const [adding, setAdding] = useState<Set<number>>(new Set());
   const [added, setAdded] = useState<Set<number>>(new Set());
@@ -216,7 +224,7 @@ export default function OpportunitiesTable({ opportunities, loading, onRefresh, 
 
       {/* Filters Bar */}
       <div className="row-between" style={{ marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div className="row" style={{ gap: '0.5rem', alignItems: 'center' }}>
+        <div className="row" style={{ gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             type="text"
             placeholder="Search..."
@@ -232,24 +240,37 @@ export default function OpportunitiesTable({ opportunities, loading, onRefresh, 
               color: 'var(--text)',
             }}
           />
-          <select
-            value={scoreFilter}
-            onChange={(e) => setScoreFilter(e.target.value as ScoreFilter)}
-            style={{ 
-              padding: '0.35rem 0.5rem', 
-              fontSize: '0.75rem', 
-              borderRadius: '4px',
-              background: 'var(--input-bg)',
-              border: '1px solid var(--border)',
-              color: 'var(--text)',
-            }}
-          >
-            <option value="all">All Scores</option>
-            <option value="sizzler">Sizzler 80+</option>
-            <option value="hot">Hot 60+</option>
-            <option value="warm">Warm 40+</option>
-            <option value="cool">Cool 20+</option>
-          </select>
+          {/* Score Filter Chips */}
+          <div className="row" style={{ gap: '0.25rem', flexWrap: 'wrap' }}>
+            {scoreFilters.map((filter) => {
+              const count = filter.value === 'all' 
+                ? opportunities.length 
+                : opportunities.filter(o => {
+                    const minScore: Record<'sizzler'|'hot'|'warm'|'cool', number> = { sizzler: 80, hot: 60, warm: 40, cool: 20 };
+                    return o.score >= minScore[filter.value as 'sizzler'|'hot'|'warm'|'cool'];
+                  }).length;
+              return (
+                <button
+                  key={filter.value}
+                  onClick={() => setScoreFilter(filter.value)}
+                  style={{
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.65rem',
+                    fontWeight: 600,
+                    borderRadius: '20px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: scoreFilter === filter.value ? filter.color : 'rgba(255,255,255,0.05)',
+                    color: scoreFilter === filter.value ? '#000' : 'var(--text-muted)',
+                    transition: 'all 0.15s ease',
+                    boxShadow: scoreFilter === filter.value ? `0 0 10px ${filter.color}40` : 'none',
+                  }}
+                >
+                  {filter.label} <span style={{ opacity: 0.7, fontSize: '0.6rem' }}>({count})</span>
+                </button>
+              );
+            })}
+          </div>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
