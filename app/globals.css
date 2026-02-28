@@ -238,6 +238,8 @@ p {
   border-radius: 10px;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 2px 4px rgba(31, 138, 66, 0.2);
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease, transform 90ms ease, box-shadow 140ms ease, filter 140ms ease;
 }
 
 .btn:disabled {
@@ -249,6 +251,7 @@ p {
   background: var(--surface-2);
   color: var(--text);
   border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .btn,
@@ -262,6 +265,7 @@ select {
 
 .btn:not(:disabled):hover {
   filter: brightness(1.05);
+  box-shadow: 0 4px 12px rgba(31, 138, 66, 0.35);
 }
 
 .btn:not(:disabled):active {
@@ -270,6 +274,7 @@ select {
 
 .btn-secondary:not(:disabled):hover {
   background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 /* Premium button glow in dark mode */
