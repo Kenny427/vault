@@ -329,6 +329,21 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
     }
   };
 
+  const handleSeed = async () => {
+    try {
+      const seedRes = await fetch('/api/theses/seed', { method: 'POST' });
+      const seedData = await seedRes.json().catch(() => ({}));
+      if (!seedRes.ok) {
+        setRefreshResult(seedData?.error ?? 'Failed to initialize scanner');
+        return;
+      }
+      setRefreshResult(`✓ Initialized ${seedData?.inserted ?? 0} items`);
+      await handleRefreshPrices();
+    } catch {
+      setRefreshResult('Failed to initialize scanner');
+    }
+  };
+
   const freshness = formatFreshness(lastUpdated);
 
   const totalPotential = opportunities.reduce((sum, o) => sum + o.est_profit, 0);
@@ -512,7 +527,16 @@ export default function OpportunitiesFeed({ opportunities, loading, onRefresh, l
           }}
         >
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎯</div>
-          <h3 style={{ margin: '0 0 0.5rem', fontSize: '1.1rem', fontWeight: 700 }}>No opportunities found</h3>
+          <h3 style={{ 
+              margin: '0 0 0.75rem', 
+              fontSize: '1.5rem', 
+              fontWeight: 800,
+              background: 'linear-gradient(135deg, #27c267 0%, #9ff0c4 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              No Opportunities Detected
+            </h3>
           <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1.25rem', maxWidth: '300px', margin: '0 auto 1.25rem' }}>
             First time here? Seed a starter watchlist, then refresh prices to see potential flips.
           </p>

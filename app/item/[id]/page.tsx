@@ -46,6 +46,32 @@ type TimeSeriesPoint = {
   lowPriceVolume?: number | null;
 };
 
+// Interactive StatChip with tooltips - Terminal AI Research Style
+function StatChip({ label, value, subValue, color = '#e2e8f0', bgColor = 'rgba(255,255,255,0.05)', tooltip, trend }: { 
+  label: string; value: string | number; subValue?: string; color?: string; bgColor?: string; tooltip?: string; trend?: 'up' | 'down' | 'neutral';
+}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const trendColor = trend === 'up' ? '#22c55e' : trend === 'down' ? '#ef4444' : color;
+  const trendIcon = trend === 'up' ? '↑' : trend === 'down' ? '↓' : '';
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }} onMouseEnter={() => setShowTooltip(true)} onMouseLeave={() => setShowTooltip(false)}>
+      <div style={{ background: bgColor, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '0.5rem 0.75rem', minWidth: 80, textAlign: 'center', cursor: 'help', transition: 'all 0.2s ease' }}>
+        <p style={{ color: '#64748b', fontSize: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>{label}</p>
+        <p style={{ color: trend ? trendColor : color, fontSize: '1rem', fontWeight: 800, fontFamily: 'monospace', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
+          {trendIcon}{typeof value === 'number' ? value.toLocaleString() : value}
+        </p>
+        {subValue && <p style={{ color: '#475569', fontSize: '0.65rem', marginTop: '0.15rem' }}>{subValue}</p>}
+      </div>
+      {tooltip && showTooltip && (
+        <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.95)', border: '1px solid #334155', borderRadius: 6, padding: '0.5rem 0.75rem', fontSize: '0.7rem', color: '#e2e8f0', whiteSpace: 'nowrap', zIndex: 100, marginBottom: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+          {tooltip}
+          <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', border: '6px solid transparent', borderTopColor: '#334155' }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ItemPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const itemId = Number(id);
