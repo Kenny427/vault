@@ -406,7 +406,7 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                   )}
                 </div>
 
-                <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', fontSize: '0.85rem' }}>
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.5rem', fontSize: '0.85rem' }}>
                   <div>
                     <p className="muted" style={{ fontSize: '0.7rem' }}>Buy</p>
                     <p style={{ fontWeight: 600 }}>{formatGp(opp.buy_at)}</p>
@@ -430,6 +430,10 @@ export default function OpportunitiesCard({ opportunities, loading, onRefresh, l
                   <div>
                     <p className="muted" style={{ fontSize: '0.7rem' }}>Est Profit</p>
                     <p style={{ fontWeight: 600, color: '#22c55e' }}>{formatGp(opp.est_profit)}</p>
+                  </div>
+                  <div>
+                    <p className="muted" style={{ fontSize: '0.7rem' }}>ROI</p>
+                    <p style={{ fontWeight: 600, color: '#3b82f6' }}>{((opp.margin / opp.buy_at) * 100).toFixed(1)}%</p>
                   </div>
                   {opp.buy_limit && opp.buy_limit > 0 && (
                     <div>
