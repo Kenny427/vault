@@ -59,6 +59,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       hover:-translate-y-0.5 hover:shadow-lg hover:border-accent/50
       dark:hover:border-accent/40 dark:hover:shadow-accent/10
       cursor-pointer
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/65 focus-visible:ring-offset-2 focus-visible:-translate-y-0.5
     ` : '';
     
     const paddingStyles = {

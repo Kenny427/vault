@@ -29,6 +29,7 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       inline-flex items-center justify-center font-bold
       rounded-full tracking-wide
       transition-all duration-150
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/65 focus-visible:ring-offset-2
     `;
     
     const variantStyles = {
